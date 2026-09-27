@@ -1,28 +1,22 @@
 // ===============================================================
-// شرح الملف: هذا الشاشة الرئيسية/نقطة الدخول.
-// الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
+// شرح الملف: هذا نقطة الدخول لطبقة الوصول للبيانات بالواجهة الأمامية.
+// المصادقة (auth) تمر عبر Supabase مباشرة (src/hooks/use-auth.tsx).
+// هذا الملف يوفر فقط: قائمة المناطق الثابتة، مزوّد بيانات المزوّدين
+// التجريبي (mock)، محفظة المستخدم (متصلة الآن بـ Supabase)، ومولّد
+// معرّفات عشوائية تُستخدم محليًا بالواجهة.
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
-import * as mockAuth from '@/mocks/auth.mock';
 import * as mockProviders from '@/mocks/providers.mock';
 import { randomId } from '@/mocks/apiClient';
-import { API_CONFIG, isHttpApiEnabled } from './config';
-import { createBackendApi, SYRIAN_REGIONS } from './backendAdapter';
-
-const backend = isHttpApiEnabled ? createBackendApi(API_CONFIG.baseUrl) : null;
+import { SYRIAN_REGIONS, getRegionById } from './regions';
+import { wallet } from './walletAdapter';
 
 export const api = {
-  auth: backend ? { ...backend.auth, SYRIAN_REGIONS, getRegionById: (id: string) => SYRIAN_REGIONS.find((r) => r.id === id) ?? SYRIAN_REGIONS[0] } : mockAuth,
+  auth: { SYRIAN_REGIONS, getRegionById },
   providers: mockProviders,
-  wallet: backend?.wallet,
-  providerServices: backend?.providerServices,
+  wallet,
   randomId,
 };
-
-export { API_CONFIG, isHttpApiEnabled };
-export * from './contracts';
-export * from './httpAdapter';
-export * from './httpClient';
 
 export type ApiAdapter = typeof api;

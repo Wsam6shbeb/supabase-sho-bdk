@@ -844,59 +844,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const currentProfile = myProviderProfile;
       const isFirstSkill = !currentProfile || currentProfile.skills.length === 0;
 
-      if (api.providerServices) {
-        const response = await api.providerServices.create({
-          description: skill.description?.trim() || skill.name.trim(),
-          experience_years: skill.years_of_experience ?? 0,
-          price_min: skill.price_min ?? 0,
-          price_max: skill.price_max ?? 0,
-        });
-
-        if (!response.success) {
-          pushNotification({
-            type: 'order_cancelled',
-            title: 'تعذر إضافة الخدمة',
-            body: response.error.message,
-            route: '/orders/become-provider',
-          });
-          return { welcomeBonus: false };
-        }
-
-        const data = response.data;
-        if (data?.needs_clarification) {
-          return { welcomeBonus: false, clarificationQuestion: data.question_clarification };
-        }
-
-        const providerService = data?.provider_service;
-        const serviceName = providerService?.service?.name ?? skill.name;
-        const savedSkill: ProviderSkill = {
-          id: String(providerService?.id ?? skill.id),
-          name: serviceName,
-          years_of_experience: providerService?.experience_years ?? skill.years_of_experience,
-          description: providerService?.specifications ?? skill.description,
-        };
-
-        setMyProviderProfile((prev) => ({
-          skills: [...(prev?.skills ?? []), savedSkill],
-          bio: prev?.bio,
-          is_available: prev?.is_available ?? true,
-          welcome_bonus_received: Boolean(prev?.welcome_bonus_received || (isFirstSkill && data?.is_new_service_category)),
-        }));
-
-        // The backend is authoritative for the welcome bonus and wallet transaction.
-        if (isFirstSkill && data?.is_new_service_category) {
-          pushNotification({
-            type: 'welcome_bonus',
-            title: 'مبروك! مكافأة انضمام',
-            body: 'تم تسجيل أول مهارة لك وتفعيل صلاحية مقدم الخدمة.',
-            route: '/(drawer)/(tabs)/wallet',
-          });
-          return { welcomeBonus: true };
-        }
-        return { welcomeBonus: false };
-      }
-
-      // Mock fallback.
+      // TODO(Supabase): لا يوجد بعد جدول بمخطط Supabase يقابل "خدمات المزوّد"
+      // (وصف/سنوات خبرة/نطاق سعري) مع منطق مراجعة الوصف تلقائيًا (needs_clarification)
+      // الذي كان مبنيًا على الـ Django backend القديم. لحين إضافة هذا الجدول،
+      // يعتمد التسجيل على الحالة المحلية فقط (نفس السلوك الحالي فعليًا).
       const alreadyReceived = currentProfile?.welcome_bonus_received ?? false;
       const shouldGiveBonus = isFirstSkill && !alreadyReceived;
       setMyProviderProfile((prev) => ({
