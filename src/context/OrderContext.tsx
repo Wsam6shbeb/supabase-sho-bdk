@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { api } from '@/services/api';
+import { supabase } from '@/services/supabase';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import { BUSINESS_CONFIG } from '@/config/business';
 import { estimateCommissionFromChat, extractPriceFromChat } from '@/domain/commission';
@@ -213,6 +214,96 @@ function systemMessage(orderId: string, content: string): ChatMessage {
 
 const WELCOME_TEXT =
   "يرجى التواصل بهاي المحادثة لتحديد سعر الخدمة ومدتها وباقي التفاصيل، وعند الاتفاق اضغط 'تم الاتفاق'. التطبيق مو مسؤول عن جودة أو سرعة تنفيذ الخدمة، وبتقدر تقيّم الطرف الآخر وتكتب سبب التقييم.";
+
+// ═══════════════════════════════════════════════════════════
+// Supabase sync (best-effort — لا تُغيّر الحالة المحلية ولا الواجهة)
+// ═══════════════════════════════════════════════════════════
+// ملاحظة: نظام الطلبات/المزوّدين الحالي محلي بالكامل (mock)، فـ orderId/
+// providerId ما زالوا معرّفات محلية وليس بالضرورة uuid حقيقي بجداول
+// service_requests/provider_profiles. لذلك هاي العمليات "أفضل محاولة"
+// (best-effort): إذا نجحت تُسجَّل بـ Supabase، وإذا فشلت (مثلاً بسبب
+// معرّف غير موجود) بيتسجّل الخطأ بالـ console دون ما يوقف أو يغيّر
+// تجربة المستخدم بالواجهة.
+
+// [شرح الدالة: syncOpenChatToSupabase] ينشئ صف محادثة (conversation) بـ Supabase مطابق للمحادثة المحلية المفتوحة حديثًا.
+async function syncOpenChatToSupabase(thread: ChatThread, orderId: string, providerId: string) {
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('[Supabase][openChat] تعذر جلب المستخدم الحالي:', authError.message);
+      return;
+    }
+    const requesterId = authData.user?.id;
+    if (!requesterId) {
+      console.error('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('conversations')
+      .insert({
+        request_id: orderId,
+        requester_id: requesterId,
+        provider_id: providerId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase][openChat] فشل إنشاء المحادثة:', error.message, {
+        threadId: thread.id,
+        orderId,
+        providerId,
+      });
+      return;
+    }
+
+    console.log('[Supabase][openChat] تم إنشاء المحادثة بنجاح:', data.id);
+  } catch (err) {
+    console.error('[Supabase][openChat] خطأ غير متوقع أثناء إنشاء المحادثة:', err);
+  }
+}
+
+// [شرح الدالة: syncAgreementToSupabase] ينشئ اتفاقاً بـ Supabase عبر دالة create_agreement (RPC) المطابقة لاتفاق العميل ومقدم الخدمة.
+async function syncAgreementToSupabase(params: {
+  threadId: string;
+  requestId: string;
+  providerId: string;
+  price: number | null;
+  commission: number;
+}) {
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('[Supabase][customerAgrees] تعذر جلب المستخدم الحالي:', authError.message);
+      return;
+    }
+    const requesterId = authData.user?.id;
+    if (!requesterId) {
+      console.error('[Supabase][customerAgrees] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء الاتفاق.');
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('create_agreement', {
+      p_request_id: params.requestId,
+      p_conversation_id: params.threadId,
+      p_requester_id: requesterId,
+      p_provider_id: params.providerId,
+      p_price: params.price,
+      p_price_source: params.price != null ? 'user_confirmed' : 'default',
+      p_commission: params.commission,
+    });
+
+    if (error) {
+      console.error('[Supabase][customerAgrees] فشل إنشاء الاتفاق:', error.message, params);
+      return;
+    }
+
+    console.log('[Supabase][customerAgrees] تم إنشاء الاتفاق بنجاح:', data?.id);
+  } catch (err) {
+    console.error('[Supabase][customerAgrees] خطأ غير متوقع أثناء إنشاء الاتفاق:', err);
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // Provider
@@ -517,6 +608,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const thread = createNegotiationThread(orderId, provider, systemMessage(orderId, WELCOME_TEXT));
 
       setActiveChats((prev) => [...prev, thread]);
+      void syncOpenChatToSupabase(thread, orderId, provider.id);
       return { ok: true, thread };
     },
     [activeChats, agreedProviderId, blockedProviderIds, currentOrder?.id],
@@ -593,8 +685,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         referenceId: providerId,
         route: '/orders/active',
       });
+
+      void syncAgreementToSupabase({
+        threadId,
+        requestId: activeChats.find((t) => t.id === threadId)?.order_id ?? currentOrder?.id ?? '',
+        providerId,
+        price: agreedPrice,
+        commission,
+      });
     },
-    [activeChats, candidates, clearTimer, pushNotification],
+    [activeChats, candidates, clearTimer, currentOrder, pushNotification],
   );
 
   const providerApproves = useCallback(
@@ -844,19 +944,47 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const currentProfile = myProviderProfile;
       const isFirstSkill = !currentProfile || currentProfile.skills.length === 0;
 
-      // TODO(Supabase): لا يوجد بعد جدول بمخطط Supabase يقابل "خدمات المزوّد"
-      // (وصف/سنوات خبرة/نطاق سعري) مع منطق مراجعة الوصف تلقائيًا (needs_clarification)
-      // الذي كان مبنيًا على الـ Django backend القديم. لحين إضافة هذا الجدول،
-      // يعتمد التسجيل على الحالة المحلية فقط (نفس السلوك الحالي فعليًا).
-      const alreadyReceived = currentProfile?.welcome_bonus_received ?? false;
-      const shouldGiveBonus = isFirstSkill && !alreadyReceived;
+      // يُحفظ وصف/خبرة/نطاق سعر الخدمة فعليًا بجدول provider_services بـ Supabase.
+      const response = await api.providerServices.create({
+        description: skill.description?.trim() || skill.name.trim(),
+        experience_years: skill.years_of_experience ?? 0,
+        price_min: skill.price_min ?? 0,
+        price_max: skill.price_max ?? 0,
+      });
+
+      if (!response.success) {
+        pushNotification({
+          type: 'order_cancelled',
+          title: 'تعذر إضافة الخدمة',
+          body: response.error.message,
+          route: '/orders/become-provider',
+        });
+        return { welcomeBonus: false };
+      }
+
+      const row = response.data;
+      const savedSkill: ProviderSkill = {
+        id: row.id,
+        name: skill.name,
+        years_of_experience: row.experience_years,
+        description: row.description,
+      };
+
       setMyProviderProfile((prev) => ({
-        skills: [...(prev?.skills ?? []), skill],
+        skills: [...(prev?.skills ?? []), savedSkill],
         bio: prev?.bio,
         is_available: prev?.is_available ?? true,
-        welcome_bonus_received: shouldGiveBonus ? true : prev?.welcome_bonus_received ?? false,
+        welcome_bonus_received: prev?.welcome_bonus_received ?? false,
       }));
+
+      // ملاحظة: منح مكافأة الانضمام بالمحفظة الحقيقية (ledger_entries) يحتاج
+      // دالة/RPC موثوقة بجانب قاعدة البيانات (الجدول ليس له سياسة INSERT من
+      // طرف العميل عن قصد). لحين توفيرها، تبقى المكافأة معروضة محليًا فقط
+      // كما كانت بالوضع التجريبي السابق.
+      const alreadyReceived = currentProfile?.welcome_bonus_received ?? false;
+      const shouldGiveBonus = isFirstSkill && !alreadyReceived;
       if (shouldGiveBonus) {
+        setMyProviderProfile((prev) => (prev ? { ...prev, welcome_bonus_received: true } : prev));
         addTransaction('credit', WELCOME_BONUS_AMOUNT, 'welcome_bonus', 'مكافأة انضمام مقدم خدمة جديد');
         pushNotification({
           type: 'welcome_bonus',

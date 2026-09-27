@@ -266,9 +266,22 @@ export default function MessagesTab() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.six,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.three,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSpacer: {
+    width: 44,
   },
   title: {
     fontSize: FontSizes['2xl'],

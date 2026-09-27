@@ -288,6 +288,8 @@ export const ar = {
       awaitingRatingBadge: 'بانتظار تقييمك',
       postedBadge: 'منشور',
       awaitingAgreementBadge: 'بانتظار موافقة',
+      cancelledBadge: 'ملغى',
+      notExecutedReviewBadge: 'قيد مراجعة عدم التنفيذ',
       commission: 'العمولة',
       agreedPrice: 'السعر المتفق عليه',
       withProvider: 'مع',

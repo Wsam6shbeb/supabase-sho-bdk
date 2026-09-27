@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { api } from '@/services/api';
+import { supabase } from '@/services/supabase';
 import { ChatStatus } from '@/types/common';
 import type { ChatMessage } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -119,7 +120,45 @@ export default function ChatScreen() {
       ],
     }));
 
+    // مزامنة أفضل محاولة (best-effort) مع Supabase — لا تُغيّر الحالة المحلية
+    // أعلاه ولا الواجهة. conversation_id هون هو معرّف المحادثة المحلي (thread.id)
+    // وقد لا يقابل صفاً حقيقياً بجدول conversations بعد (نظام الطلبات/المحادثات
+    // الحالي محلي بالكامل)، فمن المتوقع فشل الإدراج بهالحالة، وبيتم تسجيله فقط.
+    (async () => {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error('[Supabase][handleSend] تعذر جلب المستخدم الحالي:', authError.message);
+          return;
+        }
+        const senderId = authData.user?.id;
+        if (!senderId) {
+          console.error('[Supabase][handleSend] لا يوجد مستخدم مسجّل دخول، تم تجاوز حفظ الرسالة.');
+          return;
+        }
 
+        const { data, error } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: thread.id,
+            sender_id: senderId,
+            body: text,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[Supabase][handleSend] فشل حفظ الرسالة:', error.message, {
+            conversation_id: thread.id,
+          });
+          return;
+        }
+
+        console.log('[Supabase][handleSend] تم حفظ الرسالة بنجاح:', data.id);
+      } catch (err) {
+        console.error('[Supabase][handleSend] خطأ غير متوقع أثناء حفظ الرسالة:', err);
+      }
+    })();
   };
 
 // [شرح الدالة: handleCustomerAgree] يعالج موافقة العميل على الاتفاق داخل المحادثة.

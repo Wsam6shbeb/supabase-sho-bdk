@@ -482,6 +482,60 @@ export type Database = {
           },
         ]
       }
+      provider_services: {
+        Row: {
+          created_at: string
+          description: string
+          experience_years: number
+          id: string
+          is_active: boolean
+          price_max: number
+          price_min: number
+          provider_id: string
+          skill_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          experience_years?: number
+          id?: string
+          is_active?: boolean
+          price_max?: number
+          price_min?: number
+          provider_id: string
+          skill_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          experience_years?: number
+          id?: string
+          is_active?: boolean
+          price_max?: number
+          price_min?: number
+          provider_id?: string
+          skill_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "provider_services_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_skills: {
         Row: {
           provider_id: string
@@ -860,7 +914,7 @@ export type Database = {
         Args: {
           p_commission: number
           p_conversation_id: string
-          p_price: number
+          p_price: number | null
           p_price_source: string
           p_provider_id: string
           p_request_id: string

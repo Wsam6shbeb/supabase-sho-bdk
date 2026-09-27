@@ -78,6 +78,20 @@ export function OrderCard({
           bg: `${scheme.primary}15`,
           icon: 'checkmark-done-circle-outline' as const,
         };
+      case OrderStatus.CANCELLED:
+        return {
+          text: t('orders.myOrders.cancelledBadge'),
+          color: scheme.danger,
+          bg: `${scheme.danger}15`,
+          icon: 'close-circle-outline' as const,
+        };
+      case OrderStatus.NOT_EXECUTED_REVIEW:
+        return {
+          text: t('orders.myOrders.notExecutedReviewBadge'),
+          color: scheme.danger,
+          bg: `${scheme.danger}15`,
+          icon: 'alert-circle-outline' as const,
+        };
     }
   };
 

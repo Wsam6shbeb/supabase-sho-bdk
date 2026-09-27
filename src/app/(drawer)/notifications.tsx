@@ -26,6 +26,7 @@ const NOTIFICATION_CONFIG: Record<
   { icon: keyof typeof Ionicons.glyphMap; colorKey: 'primary' | 'success' | 'warning' | 'danger' | 'urgent' | 'textSecondary' }
 > = {
   order_created: { icon: 'add-circle-outline', colorKey: 'primary' },
+  order_cancelled: { icon: 'close-circle-outline', colorKey: 'danger' },
   candidate_found: { icon: 'people-outline', colorKey: 'primary' },
   agreement_confirmed: { icon: 'time-outline', colorKey: 'warning' },
   agreement_approved: { icon: 'checkmark-circle-outline', colorKey: 'success' },
