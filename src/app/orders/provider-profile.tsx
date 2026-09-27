@@ -27,14 +27,18 @@ export default function ProviderProfileScreen() {
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const {
+  
+    const {
     blockProvider,
     isProviderBlocked,
     hasCompletedOrderWith,
+    getProviderById,
   } = useOrder();
 
   const providerId = params.provider_id as string;
-  const provider = api.providers.getProviderById(providerId);
+  // const provider = api.providers.getProviderById(providerId);
+  const provider = getProviderById(providerId);
+
   const blocked = isProviderBlocked(providerId);
   const canRequestAgain = hasCompletedOrderWith(providerId);
 
