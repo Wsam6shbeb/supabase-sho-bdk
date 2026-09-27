@@ -18,7 +18,8 @@ import type {
   PasswordResetResult,
   GoogleLoginDto,
 } from '@/types/auth';
-import type { ApiError } from '@/types/common';
+import type { ApiError, Region } from '@/types/common';
+import { VerificationStatus } from '@/types/common';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export interface AuthState {
@@ -54,27 +55,31 @@ const AuthContext = createContext<UseAuth | null>(null);
 
 // تحويل مستخدم Supabase لشكل User تبعنا
 function mapSupabaseUser(sbUser: any): User {
+  const meta = sbUser.user_metadata ?? {};
+  const region: Region = meta.region
+    ? { id: meta.region.id ?? '', name_ar: meta.region.name_ar ?? meta.region ?? '' }
+    : { id: '', name_ar: meta.region ?? '' };
+
   return {
     id: sbUser.id,
+    name: meta.full_name ?? meta.name ?? '',
     email: sbUser.email ?? '',
-    full_name: sbUser.user_metadata?.full_name ?? '',
-    phone: sbUser.phone ?? null,
-    region: sbUser.user_metadata?.region ?? null,
-    avatar_url: sbUser.user_metadata?.avatar_url ?? null,
-    is_provider: sbUser.user_metadata?.is_provider ?? false,
-    is_admin: sbUser.user_metadata?.is_admin ?? false,
-    verification_status: sbUser.user_metadata?.verification_status ?? 'pending',
-    status: 'active',
-    created_at: sbUser.created_at,
-    updated_at: sbUser.updated_at ?? sbUser.created_at,
-  } as User;
+    phone: sbUser.phone ?? meta.phone ?? '',
+    region: region,
+    avatar_url: meta.avatar_url ?? null,
+    has_provider_profile: meta.has_provider_profile ?? false,
+    provider_profile: null,
+    verification_status: (meta.verification_status ?? VerificationStatus.NOT_VERIFIED) as VerificationStatus,
+    balance: 0,
+    received_welcome_bonus: false,
+    created_at: sbUser.created_at ?? new Date().toISOString(),
+  };
 }
 
 function mapError(err: any): ApiError {
   return {
     code: err?.code ?? 'UNKNOWN',
     message: err?.message ?? 'حدث خطأ غير متوقع',
-    details: err?.details ?? null,
   };
 }
 
@@ -173,13 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // تسجيل حساب جديد
   const register = useCallback(async (dto: RegisterDto) => {
     setState((p) => ({ ...p, isLoading: true, lastError: null }));
-    const { data, error } = await supabase.auth.signUp({
+     const { data, error } = await supabase.auth.signUp({
       email: dto.email,
       password: dto.password,
       options: {
         data: {
-          full_name: dto.full_name ?? '',
-          phone: dto.phone ?? null,
+          full_name: dto.name,
+          phone: dto.phone,
+          region_id: dto.region_id,
         },
       },
     });
@@ -190,13 +196,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
-    setState((p) => ({ ...p, isLoading: false, lastError: null }));
+     setState((p) => ({ ...p, isLoading: false, lastError: null }));
     return {
-      user: data.user ? mapSupabaseUser(data.user) : null,
-      requiresEmailVerification: !data.session,
+      email: dto.email,
+      resend_after_seconds: 60,
     } as RegisterResult;
-  }, []);
-
+  }, []); 
   // verify email (مؤجل — Supabase ما بدها إلا إذا فعّلناها)
   const verifyEmail = useCallback(async (_dto: VerifyEmailDto) => {
     const error = { code: 'NOT_NEEDED', message: 'التحقق من الإيميل غير مفعّل حالياً.' };
@@ -219,20 +224,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((p) => ({ ...p, isLoading: false, lastError: mapError(error) }));
       return null;
     }
-    setState((p) => ({ ...p, isLoading: false }));
-    return { success: true } as ForgotPasswordResult;
+     setState((p) => ({ ...p, isLoading: false }));
+    return { detail: 'تم إرسال رابط إعادة التعيين إلى بريدك' } as ForgotPasswordResult;
   }, []);
 
   // إعادة تعيين كلمة السر
-  const resetPassword = useCallback(async (dto: PasswordResetDto) => {
+    const resetPassword = useCallback(async (dto: PasswordResetDto) => {
     setState((p) => ({ ...p, isLoading: true, lastError: null }));
-    const { error } = await supabase.auth.updateUser({ password: dto.password });
+    const { error } = await supabase.auth.updateUser({ password: dto.new_password });
     if (error) {
       setState((p) => ({ ...p, isLoading: false, lastError: mapError(error) }));
       return null;
     }
     setState((p) => ({ ...p, isLoading: false }));
-    return { success: true } as PasswordResetResult;
+    return { detail: 'تم تغيير كلمة السر بنجاح' } as PasswordResetResult;
   }, []);
 
   // تسجيل خروج

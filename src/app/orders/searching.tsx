@@ -40,8 +40,7 @@ export default function SearchingScreen() {
     const searchTimeout = setTimeout(async () => {
       const { data: providersData, error } = await supabase
         .from('provider_profiles')
-        .select('user_id, rating_avg, completed_services_count, cancellations_count, users!inner(id, full_name, avatar_url, region, verification_status)')
-        .eq('is_available', true)
+        .select('user_id, rating_avg, completed_services_count, users!provider_profiles_user_id_fkey(id, full_name, avatar_url, region, verification_status)')        .eq('is_available', true)
         .limit(10);
 
       if (error) {
