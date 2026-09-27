@@ -11,7 +11,7 @@
 
 import type { ServiceProvider } from '@/types/orders';
 import { randomId } from './apiClient';
-import { SYRIAN_REGIONS, getRegionById } from './auth.mock';
+import { SYRIAN_REGIONS, getRegionById } from '@/services/api/regions';
 
 /** ألوان بطاقات مقدمي الخدمة */
 const CARD_COLORS = [

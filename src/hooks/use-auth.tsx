@@ -83,6 +83,29 @@ function mapError(err: any): ApiError {
   };
 }
 
+// يضمن وجود صف بجدول public.users لهذا المستخدم (لا يلمس صفاً موجوداً مسبقاً).
+// ضروري لأنو trigger إنشاء المحفظة (trg_create_wallet_for_new_user) مرتبط
+// بـ INSERT على public.users، وليس على auth.users مباشرة.
+async function ensureUserProfile(sbUser: any) {
+  try {
+    const meta = sbUser?.user_metadata ?? {};
+    const { error } = await supabase.from('users').upsert(
+      {
+        id: sbUser.id,
+        full_name: meta.full_name ?? meta.name ?? '',
+        phone: sbUser.phone || meta.phone || null,
+        region: meta.region_id ?? meta.region ?? null,
+      },
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
+    if (error) {
+      console.error('[Supabase][ensureUserProfile] فشل إنشاء صف المستخدم:', error.message);
+    }
+  } catch (err) {
+    console.error('[Supabase][ensureUserProfile] خطأ غير متوقع أثناء إنشاء صف المستخدم:', err);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
 
@@ -103,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isInitialized: true,
             lastError: null,
           }));
+          void ensureUserProfile(data.session.user);
         } else {
           setState((p) => ({ ...p, isInitialized: true }));
         }
@@ -121,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isInitialized: true,
           lastError: null,
         }));
+        void ensureUserProfile(session.user);
       } else {
         setState((p) => ({
           ...p,
@@ -194,6 +219,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const apiErr = mapError(error);
       setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
       return null;
+    }
+
+    if (data.user) {
+      void ensureUserProfile(data.user);
     }
 
      setState((p) => ({ ...p, isLoading: false, lastError: null }));
