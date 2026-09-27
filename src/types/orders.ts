@@ -1,0 +1,117 @@
+// ===============================================================
+// شرح الملف: هذا صفحة الطلبات.
+// الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
+// ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
+// ===============================================================
+
+import type { Region } from './common';
+import { OrderStatus, ChatStatus } from './common';
+
+// ═══════════════════════════════════════════════════════════
+// أنواع الطلبات ومقدمي الخدمة
+// ═══════════════════════════════════════════════════════════
+
+/** معلومات مقدم الخدمة */
+export interface ServiceProvider {
+  id: string;
+  name: string;
+  avatar_url?: string | null;
+  region: Region;
+  skills: string[];
+  rating: number;
+  total_orders: number;
+  completion_rate: number;
+  response_time_minutes: number;
+  cancellation_rate: number;
+  balance: number;
+  is_available: boolean;
+  verification_status: 'not_verified' | 'under_review' | 'verified';
+  card_color: string;
+}
+
+/** بيانات إنشاء طلب جديد */
+export interface CreateOrderDto {
+  description: string;
+  is_urgent: boolean;
+}
+
+/** معلومات الطلب */
+export interface Order {
+  id: string;
+  customer_id: string;
+  description: string;
+  is_urgent: boolean;
+  status: OrderStatus;
+  region_id: string;
+  created_at: string;
+  updated_at: string;
+  provider_id?: string | null;
+  provider_name?: string | null;
+  provider_card_color?: string | null;
+  commission_amount?: number | null;
+  agreed_price?: number | null;
+  // ⭐ التقييم
+  customer_rating?: number | null;
+  customer_comment?: string | null;
+  customer_tags?: string[];
+  provider_rating?: number | null;
+  provider_comment?: string | null;
+  completed_at?: string | null;
+  // ⭐ الاعتماد التلقائي إذا ما قيّم الزبون خلال المهلة
+  rating_deadline?: string | null;
+  rating_auto_approved?: boolean;
+  rating_reminder_sent?: boolean;
+  /** Non-execution / dispute state; financial settlement remains server-authoritative. */
+  not_executed_reported_by?: 'customer' | 'provider' | 'both' | null;
+  non_execution_status?: 'none' | 'pending_review' | 'cancelled_no_refund' | 'refund_pending' | 'admin_review' | null;
+}
+
+/** رسالة محادثة */
+export interface ChatMessage {
+  id: string;
+  order_id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  is_system: boolean;
+  created_at: string;
+  read_at?: string | null;
+}
+
+/** موضوع محادثة مع مقدم خدمة */
+export interface ChatThread {
+  id: string;
+  order_id: string;
+  provider_id: string;
+  customer_id: string;
+  status: ChatStatus;
+  last_message?: ChatMessage | null;
+  unread_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** لون بطاقة مقدم الخدمة */
+export interface ProviderCardColor {
+  id: string;
+  name: string;
+  color: string;
+  color_light: string;
+}
+
+// ⭐ التقييم
+/** بيانات التقييم */
+export interface RatingDto {
+  order_id: string;
+  stars: number; // 1-5
+  comment?: string;
+  tags?: string[];
+}
+
+// ⭐ المهام المكتملة (للتقييم)
+/** طلب مكتمل مع إمكانيات التقييم */
+export interface CompletedOrder extends Order {
+  can_rate: boolean;
+  can_chat: boolean;
+  can_request_again: boolean;
+}

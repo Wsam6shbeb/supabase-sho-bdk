@@ -1,0 +1,500 @@
+// ===============================================================
+// شرح الملف: هذا صفحة عرض مقدمي الخدمة المرشحين.
+// الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
+// الدوال/الوظائف المعرّفة هنا: CandidatesScreen، handleOpenChat، handleViewProfile، renderProviderCard.
+// ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
+// ===============================================================
+
+// ═══════════════════════════════════════════════════════════
+// شاشة عرض المرشحين
+// ═══════════════════════════════════════════════════════════
+
+import { AppButton } from '@/components/ui/AppButton';
+import { AppCard } from '@/components/ui/AppCard';
+import {
+    Colors,
+    FontSizes,
+    FontWeights,
+    Radii,
+    Spacing,
+} from '@/constants/theme';
+import { useOrder } from '@/context/OrderContext';
+import { useTheme } from '@/hooks/use-theme';
+import { t } from '@/i18n/ar';
+import { ChatStatus } from '@/types/common';
+import type { ServiceProvider } from '@/types/orders';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import {
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// [شرح الدالة: CandidatesScreen] يعرض مقدمي الخدمة المرشحين لطلب المستخدم.
+export default function CandidatesScreen() {
+  const theme = useTheme();
+  const scheme = Colors[theme];
+  const {
+    candidates: providers,
+    activeChats: orderChats,
+    openChat,
+    agreedProviderId,
+  } = useOrder();
+
+  const [warning, setWarning] = useState<'MAX_CHATS' | 'ALREADY_AGREED' | 'BLOCKED' | null>(null);
+
+  // ═══════════════════════════════════════════════════════════
+  // فتح محادثة
+  // ═══════════════════════════════════════════════════════════
+// [شرح الدالة: handleOpenChat] يفتح المحادثة مع مقدم الخدمة المختار.
+  const handleOpenChat = (providerId: string) => {
+    const provider = providers.find((p) => p.id === providerId);
+    if (!provider) return;
+
+    const result = openChat(provider);
+    if (!result.ok) {
+      setWarning(result.reason);
+      return;
+    }
+
+    setWarning(null);
+    router.push({
+      pathname: '/orders/chat',
+      params: { provider_id: providerId },
+    });
+  };
+
+// [شرح الدالة: handleViewProfile] يفتح ملف مقدم الخدمة لعرض تفاصيله.
+  const handleViewProfile = (providerId: string) => {
+    router.push({
+      pathname: '/orders/provider-profile',
+      params: { provider_id: providerId },
+    });
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // بطاقة المرشح
+  // ═══════════════════════════════════════════════════════════
+// [شرح الدالة: renderProviderCard] ينشئ بطاقة واجهة لمقدم خدمة ضمن قائمة النتائج.
+  const renderProviderCard = ({ item }: { item: ServiceProvider }) => {
+    const thread = orderChats.find((t) => t.provider_id === item.id);
+    const isChatActive = !!thread;
+    const isAgreed = agreedProviderId === item.id;
+    const isAwaiting = thread?.status === ChatStatus.AWAITING_APPROVAL;
+    const isLocked = thread?.status === ChatStatus.LOCKED_NOT_CHOSEN;
+
+    return (
+      <AppCard
+        key={item.id}
+        padding="four"
+        elevation="md"
+        style={[
+          styles.providerCard,
+          {
+            borderLeftWidth: 4,
+            borderLeftColor: item.card_color,
+          },
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.avatarContainer}>
+            {item.avatar_url ? (
+              <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+            ) : (
+              <View
+                style={[
+                  styles.avatarPlaceholder,
+                  { backgroundColor: `${item.card_color}20` },
+                ]}
+              >
+                <Text style={[styles.avatarText, { color: item.card_color }]}>
+                  {item.name.charAt(0)}
+                </Text>
+              </View>
+            )}
+            {item.verification_status === 'verified' && (
+              <View style={[styles.verifiedBadge, { backgroundColor: scheme.success }]}>
+                <Ionicons name="checkmark" size={12} color={scheme.successContrast} />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.cardInfo}>
+            <View style={styles.nameRow}>
+              <Text style={[styles.providerName, { color: scheme.text }]}>
+                {item.name}
+              </Text>
+              <View style={styles.ratingContainer}>
+                <Ionicons name="star" size={14} color={scheme.warning} />
+                <Text style={[styles.rating, { color: scheme.text }]}>{item.rating}</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.region, { color: scheme.textSecondary }]}>
+              {item.region.name_ar}
+            </Text>
+
+            <View style={styles.skillsContainer}>
+              {item.skills.slice(0, 3).map((skill, index) => (
+                <View
+                  key={index}
+                  style={[styles.skillBadge, { backgroundColor: `${item.card_color}15` }]}
+                >
+                  <Text style={[styles.skillText, { color: item.card_color }]}>
+                    {skill}
+                  </Text>
+                </View>
+              ))}
+              {item.skills.length > 3 && (
+                <Text style={[styles.moreSkills, { color: scheme.textSecondary }]}>
+                  +{item.skills.length - 3}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* شارات الحالة */}
+        {isAgreed && isAwaiting && (
+          <View
+            style={[styles.statusBadge, { backgroundColor: `${scheme.warning}15` }]}
+          >
+            <Ionicons name="time" size={16} color={scheme.warning} />
+            <Text style={[styles.statusText, { color: scheme.warning }]}>
+              {t('orders.candidates.awaitingApprovalBadge')}
+            </Text>
+          </View>
+        )}
+
+        {isLocked && (
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: `${scheme.textTertiary}15` },
+            ]}
+          >
+            <Ionicons name="lock-closed" size={16} color={scheme.textTertiary} />
+            <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
+              {t('orders.candidates.lockedBadge')}
+            </Text>
+          </View>
+        )}
+
+        {/* الإحصائيات */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Ionicons name="list" size={16} color={scheme.textSecondary} />
+            <Text style={[styles.statText, { color: scheme.textSecondary }]}>
+              {item.total_orders}
+            </Text>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons name="time" size={16} color={scheme.textSecondary} />
+            <Text style={[styles.statText, { color: scheme.textSecondary }]}>
+              {item.response_time_minutes}د
+            </Text>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons name="checkmark-circle" size={16} color={scheme.textSecondary} />
+            <Text style={[styles.statText, { color: scheme.textSecondary }]}>
+              {Math.round(item.completion_rate * 100)}%
+            </Text>
+          </View>
+        </View>
+
+        {/* الأزرار */}
+        <View style={styles.cardActions}>
+          <AppButton
+            title={
+              isChatActive
+                ? t('orders.candidates.returnToChat')
+                : t('orders.candidates.openChat')
+            }
+            variant={isChatActive ? 'secondary' : 'primary'}
+            size="md"
+            onPress={() => handleOpenChat(item.id)}
+            style={{ flex: 1 }}
+            leadingIcon={
+              <Ionicons
+                name={isChatActive ? 'arrow-back' : 'chatbubble-outline'}
+                size={16}
+                color={isChatActive ? scheme.text : scheme.primaryContrast}
+              />
+            }
+          />
+          <AppButton
+            title={t('orders.candidates.viewProfile')}
+            variant="secondary"
+            size="md"
+            onPress={() => handleViewProfile(item.id)}
+            style={{ flex: 1, marginStart: Spacing.two }}
+          />
+        </View>
+      </AppCard>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // Empty state
+  // ═══════════════════════════════════════════════════════════
+  if (providers.length === 0) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: scheme.background }]}
+        edges={['top']}
+      >
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search" size={64} color={scheme.textTertiary} />
+          <Text style={[styles.emptyTitle, { color: scheme.text }]}>
+            {t('orders.candidates.emptyState')}
+          </Text>
+          <AppButton
+            title={t('orders.candidates.tryAgain')}
+            variant="primary"
+            size="lg"
+            onPress={() => router.back()}
+            style={{ marginTop: Spacing.six }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // Render
+  // ═══════════════════════════════════════════════════════════
+  return (
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: scheme.background }]}
+      edges={['top']}
+    >
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={[styles.backText, { color: scheme.primary }]}>← رجوع</Text>
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: scheme.text }]}>
+          {t('orders.candidates.title')}
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <Text style={[styles.subtitle, { color: scheme.textSecondary }]}>
+        {t('orders.candidates.subtitle')}
+      </Text>
+
+      {/* تحذير */}
+      {warning && (
+        <AppCard
+          padding="four"
+          elevation="sm"
+          style={[
+            styles.warningCard,
+            { backgroundColor: `${scheme.warning}18`, borderColor: `${scheme.warning}55` },
+          ]}
+        >
+          <View style={styles.warningContent}>
+            <Ionicons name="warning" size={24} color={scheme.warning} />
+            <Text style={[styles.warningText, { color: scheme.text }]}>
+              {warning === 'MAX_CHATS'
+                ? t('orders.candidates.maxChatsWarning')
+                : warning === 'BLOCKED'
+                  ? t('orders.candidates.blockedWarning')
+                  : t('orders.candidates.alreadyAgreedWarning')}
+            </Text>
+            <Pressable onPress={() => setWarning(null)}>
+              <Ionicons name="close" size={20} color={scheme.textSecondary} />
+            </Pressable>
+          </View>
+        </AppCard>
+      )}
+
+      <FlatList
+        data={providers}
+        renderItem={renderProviderCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={{ height: Spacing.three }} />}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.six,
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.two,
+  },
+  backText: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.semibold,
+  },
+  headerTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+  },
+  subtitle: {
+    fontSize: FontSizes.sm,
+    paddingHorizontal: Spacing.six,
+    paddingBottom: Spacing.four,
+    textAlign: 'center',
+  },
+  listContent: {
+    paddingHorizontal: Spacing.six,
+    paddingBottom: Spacing.six,
+  },
+  providerCard: {},
+  cardHeader: {
+    flexDirection: 'row',
+    marginBottom: Spacing.three,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: Radii.full,
+  },
+  avatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: Radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: Radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  cardInfo: {
+    flex: 1,
+    marginStart: Spacing.three,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.one,
+  },
+  providerName: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.semibold,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rating: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium,
+    marginStart: Spacing.one,
+  },
+  region: {
+    fontSize: FontSizes.sm,
+    marginBottom: Spacing.two,
+  },
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  skillBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+    borderRadius: Radii.sm,
+  },
+  skillText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium,
+  },
+  moreSkills: {
+    fontSize: FontSizes.xs,
+    marginStart: Spacing.one,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radii.md,
+    marginBottom: Spacing.three,
+  },
+  statusText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    writingDirection: 'rtl',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: Spacing.three,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    marginBottom: Spacing.three,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  statText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium,
+  },
+  cardActions: {
+    flexDirection: 'row',
+  },
+  warningCard: {
+    marginHorizontal: Spacing.six,
+    marginBottom: Spacing.four,
+    borderWidth: 1.5,
+  },
+  warningContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium,
+    writingDirection: 'rtl',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.six,
+  },
+  emptyTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    marginTop: Spacing.four,
+    textAlign: 'center',
+  },
+});
