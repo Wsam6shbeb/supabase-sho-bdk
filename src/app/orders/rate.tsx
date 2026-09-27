@@ -12,6 +12,8 @@
 import { RatingStars } from '@/components/orders/RatingStars';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/hooks/use-auth';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -46,7 +48,7 @@ export default function RateOrderScreen() {
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
   const { getOrderById, rateOrder, orderHistory } = useOrder();
-
+  const { user } = useAuth();
   const orderId = params.order_id as string;
   const readonly = params.readonly === 'true';
   const order = getOrderById(orderId) ?? orderHistory.find((o) => o.id === orderId);
@@ -97,7 +99,7 @@ export default function RateOrderScreen() {
   // Submit
   // ═══════════════════════════════════════════════════════════
 // [شرح الدالة: handleSubmit] يعالج إرسال النموذج الحالي بعد التحقق من البيانات وتنفيذ العملية المطلوبة.
-  const handleSubmit = () => {
+   const handleSubmit = async () => {
     setError(null);
 
     if (stars === 0) {
@@ -105,12 +107,49 @@ export default function RateOrderScreen() {
       return;
     }
 
+    if (!user?.id) {
+      setError('يجب تسجيل الدخول');
+      return;
+    }
+
+    // 1) نحفظ محلياً (للـ UI السريع)
     rateOrder({
       order_id: orderId,
       stars,
       comment: comment.trim() || undefined,
       tags: selectedTags,
     });
+
+    // 2) نرسل لـ Supabase
+    const providerId = order?.provider_id;
+    if (providerId) {
+      const { data, error: sbError } = await supabase
+        .from('ratings')
+        .insert({
+          request_id: orderId,
+          from_user_id: user.id,
+          to_user_id: providerId,
+          score: stars,
+          comment: comment.trim() || null,
+          tags: selectedTags,
+        })
+        .select('id')
+        .single();
+
+      if (sbError) {
+        console.log('❌ Supabase rating error:', sbError);
+        setError('فشل حفظ التقييم: ' + sbError.message);
+        return;
+      }
+
+      console.log('✅ تم حفظ التقييم:', data);
+
+      // 3) نحدّث حالة الطلب بـ Supabase
+      await supabase
+        .from('service_requests')
+        .update({ state: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', orderId);
+    }
 
     setSubmitted(true);
   };
@@ -295,7 +334,7 @@ export default function RateOrderScreen() {
               title={t('orders.myOrders.rating.submitBtn')}
               variant="primary"
               size="lg"
-              onPress={handleSubmit}
+              onPress={() => { void handleSubmit(); }}
               leadingIcon={
                 <Ionicons
                   name="checkmark-circle"
