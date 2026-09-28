@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppButton } from '@/components/ui/AppButton';
+import { supabase } from '@/services/supabase';
 import { AppCard } from '@/components/ui/AppCard';
 import {
     Colors,
@@ -24,8 +25,8 @@ import { t } from '@/i18n/ar';
 import { ChatStatus } from '@/types/common';
 import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
     FlatList,
     Image,
@@ -45,9 +46,98 @@ export default function CandidatesScreen() {
     activeChats: orderChats,
     openChat,
     agreedProviderId,
+    setCandidates,
   } = useOrder();
 
+  const params = useLocalSearchParams();
+  const requestId = typeof params.request_id === 'string' ? params.request_id : '';
+
   const [warning, setWarning] = useState<'MAX_CHATS' | 'ALREADY_AGREED' | 'BLOCKED' | null>(null);
+
+  // تحميل المرشحين من Supabase حتى تصبح قاعدة البيانات مصدر الحقيقة للشاشة،
+  // بدلاً من الاعتماد على قائمة موجودة فقط في الذاكرة المحلية.
+  useEffect(() => {
+    if (!requestId) {
+      console.error('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCandidates = async () => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select(`
+          provider_id,
+          rank,
+          match_score,
+          provider_profiles!candidates_provider_id_fkey(
+            user_id,
+            rating_avg,
+            completed_services_count,
+            users!provider_profiles_user_id_fkey(
+              id,
+              full_name,
+              avatar_url,
+              region,
+              verification_status
+            )
+          )
+        `)
+        .eq('request_id', requestId)
+        .order('rank', { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[Supabase][candidates] فشل تحميل المرشحين:', error.message);
+        return;
+      }
+
+      const results: ServiceProvider[] = (data ?? [])
+        .map((candidate: any) => {
+          const profile = candidate.provider_profiles;
+          const user = profile?.users;
+
+          if (!profile?.user_id || !user) return null;
+
+          return {
+            id: profile.user_id,
+            name: user.full_name ?? 'مقدم خدمة',
+            avatar_url: user.avatar_url ?? null,
+            region: {
+              id: user.region ?? '',
+              name_ar: user.region ?? '',
+            },
+            skills: [],
+            rating: Number(profile.rating_avg) || 0,
+            total_orders: Number(profile.completed_services_count) || 0,
+            completion_rate: 0,
+            response_time_minutes: 0,
+            cancellation_rate: 0,
+            balance: 0,
+            is_available: true,
+            verification_status:
+              user.verification_status === 'verified'
+                ? 'verified'
+                : user.verification_status === 'under_review'
+                  ? 'under_review'
+                  : 'not_verified',
+            card_color: '#3B82F6',
+            service_request_id: requestId,
+          } satisfies ServiceProvider;
+        })
+        .filter((provider): provider is ServiceProvider => provider !== null);
+
+      setCandidates(results);
+    };
+
+    void loadCandidates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId, setCandidates]);
 
   // ═══════════════════════════════════════════════════════════
   // فتح محادثة
