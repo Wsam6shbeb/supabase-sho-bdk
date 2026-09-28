@@ -18,8 +18,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { LoginDto } from '@/types/auth';
 import { Link, router } from 'expo-router';
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import {
     KeyboardAvoidingView,
@@ -93,61 +91,10 @@ export default function LoginScreen() {
     setSubmitting(true);
 
     try {
-      const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
-      if (!clientId) {
-        setErrors({ form: 'لم يتم إعداد Google OAuth بعد. أضف EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID إلى ملف .env ثم أعد تشغيل Expo.' });
-        return;
-      }
-
-      // The backend expects the Google ID token directly. We therefore use
-      // Google's implicit ID-token response and send that token unchanged to
-      // POST /api/auth/google/.
-      const redirectUri = Linking.createURL('oauth/google');
-      const state = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-      authUrl.searchParams.set('client_id', clientId);
-      authUrl.searchParams.set('redirect_uri', redirectUri);
-      authUrl.searchParams.set('response_type', 'id_token');
-      authUrl.searchParams.set('scope', 'openid email profile');
-      authUrl.searchParams.set('state', state);
-      authUrl.searchParams.set('nonce', nonce);
-      authUrl.searchParams.set('prompt', 'select_account');
-
-      const result = await WebBrowser.openAuthSessionAsync(authUrl.toString(), redirectUri);
-      if (result.type !== 'success' || !result.url) {
-        if (result.type !== 'cancel' && result.type !== 'dismiss') {
-          setErrors({ form: 'تعذر إكمال تسجيل الدخول عبر Google.' });
-        }
-        return;
-      }
-
-      const returnedUrl = new URL(result.url);
-      const returnedState = returnedUrl.searchParams.get('state');
-      const fragment = new URLSearchParams(returnedUrl.hash.replace(/^#/, ''));
-      const idToken = fragment.get('id_token');
-      const fragmentState = fragment.get('state');
-
-      if ((returnedState && returnedState !== state) || (fragmentState && fragmentState !== state)) {
-        setErrors({ form: 'تعذر التحقق من استجابة Google. حاول مرة أخرى.' });
-        return;
-      }
-
-      if (!idToken) {
-        const errorDescription = fragment.get('error_description') || returnedUrl.searchParams.get('error_description');
-        setErrors({ form: errorDescription || 'لم تُرجع Google رمز الهوية المطلوب.' });
-        return;
-      }
-
-      const resultFromBackend = await loginWithGoogle({ id_token: idToken });
-      if (resultFromBackend) {
+      const result = await loginWithGoogle();
+      if (result) {
         router.replace('/(drawer)/(tabs)');
-      } else {
-        setErrors({ form: 'تمت المصادقة مع Google لكن تعذر تسجيل الحساب لدى الخادم.' });
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      setErrors({ form: message || 'تعذر بدء تسجيل الدخول عبر Google. تحقق من إعدادات OAuth وحاول مرة أخرى.' });
     } finally {
       setSubmitting(false);
     }
@@ -211,9 +158,7 @@ export default function LoginScreen() {
             {formLevelError ? (
               <View style={[styles.errorBox, { backgroundColor: `${scheme.danger}15` }]}>
                 <Text style={[styles.errorBoxText, { color: scheme.danger }]}>
-                  {formLevelError === 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
-                    ? formLevelError
-                    : t('auth.login.invalidCredentials')}
+{formLevelError}
                 </Text>
               </View>
             ) : null}
