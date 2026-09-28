@@ -21,6 +21,12 @@ import type {
 import type { ApiError, Region } from '@/types/common';
 import { VerificationStatus } from '@/types/common';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
+
+// يكمل نافذة OAuth على الويب عند رجوع Google إلى نفس التطبيق.
+WebBrowser.maybeCompleteAuthSession();
 
 export interface AuthState {
   user: User | null;
@@ -32,7 +38,7 @@ export interface AuthState {
 
 export interface UseAuth extends AuthState {
   login: (dto: LoginDto) => Promise<AuthResult | null>;
-  loginWithGoogle: (dto: GoogleLoginDto) => Promise<AuthResult | null>;
+  loginWithGoogle: (dto?: GoogleLoginDto) => Promise<AuthResult | null>;
   register: (dto: RegisterDto) => Promise<RegisterResult | null>;
   verifyEmail: (dto: VerifyEmailDto) => Promise<AuthResult | null>;
   resendOtp: (dto: ResendOtpDto) => Promise<ResendOtpResult | null>;
@@ -193,11 +199,117 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { user, access: data.session?.access_token ?? '', refresh: data.session?.refresh_token ?? '' } as AuthResult;
   }, []);
 
-  // Google (مؤجل — سنستخدم Supabase OAuth لاحقاً)
-  const loginWithGoogle = useCallback(async (_dto: GoogleLoginDto) => {
-    const error = { code: 'GOOGLE_NOT_CONFIGURED', message: 'تسجيل الدخول عبر Google سيتم تفعيله لاحقاً.' };
-    setState((p) => ({ ...p, lastError: error }));
-    return null;
+  // تسجيل الدخول عبر Google باستخدام Supabase OAuth + PKCE.
+  // على الهاتف نرجع إلى scheme الخاص بالتطبيق: shobdk://oauth/google.
+  // على الويب نرجع إلى نفس origin حتى تغلق نافذة OAuth وتعود للجلسة.
+  const loginWithGoogle = useCallback(async (_dto?: GoogleLoginDto) => {
+    setState((p) => ({ ...p, isLoading: true, lastError: null }));
+
+    try {
+      const redirectTo =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.location.origin
+          : Linking.createURL('oauth/google');
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        const apiErr = mapError(error);
+        setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
+        return null;
+      }
+
+      if (!data.url) {
+        const apiErr = {
+          code: 'GOOGLE_OAUTH_URL_MISSING',
+          message: 'تعذر إنشاء رابط تسجيل الدخول عبر Google.',
+        };
+        setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
+        return null;
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+      if (result.type !== 'success' || !result.url) {
+        if (result.type !== 'cancel' && result.type !== 'dismiss') {
+          setState((p) => ({
+            ...p,
+            isLoading: false,
+            lastError: {
+              code: 'GOOGLE_OAUTH_CANCELLED',
+              message: 'لم يكتمل تسجيل الدخول عبر Google.',
+            },
+          }));
+        } else {
+          setState((p) => ({ ...p, isLoading: false }));
+        }
+        return null;
+      }
+
+      const callbackUrl = new URL(result.url);
+      const oauthError =
+        callbackUrl.searchParams.get('error_description') ||
+        callbackUrl.searchParams.get('error');
+
+      if (oauthError) {
+        const apiErr = {
+          code: callbackUrl.searchParams.get('error') ?? 'GOOGLE_OAUTH_ERROR',
+          message: oauthError,
+        };
+        setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
+        return null;
+      }
+
+      const code = callbackUrl.searchParams.get('code');
+      if (!code) {
+        const apiErr = {
+          code: 'GOOGLE_OAUTH_CODE_MISSING',
+          message: 'عادت Google بدون رمز المصادقة المطلوب.',
+        };
+        setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
+        return null;
+      }
+
+      const { data: sessionData, error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(code);
+
+      if (exchangeError || !sessionData.session?.user) {
+        const apiErr = mapError(exchangeError ?? {
+          code: 'GOOGLE_SESSION_MISSING',
+          message: 'تعذر إنشاء جلسة المستخدم بعد تسجيل الدخول عبر Google.',
+        });
+        setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
+        return null;
+      }
+
+      const user = mapSupabaseUser(sessionData.session.user);
+      void ensureUserProfile(sessionData.session.user);
+
+      setState((p) => ({
+        ...p,
+        user,
+        token: sessionData.session!.access_token,
+        isLoading: false,
+        lastError: null,
+      }));
+
+      return {
+        user,
+        access: sessionData.session.access_token,
+        refresh: sessionData.session.refresh_token,
+        is_new_user: Boolean(sessionData.user?.created_at === sessionData.user?.updated_at),
+      } as AuthResult;
+    } catch (err) {
+      const apiErr = mapError(err);
+      setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
+      return null;
+    }
   }, []);
 
   // تسجيل حساب جديد
@@ -230,7 +342,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: dto.email,
       resend_after_seconds: 60,
     } as RegisterResult;
-  }, []); 
+  }, []);
+
   // verify email (مؤجل — Supabase ما بدها إلا إذا فعّلناها)
   const verifyEmail = useCallback(async (_dto: VerifyEmailDto) => {
     const error = { code: 'NOT_NEEDED', message: 'التحقق من الإيميل غير مفعّل حالياً.' };
