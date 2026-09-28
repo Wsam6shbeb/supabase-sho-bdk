@@ -26,6 +26,7 @@ import type {
 import type { CreateNonExecutionReportDto, CreateReportDto, Report } from '@/types/reports';
 import { useOrderNotifications } from '@/hooks/order/useOrderNotifications';
 import { useOrderSafety } from '@/hooks/order/useOrderSafety';
+import { useAuth } from '@/hooks/use-auth';
 import type {
     Transaction,
     TransactionReason,
@@ -128,7 +129,7 @@ export interface OrderContextValue {
     description: string;
     is_urgent: boolean;
     region_id: string;
-  }) => Order;
+  }) => Promise<Order>;
   setCandidates: (providers: ServiceProvider[]) => void;
   resetOrder: () => void;
 
@@ -225,15 +226,47 @@ const WELCOME_TEXT =
 // معرّف غير موجود) بيتسجّل الخطأ بالـ console دون ما يوقف أو يغيّر
 // تجربة المستخدم بالواجهة.
 
-// [شرح الدالة: syncOpenChatToSupabase] ينشئ صف محادثة (conversation) بـ Supabase مطابق للمحادثة المحلية المفتوحة حديثًا.
-async function syncOpenChatToSupabase(thread: ChatThread, orderId: string, providerId: string) {
+// [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة (service_requests) بـ Supabase ويرجع الـ UUID الحقيقي.
+async function createServiceRequestInSupabase(params: {
+  requesterId: string;
+  description: string;
+  isUrgent: boolean;
+  regionId: string;
+}): Promise<{ id: string } | null> {
   try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      console.error('[Supabase][openChat] تعذر جلب المستخدم الحالي:', authError.message);
-      return;
+    const { data, error } = await supabase
+      .from('service_requests')
+      .insert({
+        requester_id: params.requesterId,
+        raw_text: params.description,
+        urgency: params.isUrgent ? 'urgent' : 'normal',
+        region: params.regionId || null,
+        state: 'submitted',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[Supabase][startOrder] فشل إنشاء طلب الخدمة:', error.message, params);
+      return null;
     }
-    const requesterId = authData.user?.id;
+
+    console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
+    return data;
+  } catch (err) {
+    console.error('[Supabase][startOrder] خطأ غير متوقع أثناء إنشاء طلب الخدمة:', err);
+    return null;
+  }
+}
+
+// [شرح الدالة: syncOpenChatToSupabase] ينشئ صف محادثة (conversation) بـ Supabase مطابق للمحادثة المحلية المفتوحة حديثًا.
+async function syncOpenChatToSupabase(
+  thread: ChatThread,
+  orderId: string,
+  providerId: string,
+  requesterId: string | undefined,
+) {
+  try {
     if (!requesterId) {
       console.error('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
       return;
@@ -269,17 +302,12 @@ async function syncAgreementToSupabase(params: {
   threadId: string;
   requestId: string;
   providerId: string;
+  requesterId: string | undefined;
   price: number | null;
   commission: number;
 }) {
   try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      console.error('[Supabase][customerAgrees] تعذر جلب المستخدم الحالي:', authError.message);
-      return;
-    }
-    const requesterId = authData.user?.id;
-    if (!requesterId) {
+    if (!params.requesterId) {
       console.error('[Supabase][customerAgrees] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء الاتفاق.');
       return;
     }
@@ -287,7 +315,7 @@ async function syncAgreementToSupabase(params: {
     const { data, error } = await supabase.rpc('create_agreement', {
       p_request_id: params.requestId,
       p_conversation_id: params.threadId,
-      p_requester_id: requesterId,
+      p_requester_id: params.requesterId,
       p_provider_id: params.providerId,
       p_price: params.price,
       p_price_source: params.price != null ? 'user_confirmed' : 'default',
@@ -310,6 +338,7 @@ async function syncAgreementToSupabase(params: {
 // ═══════════════════════════════════════════════════════════
 // [شرح الدالة: OrderProvider] يوفر حالة الطلب ودوال التحكم بها لباقي مكونات التطبيق.
 export function OrderProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [candidates, setCandidatesState] = useState<ServiceProvider[]>([]);
   const [activeChats, setActiveChats] = useState<ChatThread[]>([]);
@@ -523,17 +552,37 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   // Order
   // ═══════════════════════════════════════════════════════════
   const startOrder = useCallback(
-    (params: { description: string; is_urgent: boolean; region_id: string }): Order => {
+    async (params: { description: string; is_urgent: boolean; region_id: string }): Promise<Order> => {
       clearTimer();
-      const order = createOrder(params);
+      const requesterId = user?.id;
+      let order = createOrder({ ...params, customer_id: requesterId ?? 'me' });
       setCurrentOrder(order);
       setCandidatesState([]);
       setActiveChats([]);
       setAgreedProviderId(null);
       setApprovalDeadline(null);
+
+      if (requesterId) {
+        const created = await createServiceRequestInSupabase({
+          requesterId,
+          description: params.description,
+          isUrgent: params.is_urgent,
+          regionId: params.region_id,
+        });
+        if (created) {
+          // نستبدل المعرّف المحلي بالـ UUID الحقيقي بجدول service_requests
+          // قبل ما نرجع الطلب، حتى أي خطوة لاحقة (بحث، محادثة، اتفاق،
+          // تقييم) تستخدم مباشرة معرّفاً حقيقياً.
+          order = { ...order, id: created.id };
+          setCurrentOrder(order);
+        }
+      } else {
+        console.error('[Supabase][startOrder] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة.');
+      }
+
       return order;
     },
-    [clearTimer],
+    [clearTimer, user?.id],
   );
 
   const setCandidates = useCallback(
@@ -572,7 +621,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       clearTimer();
 
       // 1. أنشئ طلب جديد
-      const order = createOrder({ description, is_urgent: false, region_id: provider.region.id });
+      const requesterId = user?.id;
+      const order = createOrder({
+        description,
+        is_urgent: false,
+        region_id: provider.region.id,
+        customer_id: requesterId ?? 'me',
+      });
 
       // 2. أنشئ محادثة جديدة مباشرة مع المقدم
       const thread = createNegotiationThread(order.id, provider, systemMessage(order.id, WELCOME_TEXT));
@@ -583,9 +638,26 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       setAgreedProviderId(null);
       setApprovalDeadline(null);
 
+      // مزامنة أفضل محاولة (best-effort) — نفس نمط بقية العمليات هون: لا
+      // تغيّر شي بالحالة المحلية ولا بالواجهة، وأي فشل يُسجَّل فقط بالـ console.
+      if (requesterId) {
+        void createServiceRequestInSupabase({
+          requesterId,
+          description,
+          isUrgent: false,
+          regionId: provider.region.id,
+        }).then((created) => {
+          if (!created) return;
+          setCurrentOrder((prev) => (prev && prev.id === order.id ? { ...prev, id: created.id } : prev));
+          void syncOpenChatToSupabase(thread, created.id, provider.id, requesterId);
+        });
+      } else {
+        console.error('[Supabase][requestProviderAgain] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة/المحادثة.');
+      }
+
       return order;
     },
-    [clearTimer],
+    [clearTimer, user?.id],
   );
 
   // ═══════════════════════════════════════════════════════════
@@ -608,10 +680,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const thread = createNegotiationThread(orderId, provider, systemMessage(orderId, WELCOME_TEXT));
 
       setActiveChats((prev) => [...prev, thread]);
-      void syncOpenChatToSupabase(thread, orderId, provider.id);
+      void syncOpenChatToSupabase(thread, orderId, provider.id, user?.id);
       return { ok: true, thread };
     },
-    [activeChats, agreedProviderId, blockedProviderIds, currentOrder?.id],
+    [activeChats, agreedProviderId, blockedProviderIds, currentOrder?.id, user?.id],
   );
 
   const closeChat = useCallback((threadId: string) => {
@@ -690,11 +762,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         threadId,
         requestId: activeChats.find((t) => t.id === threadId)?.order_id ?? currentOrder?.id ?? '',
         providerId,
+        requesterId: user?.id,
         price: agreedPrice,
         commission,
       });
     },
-    [activeChats, candidates, clearTimer, currentOrder, pushNotification],
+    [activeChats, candidates, clearTimer, currentOrder, pushNotification, user?.id],
   );
 
   const providerApproves = useCallback(

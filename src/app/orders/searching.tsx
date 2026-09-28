@@ -36,6 +36,7 @@ export default function SearchingScreen() {
   useEffect(() => {
     const description = params.description as string;
     const isUrgent = params.is_urgent === 'true';
+    const requestId = typeof params.request_id === 'string' ? params.request_id : '';
 
     const searchTimeout = setTimeout(async () => {
       const { data: providersData, error } = await supabase
@@ -66,23 +67,48 @@ export default function SearchingScreen() {
         is_available: true,
         verification_status: 'not_verified',
         card_color: '#3B82F6',
+        service_request_id: requestId || undefined,
       }));
 
       setProviders(results);
       setCandidates(results);
       setIsSearching(false);
 
+      // حفظ نتائج البحث كـ "مرشحين" بجدول candidates — أفضل محاولة
+      // (best-effort): ما بتوقف أو تغيّر تدفق الشاشة إذا فشلت (مثلاً لو
+      // requestId فاضي لأنو المستخدم مو مسجّل دخول وقت إنشاء الطلب).
+      if (requestId && results.length > 0) {
+        const rows = results.map((p, index) => ({
+          request_id: requestId,
+          provider_id: p.id,
+          rank: index + 1,
+          match_score: null,
+        }));
+        supabase
+          .from('candidates')
+          .upsert(rows, { onConflict: 'request_id,provider_id' })
+          .then(({ error: candidatesError }) => {
+            if (candidatesError) {
+              console.error('[Supabase][searching] فشل حفظ المرشحين بجدول candidates:', candidatesError.message);
+              return;
+            }
+            console.log('[Supabase][searching] تم حفظ المرشحين بجدول candidates:', rows.length);
+          });
+      } else if (!requestId) {
+        console.error('[Supabase][searching] لا يوجد request_id حقيقي، تم تجاوز حفظ المرشحين بجدول candidates.');
+      }
+
       setTimeout(() => {
         router.replace({
           pathname: '/orders/candidates',
-          params: { description, is_urgent: isUrgent.toString() },
+          params: { description, is_urgent: isUrgent.toString(), request_id: requestId },
         });
       }, 2000);
     }, 1500);
 
     return () => clearTimeout(searchTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.description, params.is_urgent]);
+  }, [params.description, params.is_urgent, params.request_id]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>

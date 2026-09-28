@@ -11,7 +11,6 @@
 
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
-import { supabase } from '@/services/supabase';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import {
     Colors,
@@ -100,44 +99,24 @@ export default function CreateOrderScreen() {
     setSubmitting(true);
     setError(null);
 
-    // 1) نحفظ محلياً (للـ UI السريع)
-    const order = startOrder({
+    // إنشاء الطلب محلياً ثم بـ Supabase (service_requests) عبر startOrder —
+    // بتنتظر الـ UUID الحقيقي قبل ما تكمل، وبترجعه جاهز بـ order.id.
+    const order = await startOrder({
       description: trimmed,
       is_urgent: isUrgent,
       region_id: user?.region?.id ?? 'r-damascus',
     });
-    console.log('🆔 USER ID FROM APP:', user?.id);
-    console.log('📧 USER EMAIL:', user?.email);
-    // 2) نرسل لـ Supabase
-    if (user?.id) {
-      const { data, error: sbError } = await supabase
-        .from('service_requests')
-        .insert({
-          requester_id: user.id,
-          raw_text: trimmed,
-          urgency: isUrgent ? 'urgent' : 'normal',
-          region: user?.region?.name_ar ?? null,
-          state: 'submitted',
-        })
-        .select('id')
-        .single();
 
-      if (sbError) {
-        console.log('❌ Supabase insert error:', sbError);
-        setError('فشل إرسال الطلب: ' + sbError.message);
-        setSubmitting(false);
-        return;
-      }
+    setSubmitting(false);
 
-      console.log('✅ تم إنشاء الطلب:', data);
-    }
-
-    // 3) نروح لشاشة البحث
+    // نروح لشاشة البحث ونمرر معرّف طلب الخدمة الحقيقي (إذا نجح إنشاؤه
+    // بـ Supabase) حتى تقدر شاشة البحث تربط المرشحين فيه.
     router.push({
       pathname: '/orders/searching',
       params: {
         description: order.description,
         is_urgent: order.is_urgent.toString(),
+        request_id: order.id,
       },
     });
   };

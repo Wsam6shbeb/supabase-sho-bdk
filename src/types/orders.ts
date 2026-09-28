@@ -27,6 +27,8 @@ export interface ServiceProvider {
   is_available: boolean;
   verification_status: 'not_verified' | 'under_review' | 'verified';
   card_color: string;
+  /** معرّف طلب الخدمة (service_requests.id) الذي ظهر هذا المزوّد كمرشح له. */
+  service_request_id?: string;
 }
 
 /** بيانات إنشاء طلب جديد */

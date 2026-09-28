@@ -31,7 +31,7 @@ export default function DisclaimerScreen() {
   const params = useLocalSearchParams();
 
 // [شرح الدالة: handleAccept] يسجل موافقة المستخدم على التنبيه وينتقل إلى الخطوة التالية.
-  const handleAccept = () => {
+  const handleAccept = async () => {
     acceptDisclaimer();
 
     // إذا وصلنا من شاشة إنشاء الطلب، نكمل الطلب مباشرة بدل إعادة المستخدم
@@ -39,7 +39,7 @@ export default function DisclaimerScreen() {
     const description = typeof params.description === 'string' ? params.description.trim() : '';
     if (description) {
       const isUrgent = params.is_urgent === 'true';
-      const order = startOrder({
+      const order = await startOrder({
         description,
         is_urgent: isUrgent,
         region_id: typeof params.region_id === 'string'
@@ -52,6 +52,7 @@ export default function DisclaimerScreen() {
         params: {
           description: order.description,
           is_urgent: order.is_urgent.toString(),
+          request_id: order.id,
         },
       });
       return;
@@ -98,7 +99,7 @@ export default function DisclaimerScreen() {
             title={t('disclaimer.acceptBtn')}
             variant="primary"
             size="lg"
-            onPress={handleAccept}
+            onPress={() => { void handleAccept(); }}
             leadingIcon={
               <Ionicons name="checkmark-circle" size={20} color={scheme.primaryContrast} />
             }
