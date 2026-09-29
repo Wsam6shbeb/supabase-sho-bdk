@@ -29,6 +29,8 @@ export interface ServiceProvider {
   card_color: string;
   /** معرّف طلب الخدمة (service_requests.id) الذي ظهر هذا المزوّد كمرشح له. */
   service_request_id?: string;
+  /** درجة المطابقة المبدئية المحسوبة من structured_data. */
+  match_score?: number;
 }
 
 /** بيانات إنشاء طلب جديد */
