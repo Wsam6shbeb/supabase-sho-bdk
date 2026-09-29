@@ -42,18 +42,7 @@ export default function SearchingScreen() {
     const requestId = typeof params.request_id === 'string' ? params.request_id : '';
 
     const searchTimeout = setTimeout(async () => {
-      const { data: providersData, error } = await supabase
-        .from('provider_profiles')
-        .select('user_id, rating_avg, completed_services_count, users!provider_profiles_user_id_fkey(id, full_name, avatar_url, region, verification_status)')        .eq('is_available', true)
-        .limit(10);
-
-      if (error) {
-        console.log('❌ Error fetching providers:', error);
-        setIsSearching(false);
-        return;
-      }
-
-      console.log('✅ Providers found:', providersData);
+      let providersData: any[] = [];
 
       // ننتظر التحليل المنظم للطلب لفترة قصيرة لأن تحليل AI يعمل في الخلفية.
       // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
@@ -83,25 +72,67 @@ export default function SearchingScreen() {
         }
       }
 
-      // نقرأ الخدمات المحللة لمقدمي الخدمة المتاحين.
-      const providerIds = (providersData ?? []).map((p: any) => p.user_id);
-      const { data: servicesData, error: servicesError } = providerIds.length
-        ? await supabase
-            .from('provider_services')
-            .select('provider_id, description, structured_data')
-            .in('provider_id', providerIds)
-            .eq('is_active', true)
-        : { data: [], error: null };
+      // نطلب من قاعدة البيانات نفسها تضييق المرشحين قبل إرسال أي بيانات إلى الذكاء الاصطناعي.
+      // القاعدة تستخدم التصنيف العام + مقارنة الكلمات/البيانات المنظمة، ثم ترجع عددًا محدودًا فقط.
+      if (requestId) {
+        const { data: candidateRows, error: candidateError } = await supabase.rpc(
+          'get_provider_candidates',
+          {
+            p_request_id: requestId,
+            p_limit: 50,
+          },
+        );
 
-      if (servicesError) {
-        console.error('[Supabase][searching] فشل قراءة خدمات مقدمي الخدمة:', servicesError.message);
+        if (candidateError) {
+          console.error('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
+        } else {
+          providersData = (candidateRows ?? []).map((row: any) => ({
+            user_id: row.provider_id,
+            rating_avg: row.rating_avg,
+            completed_services_count: row.completed_services_count,
+            services: Array.isArray(row.services) ? row.services : [],
+            users: {
+              id: row.provider_id,
+              full_name: row.full_name,
+              avatar_url: row.avatar_url,
+              region: row.region,
+              verification_status: row.verification_status,
+            },
+          }));
+
+          console.log(
+            '[Supabase][searching] المرشحون بعد التضييق الأولي:',
+            providersData.length,
+          );
+        }
       }
 
-      const servicesByProvider = new Map<string, any[]>();
-      for (const service of servicesData ?? []) {
-        const list = servicesByProvider.get(service.provider_id) ?? [];
-        list.push(service);
-        servicesByProvider.set(service.provider_id, list);
+      // احتياط فقط: إذا فشل RPC أو لم يوجد request_id، نحافظ على المسار السابق
+      // بدل أن تتعطل شاشة البحث بالكامل.
+      if (providersData.length === 0) {
+        const { data: fallbackProviders, error: fallbackError } = await supabase
+          .from('provider_profiles')
+          .select(
+            'user_id, rating_avg, completed_services_count, users!provider_profiles_user_id_fkey(id, full_name, avatar_url, region, verification_status)',
+          )
+          .eq('is_available', true)
+          .limit(10);
+
+        if (fallbackError) {
+          console.error('[Supabase][searching] فشل جلب المرشحين الاحتياطي:', fallbackError.message);
+          setIsSearching(false);
+          return;
+        }
+
+        providersData = (fallbackProviders ?? []).map((provider: any) => ({
+          ...provider,
+          services: [],
+        }));
+
+        console.log(
+          '[Supabase][searching] تم استخدام المرشحين الاحتياطيين:',
+          providersData.length,
+        );
       }
 
       // محرك المطابقة الذكي: يرسل التحليل المنظم للطلب وخدمات مقدمي الخدمة
@@ -114,21 +145,10 @@ export default function SearchingScreen() {
         location: null,
       };
 
-      const providerCandidates = (providersData ?? []).map((p: any) => {
-        const services = servicesByProvider.get(p.user_id) ?? [];
-        return {
-          provider: p,
-          services: services.length
-            ? services.map((service) => service.structured_data ?? {
-                service: service.description,
-                skills: [],
-                synonyms: [],
-                region: null,
-                location: null,
-              })
-            : [],
-        };
-      });
+      const providerCandidates = (providersData ?? []).map((p: any) => ({
+        provider: p,
+        services: Array.isArray(p.services) ? p.services : [],
+      }));
 
       let aiMatches: Array<{ provider_id: string; score: number; reason: string }> = [];
 
