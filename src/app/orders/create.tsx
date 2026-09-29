@@ -99,26 +99,28 @@ export default function CreateOrderScreen() {
     setSubmitting(true);
     setError(null);
 
-    // إنشاء الطلب محلياً ثم بـ Supabase (service_requests) عبر startOrder —
-    // بتنتظر الـ UUID الحقيقي قبل ما تكمل، وبترجعه جاهز بـ order.id.
-    const order = await startOrder({
-      description: trimmed,
-      is_urgent: isUrgent,
-      region_id: user?.region?.id ?? 'r-damascus',
-    });
+    try {
+      // قاعدة البيانات يجب أن تؤكد إنشاء الطلب قبل الانتقال إلى البحث.
+      const order = await startOrder({
+        description: trimmed,
+        is_urgent: isUrgent,
+        region_id: user?.region?.id ?? 'r-damascus',
+      });
 
-    setSubmitting(false);
+      setSubmitting(false);
 
-    // نروح لشاشة البحث ونمرر معرّف طلب الخدمة الحقيقي (إذا نجح إنشاؤه
-    // بـ Supabase) حتى تقدر شاشة البحث تربط المرشحين فيه.
-    router.push({
-      pathname: '/orders/searching',
-      params: {
-        description: order.description,
-        is_urgent: order.is_urgent.toString(),
-        request_id: order.id,
-      },
-    });
+      router.push({
+        pathname: '/orders/searching',
+        params: {
+          description: order.description,
+          is_urgent: order.is_urgent.toString(),
+          request_id: order.id,
+        },
+      });
+    } catch (err) {
+      setSubmitting(false);
+      setError(err instanceof Error ? err.message : 'تعذر إنشاء طلب الخدمة. حاول مرة أخرى.');
+    }
   };
 
 // [شرح الدالة: handleClarificationConfirm] يعالج تأكيد المستخدم على طلب التوضيح ويكمل سير إنشاء الطلب.
