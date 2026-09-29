@@ -20,6 +20,7 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: DisclaimerScreen] يعرض التنبيه أو الإقرار المطلوب قبل متابعة إنشاء الطلب.
@@ -29,9 +30,12 @@ export default function DisclaimerScreen() {
   const { acceptDisclaimer, startOrder } = useOrder();
   const { user } = useAuth();
   const params = useLocalSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 // [شرح الدالة: handleAccept] يسجل موافقة المستخدم على التنبيه وينتقل إلى الخطوة التالية.
   const handleAccept = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     acceptDisclaimer();
 
     // إذا وصلنا من شاشة إنشاء الطلب، نكمل الطلب مباشرة بدل إعادة المستخدم
@@ -62,10 +66,12 @@ export default function DisclaimerScreen() {
           'تعذر إنشاء الطلب',
           err instanceof Error ? err.message : 'حدث خطأ أثناء إنشاء الطلب. حاول مرة أخرى.',
         );
+        setIsSubmitting(false);
         return;
       }
     }
 
+    setIsSubmitting(false);
     router.back();
   };
 
@@ -104,9 +110,10 @@ export default function DisclaimerScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <AppButton
-            title={t('disclaimer.acceptBtn')}
+            title={isSubmitting ? 'جارٍ المتابعة...' : t('disclaimer.acceptBtn')}
             variant="primary"
             size="lg"
+            disabled={isSubmitting}
             onPress={() => { void handleAccept(); }}
             leadingIcon={
               <Ionicons name="checkmark-circle" size={20} color={scheme.primaryContrast} />
