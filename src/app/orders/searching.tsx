@@ -43,6 +43,9 @@ export default function SearchingScreen() {
       .replace(/ى/g, 'ي')
       .replace(/ؤ/g, 'و')
       .replace(/ئ/g, 'ي')
+      .replace(/[ًٌٍَُِّْـ]/g, '')
+      .replace(/[.,،؛:!?؟()\[\]{}"']/g, ' ')
+      .replace(/\\s+/g, ' ')
       .trim();
 
   // [شرح الدالة: calculateMatchScore] يحسب تطابقًا مبدئيًا بين تحليل طلب الزبون وتحليل خدمة مقدم الخدمة.
@@ -55,7 +58,8 @@ export default function SearchingScreen() {
       ...(Array.isArray(requestData.synonyms) ? requestData.synonyms : []),
     ]
       .filter((v) => typeof v === 'string')
-      .map(normalizeMatchText);
+      .map(normalizeMatchText)
+      .filter(Boolean);
 
     const providerTerms = [
       providerData.service,
@@ -63,7 +67,8 @@ export default function SearchingScreen() {
       ...(Array.isArray(providerData.synonyms) ? providerData.synonyms : []),
     ]
       .filter((v) => typeof v === 'string')
-      .map(normalizeMatchText);
+      .map(normalizeMatchText)
+      .filter(Boolean);
 
     const requestRegion = normalizeMatchText(
       typeof requestData.region === 'string' ? requestData.region : '',
@@ -83,10 +88,13 @@ export default function SearchingScreen() {
 
     if (requestTerms.length && providerTerms.length) {
       const matchedTerms = requestTerms.filter((term) => {
-        const requestWords = term.split(/\\s+/).filter((word) => word.length >= 3);
+        const requestWords = term.split(/\s+/).filter((word) => word.length >= 3);
+
         return providerTerms.some((providerTerm) => {
           if (providerTerm.includes(term) || term.includes(providerTerm)) return true;
-          const providerWords = providerTerm.split(/\\s+/).filter((word) => word.length >= 3);
+
+          const providerWords = providerTerm.split(/\s+/).filter((word) => word.length >= 3);
+
           return requestWords.some((word) =>
             providerWords.some((providerWord) =>
               providerWord.includes(word) || word.includes(providerWord),
@@ -94,6 +102,7 @@ export default function SearchingScreen() {
           );
         });
       });
+
       score += Math.min(70, matchedTerms.length * 20);
     }
 
