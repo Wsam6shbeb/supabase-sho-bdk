@@ -129,7 +129,12 @@ export default function CandidatesScreen() {
         })
         .filter((provider): provider is ServiceProvider => provider !== null);
 
-      setCandidates(results);
+      // إذا كانت قاعدة البيانات لم تُرجع صفوفًا بعد، لا نمسح النتائج
+      // الحقيقية التي وصلت من شاشة البحث. هذه النتائج مصدرها provider_profiles
+      // في Supabase وليست بيانات mock.
+      if (results.length > 0) {
+        setCandidates(results);
+      }
     };
 
     void loadCandidates();
