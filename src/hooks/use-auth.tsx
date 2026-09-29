@@ -440,14 +440,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // تسجيل خروج
   // نمسح حالة المستخدم محلياً حتى لا يبقى التطبيق عالقاً إذا تأخر طلب Supabase.
   const logout = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('[Supabase][logout] فشل تسجيل الخروج من Supabase:', error);
-    }
+    // نمسح الحالة المحلية فوراً حتى ينتقل التطبيق لشاشة الدخول
+    // حتى لو كان طلب Supabase بطيئاً أو الشبكة غير متاحة.
+    setState((p) => ({
+      ...p,
+      user: null,
+      token: null,
+      lastError: null,
+      isLoading: false,
+    }));
 
-    // بعد إنهاء جلسة Supabase نمسح حالة المستخدم المحلية أيضاً.
-    setState((p) => ({ ...p, user: null, token: null, lastError: null }));
+    try {
+      // إنهاء الجلسة المحلية المحفوظة على الجهاز/المتصفح.
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+      if (error) {
+        console.error('[Supabase][logout] فشل إنهاء جلسة Supabase المحلية:', error.message);
+      }
+    } catch (error) {
+      console.error('[Supabase][logout] خطأ أثناء تسجيل الخروج:', error);
+    }
 
     return true;
   }, []);
