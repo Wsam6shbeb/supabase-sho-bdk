@@ -33,6 +33,75 @@ export default function SearchingScreen() {
 
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [isSearching, setIsSearching] = useState(true);
+
+  // [شرح الدالة: normalizeMatchText] توحّد بعض اختلافات الكتابة البسيطة حتى لا تمنع المطابقة.
+  const normalizeMatchText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/ى/g, 'ي')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .trim();
+
+  // [شرح الدالة: calculateMatchScore] يحسب تطابقًا مبدئيًا بين تحليل طلب الزبون وتحليل خدمة مقدم الخدمة.
+  const calculateMatchScore = (requestData: any, providerData: any): number => {
+    if (!requestData || !providerData) return 0;
+
+    const requestTerms = [
+      requestData.service,
+      ...(Array.isArray(requestData.skills) ? requestData.skills : []),
+      ...(Array.isArray(requestData.synonyms) ? requestData.synonyms : []),
+    ]
+      .filter((v) => typeof v === 'string')
+      .map(normalizeMatchText);
+
+    const providerTerms = [
+      providerData.service,
+      ...(Array.isArray(providerData.skills) ? providerData.skills : []),
+      ...(Array.isArray(providerData.synonyms) ? providerData.synonyms : []),
+    ]
+      .filter((v) => typeof v === 'string')
+      .map(normalizeMatchText);
+
+    const requestRegion = normalizeMatchText(
+      typeof requestData.region === 'string' ? requestData.region : '',
+    );
+    const providerRegion = normalizeMatchText(
+      typeof providerData.region === 'string' ? providerData.region : '',
+    );
+
+    const requestLocation = normalizeMatchText(
+      typeof requestData.location === 'string' ? requestData.location : '',
+    );
+    const providerLocation = normalizeMatchText(
+      typeof providerData.location === 'string' ? providerData.location : '',
+    );
+
+    let score = 0;
+
+    if (requestTerms.length && providerTerms.length) {
+      const matchedTerms = requestTerms.filter((term) =>
+        providerTerms.some((providerTerm) =>
+          providerTerm.includes(term) || term.includes(providerTerm),
+        ),
+      );
+      score += Math.min(70, matchedTerms.length * 20);
+    }
+
+    if (requestRegion && providerRegion &&
+        (requestRegion.includes(providerRegion) || providerRegion.includes(requestRegion))) {
+      score += 20;
+    }
+
+    if (requestLocation && providerLocation &&
+        (requestLocation.includes(providerLocation) || providerLocation.includes(requestLocation))) {
+      score += 10;
+    }
+
+    return Math.min(100, score);
+  };
   useEffect(() => {
     const description = params.description as string;
     const isUrgent = params.is_urgent === 'true';
@@ -52,7 +121,55 @@ export default function SearchingScreen() {
 
       console.log('✅ Providers found:', providersData);
 
-      const results: ServiceProvider[] = (providersData ?? []).map((p: any, index: number) => ({
+      // نقرأ التحليل المنظم للطلب الحالي بدل مقارنة النصوص الخام.
+      let requestStructuredData: any = null;
+      if (requestId) {
+        const { data: requestData, error: requestError } = await supabase
+          .from('service_requests')
+          .select('structured_data')
+          .eq('id', requestId)
+          .maybeSingle();
+
+        if (requestError) {
+          console.error('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
+        } else {
+          requestStructuredData = requestData?.structured_data ?? null;
+        }
+      }
+
+      // نقرأ الخدمات المحللة لمقدمي الخدمة المتاحين.
+      const providerIds = (providersData ?? []).map((p: any) => p.user_id);
+      const { data: servicesData, error: servicesError } = providerIds.length
+        ? await supabase
+            .from('provider_services')
+            .select('provider_id, description, structured_data')
+            .in('provider_id', providerIds)
+            .eq('is_active', true)
+        : { data: [], error: null };
+
+      if (servicesError) {
+        console.error('[Supabase][searching] فشل قراءة خدمات مقدمي الخدمة:', servicesError.message);
+      }
+
+      const servicesByProvider = new Map<string, any[]>();
+      for (const service of servicesData ?? []) {
+        const list = servicesByProvider.get(service.provider_id) ?? [];
+        list.push(service);
+        servicesByProvider.set(service.provider_id, list);
+      }
+
+      const scoredProviders = (providersData ?? []).map((p: any) => {
+        const services = servicesByProvider.get(p.user_id) ?? [];
+        const bestScore = services.reduce(
+          (best, service) => Math.max(best, calculateMatchScore(requestStructuredData, service.structured_data)),
+          0,
+        );
+        return { provider: p, matchScore: bestScore };
+      });
+
+      scoredProviders.sort((a, b) => b.matchScore - a.matchScore);
+
+      const results: ServiceProvider[] = scoredProviders.map(({ provider: p, matchScore }, index) => ({
         id: p.user_id,
         name: p.users?.full_name ?? 'مقدم خدمة',
         avatar_url: p.users?.avatar_url ?? null,
@@ -68,6 +185,7 @@ export default function SearchingScreen() {
         verification_status: 'not_verified',
         card_color: '#3B82F6',
         service_request_id: requestId || undefined,
+        match_score: matchScore,
       }));
 
       setProviders(results);
@@ -82,7 +200,7 @@ export default function SearchingScreen() {
           request_id: requestId,
           provider_id: p.id,
           rank: index + 1,
-          match_score: null,
+          match_score: (p as any).match_score ?? null,
         }));
         const { error: candidatesError } = await supabase
           .from('candidates')
