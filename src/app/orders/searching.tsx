@@ -82,11 +82,18 @@ export default function SearchingScreen() {
     let score = 0;
 
     if (requestTerms.length && providerTerms.length) {
-      const matchedTerms = requestTerms.filter((term) =>
-        providerTerms.some((providerTerm) =>
-          providerTerm.includes(term) || term.includes(providerTerm),
-        ),
-      );
+      const matchedTerms = requestTerms.filter((term) => {
+        const requestWords = term.split(/\\s+/).filter((word) => word.length >= 3);
+        return providerTerms.some((providerTerm) => {
+          if (providerTerm.includes(term) || term.includes(providerTerm)) return true;
+          const providerWords = providerTerm.split(/\\s+/).filter((word) => word.length >= 3);
+          return requestWords.some((word) =>
+            providerWords.some((providerWord) =>
+              providerWord.includes(word) || word.includes(providerWord),
+            ),
+          );
+        });
+      });
       score += Math.min(70, matchedTerms.length * 20);
     }
 
@@ -160,16 +167,27 @@ export default function SearchingScreen() {
 
       const scoredProviders = (providersData ?? []).map((p: any) => {
         const services = servicesByProvider.get(p.user_id) ?? [];
-        const bestScore = services.reduce(
-          (best, service) => Math.max(best, calculateMatchScore(requestStructuredData, service.structured_data)),
-          0,
-        );
+        const bestScore = services.reduce((best, service) => {
+          // الخدمات القديمة قد لا تحتوي structured_data بعد؛ نستخدم الوصف الأصلي مؤقتًا.
+          const providerData = service.structured_data ?? {
+            service: service.description,
+            skills: [],
+            synonyms: [],
+            region: null,
+            location: null,
+          };
+          return Math.max(best, calculateMatchScore(requestStructuredData, providerData));
+        }, 0);
         return { provider: p, matchScore: bestScore };
       });
 
       scoredProviders.sort((a, b) => b.matchScore - a.matchScore);
 
-      const results: ServiceProvider[] = scoredProviders.map(({ provider: p, matchScore }, index) => ({
+      // لا نعرض كل مقدمي الخدمة المتاحين كأنهم مطابقون.
+      // نعرض فقط من حصل على درجة مطابقة، مع إبقاء الترتيب حسب الدرجة.
+      const matchedProviders = scoredProviders.filter(({ matchScore }) => matchScore >= 20);
+
+      const results: ServiceProvider[] = matchedProviders.map(({ provider: p, matchScore }, index) => ({
         id: p.user_id,
         name: p.users?.full_name ?? 'مقدم خدمة',
         avatar_url: p.users?.avatar_url ?? null,
