@@ -44,8 +44,9 @@ export default function ProfileScreen() {
         text: 'خروج',
         style: 'destructive',
         onPress: async () => {
+          // logout يمسح حالة المصادقة فوراً، وAppEntry يتولى إعادة التوجيه
+          // إلى شاشة تسجيل الدخول بعد تغير حالة المستخدم.
           await logout();
-          router.replace('/auth/login');
         },
       },
     ]);
