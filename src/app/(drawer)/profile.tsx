@@ -256,6 +256,21 @@ export default function ProfileScreen() {
               </View>
             </View>
 
+            {/* عرض الخدمات/المهارات التي أضافها مقدم الخدمة */}
+            <View style={styles.skillsList}>
+              {myProviderProfile?.skills.map((skill) => (
+                <View
+                  key={skill.id}
+                  style={[styles.skillChip, { backgroundColor: scheme.primary + '10' }]}
+                >
+                  <Ionicons name="checkmark-circle" size={17} color={scheme.primary} />
+                  <Text style={[styles.skillText, { color: scheme.text }]} numberOfLines={2}>
+                    {skill.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
             {welcomeBonusReceived && (
               <View
                 style={[styles.bonusBadge, { backgroundColor: `${scheme.warning}15` }]}
@@ -520,6 +535,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.three,
     marginBottom: Spacing.three,
+  },
+  skillsList: {
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  skillChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radii.md,
+  },
+  skillText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   statBox: {
     flex: 1,
