@@ -272,9 +272,9 @@ async function createServiceRequestInSupabase(params: {
   regionId: string;
 }): Promise<{ id: string }> {
   try {
-    // نحلل النص قبل الحفظ، لكن فشل الذكاء الاصطناعي لا يمنع إنشاء الطلب.
-    const analysis = await analyzeServiceRequest(params.description);
-
+    // نحفظ الطلب أولاً حتى لا نعلّق المستخدم بانتظار الذكاء الاصطناعي.
+    // تحليل AI عملية إضافية وقد تستغرق عدة ثوانٍ أو تفشل مؤقتًا، لكنها لا يجب
+    // أن تمنع الانتقال إلى شاشة البحث أو تجعل المستخدم يضغط "موافق" عدة مرات.
     const { data, error } = await supabase
       .from('service_requests')
       .insert({
@@ -283,10 +283,10 @@ async function createServiceRequestInSupabase(params: {
         urgency: params.isUrgent ? 'urgent' : 'normal',
         region: params.regionId || null,
         state: 'submitted',
-        structured_data: analysis?.structured_data ?? null,
-        ai_confidence: analysis?.ai_confidence ?? null,
-        needs_clarification: analysis?.needs_clarification ?? false,
-        clarification_question: analysis?.clarification_question ?? null,
+        structured_data: null,
+        ai_confidence: null,
+        needs_clarification: false,
+        clarification_question: null,
       })
       .select('id')
       .single();
@@ -297,6 +297,31 @@ async function createServiceRequestInSupabase(params: {
     }
 
     console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
+
+    // نبدأ تحليل AI بعد إنشاء الطلب بدون جعل المستخدم ينتظر نتيجته.
+    void analyzeServiceRequest(params.description).then(async (analysis) => {
+      if (!analysis) return;
+
+      const { error: updateError } = await supabase
+        .from('service_requests')
+        .update({
+          structured_data: analysis.structured_data,
+          ai_confidence: analysis.ai_confidence,
+          needs_clarification: analysis.needs_clarification,
+          clarification_question: analysis.clarification_question,
+        })
+        .eq('id', data.id)
+        .eq('requester_id', params.requesterId);
+
+      if (updateError) {
+        console.error('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
+      } else {
+        console.log('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي:', data.id);
+      }
+    }).catch((analysisError) => {
+      console.error('[Supabase][startOrder] خطأ غير متوقع في تحليل طلب الخدمة:', analysisError);
+    });
+
     return data;
   } catch (err) {
     console.error('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
