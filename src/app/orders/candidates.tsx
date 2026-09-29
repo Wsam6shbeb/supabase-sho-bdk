@@ -94,22 +94,96 @@ export default function CandidatesScreen() {
         return;
       }
 
+      // نجلب خدمات مقدمي الخدمة الموجودين في candidates حتى لا نعرض
+      // مقدم خدمة لا يملك خدمة فعلية، وحتى نملأ المهارات من structured_data.
+      const candidateProviderIds = (data ?? [])
+        .map((candidate: any) => candidate.provider_id)
+        .filter((providerId: unknown): providerId is string => typeof providerId === 'string');
+
+      const { data: servicesData, error: servicesError } = candidateProviderIds.length
+        ? await supabase
+            .from('provider_services')
+            .select('provider_id, description, structured_data, is_active, created_at')
+            .in('provider_id', candidateProviderIds)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+        : { data: [], error: null };
+
+      if (servicesError) {
+        console.error('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError.message);
+      }
+
+      const servicesByProvider = new Map<string, any[]>();
+
+      for (const service of servicesData ?? []) {
+        const existing = servicesByProvider.get(service.provider_id) ?? [];
+        existing.push(service);
+        servicesByProvider.set(service.provider_id, existing);
+      }
+
       const results: ServiceProvider[] = (data ?? [])
         .map((candidate: any) => {
           const profile = candidate.provider_profiles;
           const user = profile?.users;
+          const providerId = profile?.user_id;
 
-          if (!profile?.user_id || !user) return null;
+          if (!providerId || !user) return null;
+
+          const providerServices = servicesByProvider.get(providerId) ?? [];
+
+          // لا نعرض مرشحاً لا يملك خدمة نشطة؛ وجود provider_profile وحده
+          // لا يعني أن لديه خدمة يمكنه تقديمها.
+          if (providerServices.length === 0) return null;
+
+          const skillSet = new Set<string>();
+
+          for (const service of providerServices) {
+            const structuredData = service.structured_data;
+
+            if (
+              structuredData &&
+              typeof structuredData === 'object' &&
+              !Array.isArray(structuredData)
+            ) {
+              const skills = (structuredData as { skills?: unknown }).skills;
+
+              if (Array.isArray(skills)) {
+                for (const skill of skills) {
+                  if (typeof skill === 'string' && skill.trim()) {
+                    skillSet.add(skill.trim());
+                  }
+                }
+              }
+
+              const serviceName = (structuredData as { service?: unknown }).service;
+
+              if (
+                skillSet.size === 0 &&
+                typeof serviceName === 'string' &&
+                serviceName.trim()
+              ) {
+                skillSet.add(serviceName.trim());
+              }
+            }
+
+            if (skillSet.size === 0 && typeof service.description === 'string') {
+              const description = service.description.trim();
+
+              if (description) {
+                skillSet.add(description);
+              }
+            }
+          }
 
           return {
-            id: profile.user_id,
+            id: providerId,
             name: user.full_name ?? 'مقدم خدمة',
             avatar_url: user.avatar_url ?? null,
             region: {
               id: user.region ?? '',
               name_ar: user.region ?? '',
             },
-            skills: [],
+            skills: Array.from(skillSet),
             rating: Number(profile.rating_avg) || 0,
             total_orders: Number(profile.completed_services_count) || 0,
             completion_rate: 0,
