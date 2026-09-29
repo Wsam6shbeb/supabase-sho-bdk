@@ -222,6 +222,7 @@ export default function CandidatesScreen() {
               region: databaseProvider.region,
               rating: databaseProvider.rating,
               total_orders: databaseProvider.total_orders,
+              skills: databaseProvider.skills,
               verification_status: databaseProvider.verification_status,
               service_request_id: requestId,
             };
