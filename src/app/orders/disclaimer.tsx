@@ -19,7 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: DisclaimerScreen] يعرض التنبيه أو الإقرار المطلوب قبل متابعة إنشاء الطلب.
@@ -39,23 +39,31 @@ export default function DisclaimerScreen() {
     const description = typeof params.description === 'string' ? params.description.trim() : '';
     if (description) {
       const isUrgent = params.is_urgent === 'true';
-      const order = await startOrder({
-        description,
-        is_urgent: isUrgent,
-        region_id: typeof params.region_id === 'string'
-          ? params.region_id
-          : (user?.region.id ?? 'r-damascus'),
-      });
+      try {
+        const order = await startOrder({
+          description,
+          is_urgent: isUrgent,
+          region_id: typeof params.region_id === 'string'
+            ? params.region_id
+            : (user?.region.id ?? 'r-damascus'),
+        });
 
-      router.replace({
+        router.replace({
         pathname: '/orders/searching',
         params: {
           description: order.description,
           is_urgent: order.is_urgent.toString(),
           request_id: order.id,
         },
-      });
-      return;
+        });
+        return;
+      } catch (err) {
+        Alert.alert(
+          'تعذر إنشاء الطلب',
+          err instanceof Error ? err.message : 'حدث خطأ أثناء إنشاء الطلب. حاول مرة أخرى.',
+        );
+        return;
+      }
     }
 
     router.back();
