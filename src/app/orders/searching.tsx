@@ -128,19 +128,31 @@ export default function SearchingScreen() {
 
       console.log('✅ Providers found:', providersData);
 
-      // نقرأ التحليل المنظم للطلب الحالي بدل مقارنة النصوص الخام.
+      // ننتظر التحليل المنظم للطلب لفترة قصيرة لأن تحليل AI يعمل في الخلفية.
+      // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
       let requestStructuredData: any = null;
       if (requestId) {
-        const { data: requestData, error: requestError } = await supabase
-          .from('service_requests')
-          .select('structured_data')
-          .eq('id', requestId)
-          .maybeSingle();
+        for (let attempt = 0; attempt < 5 && !requestStructuredData; attempt += 1) {
+          const { data: requestData, error: requestError } = await supabase
+            .from('service_requests')
+            .select('structured_data')
+            .eq('id', requestId)
+            .maybeSingle();
 
-        if (requestError) {
-          console.error('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
-        } else {
+          if (requestError) {
+            console.error('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
+            break;
+          }
+
           requestStructuredData = requestData?.structured_data ?? null;
+
+          if (!requestStructuredData && attempt < 4) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        }
+
+        if (!requestStructuredData) {
+          console.warn('[Supabase][searching] تحليل طلب الخدمة لم يكتمل بعد، سيتم استخدام النص الخام كاحتياط.');
         }
       }
 
