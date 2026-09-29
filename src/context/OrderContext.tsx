@@ -227,6 +227,43 @@ const WELCOME_TEXT =
 // تجربة المستخدم بالواجهة.
 
 // [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة (service_requests) بـ Supabase ويرجع الـ UUID الحقيقي.
+async function analyzeServiceRequest(requestText: string): Promise<{
+  structured_data: Record<string, unknown>;
+  ai_confidence: number | null;
+  needs_clarification: boolean;
+  clarification_question: string | null;
+} | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-service-request', {
+      body: { request_text: requestText },
+    });
+
+    if (error) {
+      console.error('[Supabase][startOrder] فشل تحليل طلب الخدمة بالذكاء الاصطناعي:', error.message);
+      return null;
+    }
+
+    if (!data?.structured_data) {
+      console.error('[Supabase][startOrder] تحليل طلب الخدمة لم يُرجع structured_data.');
+      return null;
+    }
+
+    return {
+      structured_data: data.structured_data,
+      ai_confidence: typeof data.ai_confidence === 'number' ? data.ai_confidence : null,
+      needs_clarification: data.needs_clarification === true,
+      clarification_question:
+        typeof data.clarification_question === 'string' && data.clarification_question.trim()
+          ? data.clarification_question.trim()
+          : null,
+    };
+  } catch (err) {
+    console.error('[Supabase][startOrder] خطأ أثناء تحليل طلب الخدمة بالذكاء الاصطناعي:', err);
+    return null;
+  }
+}
+
+// [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة بـ Supabase مع الاحتفاظ بالنص الأصلي وتحليل الذكاء الاصطناعي.
 async function createServiceRequestInSupabase(params: {
   requesterId: string;
   description: string;
@@ -234,6 +271,9 @@ async function createServiceRequestInSupabase(params: {
   regionId: string;
 }): Promise<{ id: string }> {
   try {
+    // نحلل النص قبل الحفظ، لكن فشل الذكاء الاصطناعي لا يمنع إنشاء الطلب.
+    const analysis = await analyzeServiceRequest(params.description);
+
     const { data, error } = await supabase
       .from('service_requests')
       .insert({
@@ -242,6 +282,10 @@ async function createServiceRequestInSupabase(params: {
         urgency: params.isUrgent ? 'urgent' : 'normal',
         region: params.regionId || null,
         state: 'submitted',
+        structured_data: analysis?.structured_data ?? null,
+        ai_confidence: analysis?.ai_confidence ?? null,
+        needs_clarification: analysis?.needs_clarification ?? false,
+        clarification_question: analysis?.clarification_question ?? null,
       })
       .select('id')
       .single();
