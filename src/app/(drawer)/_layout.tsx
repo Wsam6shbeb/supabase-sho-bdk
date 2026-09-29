@@ -10,7 +10,7 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer } from 'expo-router/drawer';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 // زر الرجوع الموحد داخل صفحات الـ Drawer.
 function BackButton() {
@@ -44,21 +44,28 @@ function DrawerContent(props: any) {
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert(
-      'تسجيل الخروج',
-      'هل تريد تسجيل الخروج من الحساب؟',
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        {
-          text: 'تسجيل الخروج',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/auth/login');
-          },
+    // على الويب نستخدم نافذة تأكيد المتصفح لأن Alert.alert لا يظهر هناك.
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('هل أنت متأكد من تسجيل الخروج؟');
+      if (confirmed) {
+        void logout();
+      }
+      return;
+    }
+
+    // على الموبايل نستخدم نافذة التأكيد الأصلية الخاصة بـ React Native.
+    Alert.alert('تسجيل الخروج', 'هل أنت متأكد؟', [
+      { text: 'إلغاء', style: 'cancel' },
+      {
+        text: 'خروج',
+        style: 'destructive',
+        onPress: async () => {
+          // logout يمسح حالة المصادقة فوراً، وAppEntry يتولى إعادة التوجيه
+          // إلى شاشة تسجيل الدخول بعد تغير حالة المستخدم.
+          await logout();
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const items = [
