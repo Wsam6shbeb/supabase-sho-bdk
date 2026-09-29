@@ -52,8 +52,9 @@ function DrawerContent(props: any) {
         {
           text: 'تسجيل الخروج',
           style: 'destructive',
-          onPress: () => {
-            void logout();
+          onPress: async () => {
+            await logout();
+            router.replace('/auth/login');
           },
         },
       ],
