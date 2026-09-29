@@ -157,9 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         if (data.session?.user) {
+          const user = await loadUserProfile(data.session.user);
           setState((p) => ({
             ...p,
-            user: await loadUserProfile(data.session!.user),
+            user,
             token: data.session!.access_token,
             isInitialized: true,
             lastError: null,
@@ -176,13 +177,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       if (session?.user) {
-        setState((p) => ({
-          ...p,
-          user: await loadUserProfile(session.user),
-          token: session.access_token,
-          isInitialized: true,
-          lastError: null,
-        }));
+        void loadUserProfile(session.user).then((user) => {
+          if (cancelled) return;
+          setState((p) => ({
+            ...p,
+            user,
+            token: session.access_token,
+            isInitialized: true,
+            lastError: null,
+          }));
+        });
         void ensureUserProfile(session.user);
       } else {
         setState((p) => ({
