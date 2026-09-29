@@ -350,6 +350,61 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   // Self Onboarding
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
 
+  // يجلب ملف مقدم الخدمة الحقيقي وخدماته من Supabase عند تسجيل الدخول.
+  const loadMyProviderProfile = useCallback(async (userId: string) => {
+    try {
+      const [profileResult, servicesResult] = await Promise.all([
+        supabase
+          .from('provider_profiles')
+          .select('user_id, bio, is_available')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase
+          .from('provider_services')
+          .select('id, description, experience_years')
+          .eq('provider_id', userId)
+          .order('created_at', { ascending: true }),
+      ]);
+
+      if (profileResult.error) {
+        console.error('[Supabase][providerProfile] فشل قراءة ملف مقدم الخدمة:', profileResult.error.message);
+        return;
+      }
+
+      if (servicesResult.error) {
+        console.error('[Supabase][providerServices] فشل قراءة خدمات مقدم الخدمة:', servicesResult.error.message);
+        return;
+      }
+
+      if (!profileResult.data && (servicesResult.data?.length ?? 0) === 0) {
+        setMyProviderProfile(null);
+        return;
+      }
+
+      setMyProviderProfile({
+        skills: (servicesResult.data ?? []).map((service) => ({
+          id: service.id,
+          name: service.description,
+          years_of_experience: service.experience_years,
+          description: service.description,
+        })),
+        bio: profileResult.data?.bio ?? undefined,
+        is_available: profileResult.data?.is_available ?? true,
+        welcome_bonus_received: false,
+      });
+    } catch (err) {
+      console.error('[Supabase][providerProfile] خطأ غير متوقع أثناء تحميل ملف مقدم الخدمة:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setMyProviderProfile(null);
+      return;
+    }
+    void loadMyProviderProfile(user.id);
+  }, [user?.id, loadMyProviderProfile]);
+
   // Wallet
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -1072,14 +1127,49 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
-    setMyProviderProfile((prev) => (prev ? { ...prev, ...patch } : null));
-  }, []);
+    setMyProviderProfile((prev) => {
+      if (!prev) return null;
+
+      if (user?.id && (patch.bio !== undefined || patch.is_available !== undefined)) {
+        void supabase
+          .from('provider_profiles')
+          .update({
+            ...(patch.bio !== undefined ? { bio: patch.bio ?? null } : {}),
+            ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
+          })
+          .eq('user_id', user.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error.message);
+            }
+          });
+      }
+
+      return { ...prev, ...patch };
+    });
+  }, [user?.id]);
 
   const toggleAvailability = useCallback(() => {
-    setMyProviderProfile((prev) =>
-      prev ? { ...prev, is_available: !prev.is_available } : prev,
-    );
-  }, []);
+    setMyProviderProfile((prev) => {
+      if (!prev) return null;
+
+      const nextAvailable = !prev.is_available;
+
+      if (user?.id) {
+        void supabase
+          .from('provider_profiles')
+          .update({ is_available: nextAvailable })
+          .eq('user_id', user.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error('[Supabase][providerProfile] فشل حفظ حالة التوفر:', error.message);
+            }
+          });
+      }
+
+      return { ...prev, is_available: nextAvailable };
+    });
+  }, [user?.id]);
 
   // ═══════════════════════════════════════════════════════════
   // Helpers
