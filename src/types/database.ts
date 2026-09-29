@@ -493,6 +493,7 @@ export type Database = {
           price_min: number
           provider_id: string
           skill_id: string | null
+          structured_data: Json | null
           updated_at: string
         }
         Insert: {
@@ -505,6 +506,7 @@ export type Database = {
           price_min?: number
           provider_id: string
           skill_id?: string | null
+          structured_data?: Json | null
           updated_at?: string
         }
         Update: {
@@ -517,6 +519,7 @@ export type Database = {
           price_min?: number
           provider_id?: string
           skill_id?: string | null
+          structured_data?: Json | null
           updated_at?: string
         }
         Relationships: [
