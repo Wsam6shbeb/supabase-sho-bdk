@@ -16,6 +16,7 @@ import { BUSINESS_CONFIG } from '@/config/business';
 import { estimateCommissionFromChat, extractPriceFromChat } from '@/domain/commission';
 import { canOpenChat, createNegotiationThread, createOrder, lockUnselectedThreads, reopenNegotiations, resetPendingAgreement } from '@/domain/orderWorkflow';
 import type { AppNotification } from '@/types/notifications';
+import type { Json } from '@/types/database';
 import type {
     ChatMessage,
     ChatThread,
@@ -228,7 +229,7 @@ const WELCOME_TEXT =
 
 // [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة (service_requests) بـ Supabase ويرجع الـ UUID الحقيقي.
 async function analyzeServiceRequest(requestText: string): Promise<{
-  structured_data: Record<string, unknown>;
+  structured_data: Json;
   ai_confidence: number | null;
   needs_clarification: boolean;
   clarification_question: string | null;
