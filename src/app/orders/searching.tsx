@@ -84,16 +84,15 @@ export default function SearchingScreen() {
           rank: index + 1,
           match_score: null,
         }));
-        supabase
+        const { error: candidatesError } = await supabase
           .from('candidates')
-          .upsert(rows, { onConflict: 'request_id,provider_id' })
-          .then(({ error: candidatesError }) => {
-            if (candidatesError) {
-              console.error('[Supabase][searching] فشل حفظ المرشحين بجدول candidates:', candidatesError.message);
-              return;
-            }
-            console.log('[Supabase][searching] تم حفظ المرشحين بجدول candidates:', rows.length);
-          });
+          .upsert(rows, { onConflict: 'request_id,provider_id' });
+
+        if (candidatesError) {
+          console.error('[Supabase][searching] فشل حفظ المرشحين بجدول candidates:', candidatesError.message);
+        } else {
+          console.log('[Supabase][searching] تم حفظ المرشحين بجدول candidates:', rows.length);
+        }
       } else if (!requestId) {
         console.error('[Supabase][searching] لا يوجد request_id حقيقي، تم تجاوز حفظ المرشحين بجدول candidates.');
       }
