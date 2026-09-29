@@ -1,8 +1,6 @@
 // ===============================================================
-// شرح الملف: هذا ملف كود (ملف تخطيط وتنظيم المسارات).
-// الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: BackButton، handleBack، DrawerContent، handleLogout، DrawerLayout.
-// ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
+// شرح الملف: هذا ملف تخطيط وتنظيم المسارات.
+// الهدف: تعريف القائمة الجانبية ومساراتها المشتركة.
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights } from '@/constants/theme';
@@ -11,22 +9,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer } from 'expo-router/drawer';
-import {
-  DrawerContentScrollView,
-  DrawerItem,
-  DrawerItemList,
-  type DrawerContentComponentProps,
-} from '@react-navigation/drawer';
+import { DrawerContentScrollView, DrawerItem, DrawerItemList } from 'expo-router/drawer';
 import { router } from 'expo-router';
 import { Alert, Pressable } from 'react-native';
 
-// ⭐ زر رجوع
-// [شرح الدالة: BackButton] يعرض زر الرجوع الموحد داخل صفحات الـ Drawer.
+// زر الرجوع الموحد داخل صفحات الـ Drawer.
 function BackButton() {
   const theme = useTheme();
   const scheme = Colors[theme];
 
-  // [شرح الدالة: handleBack] ينفذ الرجوع إلى الصفحة السابقة أو المسار المناسب.
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
@@ -46,14 +37,13 @@ function BackButton() {
   );
 }
 
-// [شرح الدالة: DrawerContent] يبني محتوى القائمة الجانبية ويضيف زر تسجيل الخروج في أسفلها.
-function DrawerContent(props: DrawerContentComponentProps) {
+// محتوى القائمة الجانبية مع زر تسجيل الخروج.
+function DrawerContent(props: any) {
   const theme = useTheme();
   const scheme = Colors[theme];
   const { logout } = useAuth();
 
-  // [شرح الدالة: handleLogout] يسجل خروج المستخدم ثم ينتقل تلقائياً لشاشة تسجيل الدخول عبر AuthProvider.
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       'تسجيل الخروج',
       'هل تريد تسجيل الخروج من الحساب؟',
@@ -79,7 +69,7 @@ function DrawerContent(props: DrawerContentComponentProps) {
 
       <DrawerItem
         label="تسجيل الخروج"
-        icon={({ color, size }) => (
+        icon={({ size }) => (
           <Ionicons name="log-out-outline" size={size} color={scheme.danger} />
         )}
         labelStyle={{
@@ -101,7 +91,6 @@ function DrawerContent(props: DrawerContentComponentProps) {
   );
 }
 
-// [شرح الدالة: DrawerLayout] يبني قائمة الـ Drawer ومساراتها المشتركة.
 export default function DrawerLayout() {
   const theme = useTheme();
   const scheme = Colors[theme];
