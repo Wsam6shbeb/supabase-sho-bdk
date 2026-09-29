@@ -9,9 +9,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer } from 'expo-router/drawer';
-import { DrawerContentScrollView, DrawerItem, DrawerItemList } from 'expo-router/drawer';
 import { router } from 'expo-router';
-import { Alert, Pressable } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 // زر الرجوع الموحد داخل صفحات الـ Drawer.
 function BackButton() {
@@ -37,7 +36,8 @@ function BackButton() {
   );
 }
 
-// محتوى القائمة الجانبية مع زر تسجيل الخروج.
+// محتوى القائمة الجانبية.
+// لا نستخدم @react-navigation/* هنا لأن Expo Router SDK 57 يمنع هذه الاستيرادات في كود التطبيق.
 function DrawerContent(props: any) {
   const theme = useTheme();
   const scheme = Colors[theme];
@@ -60,34 +60,97 @@ function DrawerContent(props: any) {
     );
   };
 
-  return (
-    <DrawerContentScrollView
-      {...props}
-      contentContainerStyle={{ flexGrow: 1, backgroundColor: scheme.backgroundElevated }}
-    >
-      <DrawerItemList {...props} />
+  const items = [
+    { name: '(tabs)', label: t('home.appName'), icon: 'home-outline' as const },
+    { name: 'profile', label: t('tabs.profile'), icon: 'person-outline' as const },
+    { name: 'notifications', label: 'الإشعارات', icon: 'notifications-outline' as const },
+    { name: 'settings', label: 'الإعدادات', icon: 'settings-outline' as const },
+    { name: 'about', label: 'عن التطبيق', icon: 'information-circle-outline' as const },
+    { name: 'legal', label: 'الشروط والأحكام', icon: 'document-text-outline' as const },
+    { name: 'blocked-list', label: t('blocking.blockedListTitle'), icon: 'ban-outline' as const },
+  ];
 
-      <DrawerItem
-        label="تسجيل الخروج"
-        icon={({ size }) => (
-          <Ionicons name="log-out-outline" size={size} color={scheme.danger} />
-        )}
-        labelStyle={{
-          color: scheme.danger,
-          fontSize: FontSizes.base,
-          fontWeight: FontWeights.medium,
-          writingDirection: 'rtl',
-          textAlign: 'right',
-        }}
-        style={{
-          borderRadius: 12,
-          paddingHorizontal: 8,
-          marginHorizontal: 8,
-          marginTop: 'auto',
-        }}
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        backgroundColor: scheme.backgroundElevated,
+        paddingTop: 24,
+        paddingBottom: 16,
+      }}
+    >
+      <View style={{ gap: 6 }}>
+        {items.map((item) => {
+          const isActive = props.state?.routeNames?.[props.state.index] === item.name;
+
+          return (
+            <Pressable
+              key={item.name}
+              onPress={() => {
+                props.navigation.navigate(item.name);
+                props.navigation.closeDrawer();
+              }}
+              style={{
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                borderRadius: 12,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                marginHorizontal: 8,
+                backgroundColor: isActive ? `${scheme.primary}15` : 'transparent',
+              }}
+            >
+              <Ionicons
+                name={item.icon}
+                size={22}
+                color={isActive ? scheme.primary : scheme.textSecondary}
+              />
+              <Text
+                style={{
+                  flex: 1,
+                  marginEnd: 12,
+                  color: isActive ? scheme.primary : scheme.textSecondary,
+                  fontSize: FontSizes.base,
+                  fontWeight: FontWeights.medium,
+                  writingDirection: 'rtl',
+                  textAlign: 'right',
+                }}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Pressable
         onPress={handleLogout}
-      />
-    </DrawerContentScrollView>
+        style={{
+          marginTop: 'auto',
+          marginHorizontal: 8,
+          borderRadius: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+        }}
+      >
+        <Ionicons name="log-out-outline" size={22} color={scheme.danger} />
+        <Text
+          style={{
+            flex: 1,
+            marginEnd: 12,
+            color: scheme.danger,
+            fontSize: FontSizes.base,
+            fontWeight: FontWeights.medium,
+            writingDirection: 'rtl',
+            textAlign: 'right',
+          }}
+        >
+          تسجيل الخروج
+        </Text>
+      </Pressable>
+    </ScrollView>
   );
 }
 
@@ -114,96 +177,16 @@ export default function DrawerLayout() {
           backgroundColor: scheme.backgroundElevated,
           width: 280,
         },
-        drawerActiveTintColor: scheme.primary,
-        drawerInactiveTintColor: scheme.textSecondary,
-        drawerActiveBackgroundColor: `${scheme.primary}15`,
-        drawerLabelStyle: {
-          fontSize: FontSizes.base,
-          fontWeight: FontWeights.medium,
-          writingDirection: 'rtl',
-          textAlign: 'right',
-          marginStart: 0,
-          marginEnd: 0,
-        },
-        drawerItemStyle: {
-          borderRadius: 12,
-          paddingHorizontal: 8,
-          marginHorizontal: 8,
-        },
         drawerPosition: 'right',
       }}
     >
-      <Drawer.Screen
-        name="(tabs)"
-        options={{
-          title: t('home.appName'),
-          drawerLabel: t('home.appName'),
-          headerLeft: () => false,
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="profile"
-        options={{
-          title: t('tabs.profile'),
-          drawerLabel: t('tabs.profile'),
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="notifications"
-        options={{
-          title: 'الإشعارات',
-          drawerLabel: 'الإشعارات',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="settings"
-        options={{
-          title: 'الإعدادات',
-          drawerLabel: 'الإعدادات',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="about"
-        options={{
-          title: 'عن التطبيق',
-          drawerLabel: 'عن التطبيق',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="information-circle-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="legal"
-        options={{
-          title: 'الشروط والأحكام',
-          drawerLabel: 'الشروط والأحكام',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="blocked-list"
-        options={{
-          title: t('blocking.blockedListTitle'),
-          drawerLabel: t('blocking.blockedListTitle'),
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="ban-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      <Drawer.Screen name="(tabs)" options={{ title: t('home.appName'), drawerLabel: t('home.appName'), headerLeft: () => false }} />
+      <Drawer.Screen name="profile" options={{ title: t('tabs.profile'), drawerLabel: t('tabs.profile') }} />
+      <Drawer.Screen name="notifications" options={{ title: 'الإشعارات', drawerLabel: 'الإشعارات' }} />
+      <Drawer.Screen name="settings" options={{ title: 'الإعدادات', drawerLabel: 'الإعدادات' }} />
+      <Drawer.Screen name="about" options={{ title: 'عن التطبيق', drawerLabel: 'عن التطبيق' }} />
+      <Drawer.Screen name="legal" options={{ title: 'الشروط والأحكام', drawerLabel: 'الشروط والأحكام' }} />
+      <Drawer.Screen name="blocked-list" options={{ title: t('blocking.blockedListTitle'), drawerLabel: t('blocking.blockedListTitle') }} />
     </Drawer>
   );
 }
