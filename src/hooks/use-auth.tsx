@@ -89,6 +89,38 @@ function mapError(err: any): ApiError {
   };
 }
 
+// يجلب بيانات الحساب الحقيقية من public.users بعد نجاح تسجيل الدخول.
+// هذا يجعل جدول users هو مصدر بيانات الحساب، بينما تبقى auth.users مسؤولاً عن الجلسة.
+async function loadUserProfile(sbUser: any): Promise<User> {
+  const fallback = mapSupabaseUser(sbUser);
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, full_name, phone, region, avatar_url, is_provider, verification_status, created_at')
+      .eq('id', sbUser.id)
+      .maybeSingle();
+
+    if (error || !data) return fallback;
+
+    return {
+      ...fallback,
+      id: data.id,
+      name: data.full_name || fallback.name,
+      phone: data.phone || fallback.phone,
+      region: data.region
+        ? { id: data.region, name_ar: data.region }
+        : fallback.region,
+      avatar_url: data.avatar_url ?? fallback.avatar_url,
+      has_provider_profile: data.is_provider,
+      verification_status: data.verification_status as VerificationStatus,
+      created_at: data.created_at,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 // يضمن وجود صف بجدول public.users لهذا المستخدم (لا يلمس صفاً موجوداً مسبقاً).
 // ضروري لأنو trigger إنشاء المحفظة (trg_create_wallet_for_new_user) مرتبط
 // بـ INSERT على public.users، وليس على auth.users مباشرة.
@@ -127,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session?.user) {
           setState((p) => ({
             ...p,
-            user: mapSupabaseUser(data.session!.user),
+            user: await loadUserProfile(data.session!.user),
             token: data.session!.access_token,
             isInitialized: true,
             lastError: null,
@@ -146,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         setState((p) => ({
           ...p,
-          user: mapSupabaseUser(session.user),
+          user: await loadUserProfile(session.user),
           token: session.access_token,
           isInitialized: true,
           lastError: null,
@@ -188,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
-    const user = mapSupabaseUser(data.user);
+    const user = await loadUserProfile(data.user);
     setState((p) => ({
       ...p,
       user,
@@ -307,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const user = mapSupabaseUser(sessionData.session.user);
+      const user = await loadUserProfile(sessionData.session.user);
       void ensureUserProfile(sessionData.session.user);
 
       setState((p) => ({
