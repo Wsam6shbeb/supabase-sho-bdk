@@ -253,36 +253,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const callbackUrl = new URL(result.url);
+
+      // نقرأ نتيجة OAuth من query وhash لأن المنصة قد تعيدها بإحدى الطريقتين.
+      const params = new URLSearchParams(callbackUrl.search);
+      const hashParams = new URLSearchParams(callbackUrl.hash.replace(/^#/, ''));
+
       const oauthError =
-        callbackUrl.searchParams.get('error_description') ||
-        callbackUrl.searchParams.get('error');
+        params.get('error_description') ||
+        params.get('error') ||
+        hashParams.get('error_description') ||
+        hashParams.get('error');
 
       if (oauthError) {
         const apiErr = {
-          code: callbackUrl.searchParams.get('error') ?? 'GOOGLE_OAUTH_ERROR',
+          code: params.get('error') ?? hashParams.get('error') ?? 'GOOGLE_OAUTH_ERROR',
           message: oauthError,
         };
         setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
         return null;
       }
 
-      const code = callbackUrl.searchParams.get('code');
-      if (!code) {
-        const apiErr = {
-          code: 'GOOGLE_OAUTH_CODE_MISSING',
-          message: 'عادت Google بدون رمز المصادقة المطلوب.',
-        };
-        setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
-        return null;
+      // المسار المعتاد مع PKCE: نستلم code ونستبدله بجلسة Supabase.
+      const code = params.get('code') ?? hashParams.get('code');
+
+      let sessionData: any = null;
+      let exchangeError: any = null;
+
+      if (code) {
+        const exchanged = await supabase.auth.exchangeCodeForSession(code);
+        sessionData = exchanged.data;
+        exchangeError = exchanged.error;
+      } else {
+        // بعض تدفقات OAuth تعيد access/refresh tokens داخل hash.
+        const accessToken = hashParams.get('access_token') ?? params.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') ?? params.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+          const session = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          sessionData = session.data;
+          exchangeError = session.error;
+        }
       }
 
-      const { data: sessionData, error: exchangeError } =
-        await supabase.auth.exchangeCodeForSession(code);
-
-      if (exchangeError || !sessionData.session?.user) {
+      if (exchangeError || !sessionData?.session?.user) {
         const apiErr = mapError(exchangeError ?? {
           code: 'GOOGLE_SESSION_MISSING',
-          message: 'تعذر إنشاء جلسة المستخدم بعد تسجيل الدخول عبر Google.',
+          message: 'عادت Google بنجاح، لكن تعذر إنشاء جلسة المستخدم داخل التطبيق.',
         });
         setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
         return null;
