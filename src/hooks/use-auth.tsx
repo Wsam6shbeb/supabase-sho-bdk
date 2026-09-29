@@ -438,9 +438,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // تسجيل خروج
+  // نمسح حالة المستخدم محلياً حتى لا يبقى التطبيق عالقاً إذا تأخر طلب Supabase.
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
     setState((p) => ({ ...p, user: null, token: null, lastError: null }));
+
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('[Supabase][logout] فشل تسجيل الخروج من Supabase:', error);
+    }
+
     return true;
   }, []);
 
