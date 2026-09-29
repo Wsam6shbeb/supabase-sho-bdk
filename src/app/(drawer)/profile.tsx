@@ -18,7 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: ProfileScreen] يعرض ملف المستخدم وإجراءات الحساب وبيانات مقدم الخدمة إن وجدت.
@@ -38,6 +38,16 @@ export default function ProfileScreen() {
 
 // [شرح الدالة: handleLogout] ينفذ تسجيل خروج المستخدم وإنهاء الجلسة الحالية.
   const handleLogout = () => {
+    // على الويب نستخدم نافذة تأكيد المتصفح لأن Alert.alert لا يظهر هناك.
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('هل أنت متأكد من تسجيل الخروج؟');
+      if (confirmed) {
+        void logout();
+      }
+      return;
+    }
+
+    // على الموبايل نستخدم نافذة التأكيد الأصلية الخاصة بـ React Native.
     Alert.alert('تسجيل الخروج', 'هل أنت متأكد؟', [
       { text: 'إلغاء', style: 'cancel' },
       {
