@@ -129,11 +129,33 @@ export default function CandidatesScreen() {
         })
         .filter((provider): provider is ServiceProvider => provider !== null);
 
-      // إذا كانت قاعدة البيانات لم تُرجع صفوفًا بعد، لا نمسح النتائج
-      // الحقيقية التي وصلت من شاشة البحث. هذه النتائج مصدرها provider_profiles
-      // في Supabase وليست بيانات mock.
+      // لا نستبدل بيانات نتائج البحث الكاملة ببيانات candidates الناقصة.
+      // شاشة البحث هي التي تملك بيانات المطابقة والمهارات التي جهزها محرك AI.
+      // نستخدم provider_id نفسه من قاعدة البيانات لتحديث الإحصائيات فقط،
+      // ونحافظ على بقية بيانات مقدم الخدمة (ومنها skills) الموجودة في Context.
       if (results.length > 0) {
-        setCandidates(results);
+        const resultsById = new Map(results.map((provider) => [provider.id, provider]));
+
+        const mergedProviders = providers
+          .filter((provider) => resultsById.has(provider.id))
+          .map((provider) => {
+            const databaseProvider = resultsById.get(provider.id)!;
+
+            return {
+              ...provider,
+              name: databaseProvider.name || provider.name,
+              avatar_url: databaseProvider.avatar_url ?? provider.avatar_url,
+              region: databaseProvider.region,
+              rating: databaseProvider.rating,
+              total_orders: databaseProvider.total_orders,
+              verification_status: databaseProvider.verification_status,
+              service_request_id: requestId,
+            };
+          });
+
+        // إذا كانت قائمة Context فارغة (مثلاً بعد إعادة فتح الصفحة مباشرة)،
+        // نستخدم نتائج Supabase كاحتياط، مع الحفاظ على الـprovider_id الصحيح.
+        setCandidates(mergedProviders.length > 0 ? mergedProviders : results);
       }
     };
 
