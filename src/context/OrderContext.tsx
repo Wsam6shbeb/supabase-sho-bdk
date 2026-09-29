@@ -232,7 +232,7 @@ async function createServiceRequestInSupabase(params: {
   description: string;
   isUrgent: boolean;
   regionId: string;
-}): Promise<{ id: string } | null> {
+}): Promise<{ id: string }> {
   try {
     const { data, error } = await supabase
       .from('service_requests')
@@ -248,14 +248,17 @@ async function createServiceRequestInSupabase(params: {
 
     if (error) {
       console.error('[Supabase][startOrder] فشل إنشاء طلب الخدمة:', error.message, params);
-      return null;
+      throw new Error('تعذر إنشاء طلب الخدمة في قاعدة البيانات. حاول مرة أخرى.');
     }
 
     console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
     return data;
   } catch (err) {
-    console.error('[Supabase][startOrder] خطأ غير متوقع أثناء إنشاء طلب الخدمة:', err);
-    return null;
+    console.error('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
+    if (err instanceof Error && err.message.includes('تعذر إنشاء طلب الخدمة')) {
+      throw err;
+    }
+    throw new Error('تعذر إنشاء طلب الخدمة بسبب خطأ غير متوقع. حاول مرة أخرى.');
   }
 }
 
@@ -610,30 +613,31 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     async (params: { description: string; is_urgent: boolean; region_id: string }): Promise<Order> => {
       clearTimer();
       const requesterId = user?.id;
-      let order = createOrder({ ...params, customer_id: requesterId ?? 'me' });
+
+      // قاعدة البيانات هي مصدر الحقيقة: لا ننشئ الطلب محليًا ولا ننتقل
+      // للبحث قبل نجاح إنشاء service_requests فعليًا.
+      if (!requesterId) {
+        throw new Error('يجب تسجيل الدخول قبل إنشاء طلب الخدمة.');
+      }
+
+      const created = await createServiceRequestInSupabase({
+        requesterId,
+        description: params.description,
+        isUrgent: params.is_urgent,
+        regionId: params.region_id,
+      });
+
+      // بعد نجاح الحفظ فقط نبني الطلب المحلي باستخدام UUID الحقيقي من Supabase.
+      const order = {
+        ...createOrder({ ...params, customer_id: requesterId }),
+        id: created.id,
+      };
+
       setCurrentOrder(order);
       setCandidatesState([]);
       setActiveChats([]);
       setAgreedProviderId(null);
       setApprovalDeadline(null);
-
-      if (requesterId) {
-        const created = await createServiceRequestInSupabase({
-          requesterId,
-          description: params.description,
-          isUrgent: params.is_urgent,
-          regionId: params.region_id,
-        });
-        if (created) {
-          // نستبدل المعرّف المحلي بالـ UUID الحقيقي بجدول service_requests
-          // قبل ما نرجع الطلب، حتى أي خطوة لاحقة (بحث، محادثة، اتفاق،
-          // تقييم) تستخدم مباشرة معرّفاً حقيقياً.
-          order = { ...order, id: created.id };
-          setCurrentOrder(order);
-        }
-      } else {
-        console.error('[Supabase][startOrder] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة.');
-      }
 
       return order;
     },
