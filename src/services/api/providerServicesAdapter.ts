@@ -97,7 +97,7 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     additional_info: input.additional_info?.trim() ?? '',
   });
   if (!structuredData) {
-    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر تحليل بيانات الخدمة. حاول مرة أخرى.' } };
+    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إضافة الخدمة حالياً، يبدو أن الخدمة مشغولة. حاول مرة ثانية بعد قليل.' } };
   }
 
   // أول خدمة يضيفها المستخدم تنشئ سجل provider_profiles تلقائيًا (لا يوجد trigger لهذا بقاعدة البيانات).
