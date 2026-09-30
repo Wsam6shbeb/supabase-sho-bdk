@@ -693,6 +693,8 @@ export type Database = {
           matched_at: string | null
           needs_clarification: boolean
           raw_text: string
+          service_area: string | null
+          additional_info: string | null
           region: string | null
           requester_id: string
           state: Database["public"]["Enums"]["request_state"]
@@ -710,6 +712,8 @@ export type Database = {
           matched_at?: string | null
           needs_clarification?: boolean
           raw_text: string
+          service_area?: string | null
+          additional_info?: string | null
           region?: string | null
           requester_id: string
           state?: Database["public"]["Enums"]["request_state"]
@@ -727,6 +731,8 @@ export type Database = {
           matched_at?: string | null
           needs_clarification?: boolean
           raw_text?: string
+          service_area?: string | null
+          additional_info?: string | null
           region?: string | null
           requester_id?: string
           state?: Database["public"]["Enums"]["request_state"]
