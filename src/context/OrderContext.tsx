@@ -75,6 +75,8 @@ export interface ProviderSkill {
   name: string;
   years_of_experience?: number;
   description?: string;
+  service_area?: string;
+  additional_info?: string;
 }
 
 export interface MyProviderProfile {
@@ -162,7 +164,7 @@ export interface OrderContextValue {
   rateOrder: (dto: RatingDto) => void;
 
   // Self Onboarding
-  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }>;
+  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
   toggleAvailability: () => void;
 
@@ -1154,6 +1156,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         experience_years: skill.years_of_experience ?? 0,
         price_min: skill.price_min ?? 0,
         price_max: skill.price_max ?? 0,
+        service_area: skill.service_area.trim(),
+        additional_info: skill.additional_info?.trim() || '',
       });
 
       if (!response.success) {
@@ -1172,6 +1176,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         name: skill.name,
         years_of_experience: row.experience_years,
         description: row.description,
+        service_area: skill.service_area,
+        additional_info: skill.additional_info,
       };
 
       setMyProviderProfile((prev) => ({
