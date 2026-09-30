@@ -293,8 +293,6 @@ async function createServiceRequestInSupabase(params: {
       .insert({
         requester_id: params.requesterId,
         raw_text: params.description,
-        service_area: params.serviceArea,
-        additional_info: params.additionalInfo || null,
         urgency: params.isUrgent ? 'urgent' : 'normal',
         region: params.regionId || null,
         state: 'submitted',
