@@ -196,7 +196,7 @@ export default function CreateOrderScreen() {
                 setServiceArea(val);
                 setError(null);
               }}
-              error={error && !description.trim() ? error : undefined}
+              error={error}
               containerStyle={styles.areaInput}
             />
 
