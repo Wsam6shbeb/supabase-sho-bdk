@@ -56,6 +56,8 @@ export default function CreateOrderScreen() {
   const { startOrder, hasAcceptedDisclaimer } = useOrder();
 
   const [description, setDescription] = useState('');
+  const [serviceArea, setServiceArea] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showClarification, setShowClarification] = useState(false);
@@ -67,8 +69,13 @@ export default function CreateOrderScreen() {
     setError(null);
 
     const trimmed = description.trim();
+    const trimmedServiceArea = serviceArea.trim();
     if (!trimmed) {
       setError(t('orders.create.required'));
+      return;
+    }
+    if (!trimmedServiceArea) {
+      setError('يرجى كتابة مكان تقديم الخدمة.');
       return;
     }
 
@@ -105,6 +112,8 @@ export default function CreateOrderScreen() {
         description: trimmed,
         is_urgent: isUrgent,
         region_id: user?.region?.id ?? 'r-damascus',
+        service_area: serviceArea.trim(),
+        additional_info: additionalInfo.trim(),
       });
 
       setSubmitting(false);
@@ -164,17 +173,39 @@ export default function CreateOrderScreen() {
           </View>
 
           <AppCard padding="four" elevation="sm">
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>شو الخدمة اللي بدك ياها؟</Text>
             <AppTextInput
-              placeholder={t('orders.create.placeholder')}
+              placeholder="مثال: بدي معقب معاملات"
               value={description}
               onChangeText={(val) => {
                 setDescription(val);
                 setError(null);
               }}
-              error={error}
               multiline
               numberOfLines={4}
               containerStyle={styles.textInput}
+            />
+
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>وين بدك الخدمة؟</Text>
+            <AppTextInput
+              placeholder="مثال: اللاذقية، أو اللاذقية المشروع السابع"
+              value={serviceArea}
+              onChangeText={(val) => {
+                setServiceArea(val);
+                setError(null);
+              }}
+              error={error && !description.trim() ? error : undefined}
+              containerStyle={styles.areaInput}
+            />
+
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>معلومات إضافية (اختياري)</Text>
+            <AppTextInput
+              placeholder="مثال: بدي متابعة معاملة تسجيل عقار"
+              value={additionalInfo}
+              onChangeText={setAdditionalInfo}
+              multiline
+              numberOfLines={3}
+              containerStyle={styles.additionalInput}
             />
 
             <Pressable
@@ -301,9 +332,25 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.base,
     lineHeight: FontSizes.lg + 2,
   },
+  fieldLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    marginBottom: Spacing.two,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   textInput: {
-    minHeight: 220,
-    maxHeight: 320,
+    minHeight: 150,
+    maxHeight: 240,
+    textAlignVertical: 'top',
+    marginBottom: Spacing.four,
+  },
+  areaInput: {
+    marginBottom: Spacing.four,
+  },
+  additionalInput: {
+    minHeight: 90,
+    maxHeight: 150,
     textAlignVertical: 'top',
   },
   urgentToggle: {
