@@ -272,9 +272,8 @@ async function createServiceRequestInSupabase(params: {
   regionId: string;
 }): Promise<{ id: string }> {
   try {
-    // نحفظ الطلب أولاً حتى لا نعلّق المستخدم بانتظار الذكاء الاصطناعي.
-    // تحليل AI عملية إضافية وقد تستغرق عدة ثوانٍ أو تفشل مؤقتًا، لكنها لا يجب
-    // أن تمنع الانتقال إلى شاشة البحث أو تجعل المستخدم يضغط "موافق" عدة مرات.
+    // نحفظ الطلب أولًا للحصول على UUID الحقيقي، ثم ننتظر تحليل AI
+    // قبل إكمال العملية حتى تبدأ المطابقة ببيانات منظمة مؤكدة.
     const { data, error } = await supabase
       .from('service_requests')
       .insert({
@@ -298,29 +297,32 @@ async function createServiceRequestInSupabase(params: {
 
     console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
 
-    // نبدأ تحليل AI بعد إنشاء الطلب بدون جعل المستخدم ينتظر نتيجته.
-    void analyzeServiceRequest(params.description).then(async (analysis) => {
-      if (!analysis) return;
+    // ننتظر تحليل AI فعليًا قبل متابعة إنشاء الطلب في الواجهة.
+    // بهذه الطريقة لا نعتمد على مؤقت ثابت؛ مهما استغرق OpenRouter ضمن
+    // المهلة التي تفرضها خدمة Edge Function، لن نبدأ المطابقة قبل اكتمال التحليل.
+    const analysis = await analyzeServiceRequest(params.description);
 
-      const { error: updateError } = await supabase
-        .from('service_requests')
-        .update({
-          structured_data: analysis.structured_data,
-          ai_confidence: analysis.ai_confidence,
-          needs_clarification: analysis.needs_clarification,
-          clarification_question: analysis.clarification_question,
-        })
-        .eq('id', data.id)
-        .eq('requester_id', params.requesterId);
+    if (!analysis) {
+      throw new Error('تعذر تحليل طلب الخدمة بالذكاء الاصطناعي. حاول مرة أخرى.');
+    }
 
-      if (updateError) {
-        console.error('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
-      } else {
-        console.log('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي:', data.id);
-      }
-    }).catch((analysisError) => {
-      console.error('[Supabase][startOrder] خطأ غير متوقع في تحليل طلب الخدمة:', analysisError);
-    });
+    const { error: updateError } = await supabase
+      .from('service_requests')
+      .update({
+        structured_data: analysis.structured_data,
+        ai_confidence: analysis.ai_confidence,
+        needs_clarification: analysis.needs_clarification,
+        clarification_question: analysis.clarification_question,
+      })
+      .eq('id', data.id)
+      .eq('requester_id', params.requesterId);
+
+    if (updateError) {
+      console.error('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
+      throw new Error('تعذر حفظ تحليل طلب الخدمة. حاول مرة أخرى.');
+    }
+
+    console.log('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي:', data.id);
 
     return data;
   } catch (err) {
