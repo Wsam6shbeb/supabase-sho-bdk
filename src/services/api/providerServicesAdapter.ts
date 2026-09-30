@@ -26,6 +26,8 @@ export interface ProviderServiceRow {
     region?: string | null;
     location?: string | null;
     synonyms?: string[];
+    service_area?: string | null;
+    additional_info?: string | null;
   } | null;
   is_active: boolean;
   created_at: string;
@@ -37,6 +39,8 @@ export interface CreateProviderServiceInput {
   experience_years: number;
   price_min: number;
   price_max: number;
+  service_area: string;
+  additional_info?: string;
 }
 
 // [شرح الدالة: getCurrentUserId] يجلب معرّف المستخدم الحالي من جلسة Supabase.
@@ -46,11 +50,15 @@ async function getCurrentUserId(): Promise<string | null> {
 }
 
 // [شرح الدالة: analyzeProviderService] يرسل وصف الخدمة إلى Edge Function لتحليله بالذكاء الاصطناعي.
-// إذا فشل التحليل، لا نمنع حفظ الخدمة الأصلية؛ حتى لا تتعطل تجربة المستخدم بسبب خدمة AI مؤقتًا.
-async function analyzeProviderService(serviceText: string): Promise<ProviderServiceRow['structured_data']> {
+// لا نحفظ الخدمة إذا فشل تحليل الذكاء الاصطناعي؛ حتى تبقى بياناتها المنظمة مكتملة.
+async function analyzeProviderService(input: {
+  service: string;
+  service_area: string;
+  additional_info?: string;
+}): Promise<ProviderServiceRow['structured_data']> {
   try {
     const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
-      body: { service_text: serviceText },
+      body: { service_text: input.service, service_area: input.service_area, additional_info: input.additional_info ?? '' },
     });
 
     if (error) {
@@ -79,7 +87,18 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
   }
 
   const description = input.description.trim();
-  const structuredData = await analyzeProviderService(description);
+  const serviceArea = input.service_area.trim();
+  if (!serviceArea) {
+    return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد مكان تقديم الخدمة.' } };
+  }
+  const structuredData = await analyzeProviderService({
+    service: description,
+    service_area: serviceArea,
+    additional_info: input.additional_info?.trim() ?? '',
+  });
+  if (!structuredData) {
+    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر تحليل بيانات الخدمة. حاول مرة أخرى.' } };
+  }
 
   // أول خدمة يضيفها المستخدم تنشئ سجل provider_profiles تلقائيًا (لا يوجد trigger لهذا بقاعدة البيانات).
   const { error: profileError } = await supabase
@@ -97,7 +116,11 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
       experience_years: input.experience_years,
       price_min: input.price_min,
       price_max: input.price_max,
-      structured_data: structuredData,
+      structured_data: {
+        ...structuredData,
+        service_area: serviceArea,
+        additional_info: input.additional_info?.trim() || null,
+      },
     })
     .select()
     .single();
