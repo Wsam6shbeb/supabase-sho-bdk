@@ -52,6 +52,8 @@ export default function DisclaimerScreen() {
           region_id: typeof params.region_id === 'string'
             ? params.region_id
             : (user?.region.id ?? 'r-damascus'),
+          service_area: typeof params.service_area === 'string' ? params.service_area.trim() : '',
+          additional_info: typeof params.additional_info === 'string' ? params.additional_info.trim() : '',
         });
 
         router.replace({
