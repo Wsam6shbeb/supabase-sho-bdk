@@ -87,6 +87,8 @@ export default function CreateOrderScreen() {
           description: trimmed,
           is_urgent: isUrgent.toString(),
           region_id: user?.region?.id ?? 'r-damascus',
+          service_area: trimmedServiceArea,
+          additional_info: additionalInfo.trim(),
         },
       });
       return;
