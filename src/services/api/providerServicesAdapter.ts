@@ -108,6 +108,8 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     return { success: false, error: { code: profileError.code || 'DB_ERROR', message: profileError.message } };
   }
 
+  // نحفظ أولاً البيانات الأساسية التي كتبها مقدم الخدمة كما هي.
+  // بعدها فقط نضيف نتيجة تحليل الذكاء الاصطناعي إلى نفس السجل.
   const { data, error } = await supabase
     .from('provider_services')
     .insert({
@@ -116,11 +118,7 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
       experience_years: input.experience_years,
       price_min: input.price_min,
       price_max: input.price_max,
-      structured_data: {
-        ...structuredData,
-        service_area: serviceArea,
-        additional_info: input.additional_info?.trim() || null,
-      },
+      structured_data: null,
     })
     .select()
     .single();
@@ -129,10 +127,29 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
   }
 
+  const structuredDataWithOriginalInput = {
+    ...structuredData,
+    service_area: serviceArea,
+    additional_info: input.additional_info?.trim() || null,
+  };
+
+  // نحدّث نفس السجل بالبيانات المنظمة التي استخلصها الذكاء الاصطناعي.
+  const { data: updatedData, error: updateError } = await supabase
+    .from('provider_services')
+    .update({ structured_data: structuredDataWithOriginalInput })
+    .eq('id', data.id)
+    .eq('provider_id', userId)
+    .select()
+    .single();
+
+  if (updateError) {
+    return { success: false, error: { code: updateError.code || 'DB_ERROR', message: updateError.message } };
+  }
+
   // أفضل محاولة (best-effort): تعليم المستخدم كمزوّد؛ فشلها لا يُسقط نجاح إضافة الخدمة نفسها.
   await supabase.from('users').update({ is_provider: true }).eq('id', userId);
 
-  return { success: true, data: data as ProviderServiceRow };
+  return { success: true, data: updatedData as ProviderServiceRow };
 }
 
 // [شرح الدالة: mine] يجلب خدمات مقدّم الخدمة الحالي.
