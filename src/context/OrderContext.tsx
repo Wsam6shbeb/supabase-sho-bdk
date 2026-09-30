@@ -130,6 +130,8 @@ export interface OrderContextValue {
   // دوال الطلب
   startOrder: (params: {
     description: string;
+    service_area: string;
+    additional_info?: string;
     is_urgent: boolean;
     region_id: string;
   }) => Promise<Order>;
@@ -230,7 +232,11 @@ const WELCOME_TEXT =
 // تجربة المستخدم بالواجهة.
 
 // [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة (service_requests) بـ Supabase ويرجع الـ UUID الحقيقي.
-async function analyzeServiceRequest(requestText: string): Promise<{
+async function analyzeServiceRequest(input: {
+  description: string;
+  serviceArea: string;
+  additionalInfo?: string;
+}): Promise<{
   structured_data: Json;
   ai_confidence: number | null;
   needs_clarification: boolean;
@@ -238,7 +244,11 @@ async function analyzeServiceRequest(requestText: string): Promise<{
 } | null> {
   try {
     const { data, error } = await supabase.functions.invoke('analyze-service-request', {
-      body: { request_text: requestText },
+      body: {
+        request_text: input.description,
+        service_area: input.serviceArea,
+        additional_info: input.additionalInfo ?? '',
+      },
     });
 
     if (error) {
@@ -270,6 +280,8 @@ async function analyzeServiceRequest(requestText: string): Promise<{
 async function createServiceRequestInSupabase(params: {
   requesterId: string;
   description: string;
+  serviceArea: string;
+  additionalInfo?: string;
   isUrgent: boolean;
   regionId: string;
 }): Promise<{ id: string }> {
@@ -281,6 +293,8 @@ async function createServiceRequestInSupabase(params: {
       .insert({
         requester_id: params.requesterId,
         raw_text: params.description,
+        service_area: params.serviceArea,
+        additional_info: params.additionalInfo || null,
         urgency: params.isUrgent ? 'urgent' : 'normal',
         region: params.regionId || null,
         state: 'submitted',
@@ -302,7 +316,11 @@ async function createServiceRequestInSupabase(params: {
     // ننتظر تحليل AI فعليًا قبل متابعة إنشاء الطلب في الواجهة.
     // بهذه الطريقة لا نعتمد على مؤقت ثابت؛ مهما استغرق OpenRouter ضمن
     // المهلة التي تفرضها خدمة Edge Function، لن نبدأ المطابقة قبل اكتمال التحليل.
-    const analysis = await analyzeServiceRequest(params.description);
+    const analysis = await analyzeServiceRequest({
+      description: params.description,
+      serviceArea: params.serviceArea,
+      additionalInfo: params.additionalInfo,
+    });
 
     if (!analysis) {
       throw new Error('تعذر تحليل طلب الخدمة بالذكاء الاصطناعي. حاول مرة أخرى.');
@@ -684,7 +702,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   // Order
   // ═══════════════════════════════════════════════════════════
   const startOrder = useCallback(
-    async (params: { description: string; is_urgent: boolean; region_id: string }): Promise<Order> => {
+    async (params: { description: string; service_area: string; additional_info?: string; is_urgent: boolean; region_id: string }): Promise<Order> => {
       clearTimer();
       const requesterId = user?.id;
 
@@ -697,6 +715,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const created = await createServiceRequestInSupabase({
         requesterId,
         description: params.description,
+        serviceArea: params.service_area,
+        additionalInfo: params.additional_info,
         isUrgent: params.is_urgent,
         regionId: params.region_id,
       });
