@@ -19,7 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,11 +31,13 @@ export default function DisclaimerScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 // [شرح الدالة: handleAccept] يسجل موافقة المستخدم على التنبيه وينتقل إلى الخطوة التالية.
   const handleAccept = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setErrorMessage(null);
     acceptDisclaimer();
 
     // إذا وصلنا من شاشة إنشاء الطلب، نكمل الطلب مباشرة بدل إعادة المستخدم
@@ -62,8 +64,7 @@ export default function DisclaimerScreen() {
         });
         return;
       } catch (err) {
-        Alert.alert(
-          'تعذر إنشاء الطلب',
+        setErrorMessage(
           err instanceof Error ? err.message : 'حدث خطأ أثناء إنشاء الطلب. حاول مرة أخرى.',
         );
         setIsSubmitting(false);
@@ -106,6 +107,15 @@ export default function DisclaimerScreen() {
             {t('disclaimer.body')}
           </Text>
         </AppCard>
+
+        {errorMessage ? (
+          <View style={[styles.errorBox, { borderColor: scheme.error, backgroundColor: scheme.error + '15' }]}>
+            <Ionicons name="alert-circle" size={22} color={scheme.error} />
+            <Text style={[styles.errorText, { color: scheme.error }]}>
+              {errorMessage}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Actions */}
         <View style={styles.actions}>
@@ -164,6 +174,22 @@ const styles = StyleSheet.create({
     lineHeight: FontSizes.lg + 6,
     writingDirection: 'rtl',
     textAlign: 'right',
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: Spacing.three,
+    marginBottom: Spacing.four,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.medium,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   actions: {
     gap: Spacing.three,
