@@ -48,7 +48,7 @@ export default function SearchingScreen() {
       // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
       let requestStructuredData: any = null;
       if (requestId) {
-        for (let attempt = 0; attempt < 5 && !requestStructuredData; attempt += 1) {
+        for (let attempt = 0; attempt < 10 && !requestStructuredData; attempt += 1) {
           const { data: requestData, error: requestError } = await supabase
             .from('service_requests')
             .select('structured_data')
@@ -62,7 +62,7 @@ export default function SearchingScreen() {
 
           requestStructuredData = requestData?.structured_data ?? null;
 
-          if (!requestStructuredData && attempt < 4) {
+          if (!requestStructuredData && attempt < 9) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
