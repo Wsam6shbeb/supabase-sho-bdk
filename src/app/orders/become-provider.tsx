@@ -37,6 +37,8 @@ export default function BecomeProviderScreen() {
   const { addFirstSkill } = useOrder();
 
   const [skillName, setSkillName] = useState('');
+  const [serviceArea, setServiceArea] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,9 +46,15 @@ export default function BecomeProviderScreen() {
   const handleSubmit = async () => {
     setError(null);
     const trimmed = skillName.trim();
+    const trimmedArea = serviceArea.trim();
 
     if (!trimmed) {
       setError(t('home.becomeProvider.requiredSkillName'));
+      return;
+    }
+
+    if (!trimmedArea) {
+      setError('اكتب مكان تقديم الخدمة. مثال: المشروع السابع، أو اللاذقية مدينة وريف.');
       return;
     }
 
@@ -55,6 +63,8 @@ export default function BecomeProviderScreen() {
     const result = await addFirstSkill({
       id: `skill_${Date.now()}`,
       name: trimmed,
+      service_area: trimmedArea,
+      additional_info: additionalInfo.trim(),
     });
 
     setSubmitting(false);
@@ -106,7 +116,7 @@ export default function BecomeProviderScreen() {
             </Text>
           </View>
 
-          {/* الخدمة التي تتقنها */}
+          {/* الخدمة ومكان تقديمها والمعلومات الإضافية */}
           <AppCard padding="four" elevation="sm">
             <View style={[styles.instructionBanner, { backgroundColor: `${scheme.primary}10`, borderColor: `${scheme.primary}35` }]}>
               <Ionicons name="sparkles-outline" size={22} color={scheme.primary} />
@@ -116,8 +126,8 @@ export default function BecomeProviderScreen() {
             </View>
 
             <AppTextInput
-              label="ما الخدمة التي تتقنها؟"
-              placeholder={'مثال: مدرس لغة المانية اللاذقية المشروع السابع\n\nمثال آخر: معلم صحية اللاذقية شارع الجمهورية'}
+              label="ما المهارة أو الخدمة التي تتقنها؟"
+              placeholder="مثال: معلم طاقة شمسية"
               value={skillName}
               onChangeText={(v) => {
                 setSkillName(v);
@@ -125,8 +135,28 @@ export default function BecomeProviderScreen() {
               }}
               error={error}
               required
+              containerStyle={styles.serviceInput}
+            />
+
+            <AppTextInput
+              label="أين تقدم هذه الخدمة؟"
+              placeholder="مثال: المشروع السابع، أو اللاذقية مدينة وريف"
+              value={serviceArea}
+              onChangeText={(v) => {
+                setServiceArea(v);
+                setError(null);
+              }}
+              required
+              containerStyle={styles.serviceInput}
+            />
+
+            <AppTextInput
+              label="معلومات إضافية (اختياري)"
+              placeholder="مثال: بجي لعند الزبون، تركيب وصيانة، خبرة 10 سنوات..."
+              value={additionalInfo}
+              onChangeText={setAdditionalInfo}
               multiline
-              numberOfLines={5}
+              numberOfLines={3}
               containerStyle={styles.serviceInput}
             />
           </AppCard>
