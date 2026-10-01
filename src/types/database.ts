@@ -892,6 +892,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_provider_candidates: {
+        Args: {
+          p_request_id: string
+          p_limit?: number
+        }
+        Returns: {
+          provider_id: string
+          rating_avg: number
+          completed_services_count: number
+          full_name: string
+          avatar_url: string | null
+          region: string
+          verification_status: string
+          services: Json
+          preliminary_score: number
+        }[]
+      }
       approve_agreement: {
         Args: { p_agreement_id: string; p_provider_id: string }
         Returns: {
@@ -1143,9 +1160,8 @@ export type CompositeTypes<
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  : DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : never
 
 export const Constants = {
   public: {

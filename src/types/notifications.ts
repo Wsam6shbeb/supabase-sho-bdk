@@ -24,7 +24,9 @@ export type NotificationType =
   | 'balance_low'
   | 'welcome_bonus'
   | 'rating_reminder'
-  | 'rating_auto_approved';
+  | 'rating_auto_approved'
+    | 'ai_unavailable';   // ← ضيف هاد السطر
+
 
 /** إشعار تطبيق */
 export interface AppNotification {

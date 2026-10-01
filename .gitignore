@@ -75,3 +75,10 @@ desktop.ini
 .cache/
 .parcel-cache/
 .eslintcache
+
+# === Supabase local ===
+supabase/.temp/
+
+# === Cursor IDE ===
+.cursor/
+mcp.json

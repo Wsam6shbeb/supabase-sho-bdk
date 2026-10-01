@@ -201,7 +201,7 @@ export default function CandidatesScreen() {
             service_request_id: requestId,
           } satisfies ServiceProvider;
         })
-        .filter((provider): provider is ServiceProvider => provider !== null);
+        .filter((provider) => provider !== null) as ServiceProvider[];
 
       // لا نستبدل بيانات نتائج البحث الكاملة ببيانات candidates الناقصة.
       // شاشة البحث هي التي تملك بيانات المطابقة والمهارات التي جهزها محرك AI.

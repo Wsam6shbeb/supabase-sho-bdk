@@ -48,16 +48,11 @@ import {
 // ═══════════════════════════════════════════════════════════
 // الثوابت
 // ═══════════════════════════════════════════════════════════
-// Frontend demo fallback only. Final commission is authoritative on the Backend.
 const WELCOME_BONUS_AMOUNT = BUSINESS_CONFIG.welcomeBonus;
 
-// ⚠️ وضع التجربة السريعة — للتطوير بس. لازم يكون false دايماً وقت التسليم/الإنتاج.
-// لما يكون true، المهل بتصير ثواني بدل دقايق/ساعات عشان تقدر تجرب بسرعة بدون ما تستنى.
 const DEV_FAST_TIMERS = false;
 
-// مهلة رد مقدم الخدمة بعد "تم الاتفاق" (الوثيقة: 4 دقايق، قابلة للتعديل من الأدمن)
 const APPROVAL_TIMEOUT_MS = DEV_FAST_TIMERS ? 20 * 1000 : 4 * 60 * 1000;
-// مهلة الاعتماد التلقائي للتقييم إذا الزبون ما قيّم (الوثيقة: 48 ساعة)
 const RATING_TIMEOUT_MS = DEV_FAST_TIMERS ? 30 * 1000 : 48 * 60 * 60 * 1000;
 
 const LOW_BALANCE_THRESHOLD = 20;
@@ -87,7 +82,6 @@ export interface MyProviderProfile {
 }
 
 export interface OrderContextValue {
-  // الحالة
   currentOrder: Order | null;
   candidates: ServiceProvider[];
   activeChats: ChatThread[];
@@ -95,27 +89,22 @@ export interface OrderContextValue {
   approvalRemainingSeconds: number;
   orderHistory: Order[];
 
-  // Self Onboarding
   myProviderProfile: MyProviderProfile | null;
   hasProviderProfile: boolean;
   welcomeBonusReceived: boolean;
 
-  // Wallet
   balance: number;
   transactions: Transaction[];
   isLowBalance: boolean;
   isCriticalBalance: boolean;
 
-  // Verification
   verificationStatus: VerificationStatusType;
   isVerified: boolean;
   verificationRequest: VerificationRequest | null;
 
-  // Reports
   reports: Report[];
   blockedProviderIds: string[];
 
-  // Notifications
   notifications: AppNotification[];
   unreadNotificationsCount: number;
   markNotificationRead: (id: string) => void;
@@ -123,11 +112,9 @@ export interface OrderContextValue {
   clearNotification: (id: string) => void;
   clearAllNotifications: () => void;
 
-  // ⭐ Disclaimer
   hasAcceptedDisclaimer: boolean;
   acceptDisclaimer: () => void;
 
-  // دوال الطلب
   startOrder: (params: {
     description: string;
     service_area: string;
@@ -138,19 +125,14 @@ export interface OrderContextValue {
   setCandidates: (providers: ServiceProvider[]) => void;
   resetOrder: () => void;
 
-  // دوال المحادثة
   openChat: (provider: ServiceProvider) => OpenChatResult;
   closeChat: (threadId: string) => void;
   getThreadByProviderId: (providerId: string) => ChatThread | undefined;
   getProviderById: (providerId: string) => ServiceProvider | undefined;
 
-  // ⭐ طلب تاني
-  /** هل سبق أن طلبت من هذا المقدم وأكملت؟ */
   hasCompletedOrderWith: (providerId: string) => boolean;
-  /** أنشئ طلباً جديداً مع نفس المقدم */
   requestProviderAgain: (provider: ServiceProvider, description: string) => Order;
 
-  // دوال الاتفاق
   customerAgrees: (
     threadId: string,
     providerId: string,
@@ -161,16 +143,13 @@ export interface OrderContextValue {
   providerRejects: (threadId: string) => void;
   customerCancelsAgreement: () => void;
 
-  // دوال الإكمال والتقييم
   completeOrder: () => void;
   rateOrder: (dto: RatingDto) => void;
 
-  // Self Onboarding
   addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
   toggleAvailability: () => void;
 
-  // Wallet
   addTransaction: (
     type: Transaction['type'],
     amount: number,
@@ -180,18 +159,15 @@ export interface OrderContextValue {
   ) => void;
   topUp: (amount: number, method: string) => void;
 
-  // Verification
   submitVerification: (idPhotoUri: string, selfieUri: string) => void;
   resetVerification: () => void;
 
-  // Reports + Blocking
   submitReport: (dto: CreateReportDto) => void;
   reportNonExecution: (dto: CreateNonExecutionReportDto) => void;
   blockProvider: (providerId: string) => void;
   unblockProvider: (providerId: string) => void;
   isProviderBlocked: (providerId: string) => boolean;
 
-  // مساعدات
   estimateCommission: (messages: ChatMessage[]) => number;
   getOrderById: (orderId: string) => Order | undefined;
 }
@@ -204,7 +180,6 @@ const OrderContext = createContext<OrderContextValue | null>(null);
 // ═══════════════════════════════════════════════════════════
 // System messages
 // ═══════════════════════════════════════════════════════════
-// [شرح الدالة: systemMessage] تنفذ الدالة «systemMessage» المهمة البرمجية المرتبطة بهذا الملف وتعيد النتيجة التي يعتمد عليها باقي الكود.
 function systemMessage(orderId: string, content: string): ChatMessage {
   return {
     id: api.randomId('msg'),
@@ -222,16 +197,9 @@ const WELCOME_TEXT =
   "يرجى التواصل بهاي المحادثة لتحديد سعر الخدمة ومدتها وباقي التفاصيل، وعند الاتفاق اضغط 'تم الاتفاق'. التطبيق مو مسؤول عن جودة أو سرعة تنفيذ الخدمة، وبتقدر تقيّم الطرف الآخر وتكتب سبب التقييم.";
 
 // ═══════════════════════════════════════════════════════════
-// Supabase sync (best-effort — لا تُغيّر الحالة المحلية ولا الواجهة)
+// Supabase sync (best-effort)
 // ═══════════════════════════════════════════════════════════
-// ملاحظة: نظام الطلبات/المزوّدين الحالي محلي بالكامل (mock)، فـ orderId/
-// providerId ما زالوا معرّفات محلية وليس بالضرورة uuid حقيقي بجداول
-// service_requests/provider_profiles. لذلك هاي العمليات "أفضل محاولة"
-// (best-effort): إذا نجحت تُسجَّل بـ Supabase، وإذا فشلت (مثلاً بسبب
-// معرّف غير موجود) بيتسجّل الخطأ بالـ console دون ما يوقف أو يغيّر
-// تجربة المستخدم بالواجهة.
 
-// [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة (service_requests) بـ Supabase ويرجع الـ UUID الحقيقي.
 async function analyzeServiceRequest(input: {
   description: string;
   serviceArea: string;
@@ -276,7 +244,6 @@ async function analyzeServiceRequest(input: {
   }
 }
 
-// [شرح الدالة: createServiceRequestInSupabase] ينشئ صف طلب خدمة بـ Supabase مع الاحتفاظ بالنص الأصلي وتحليل الذكاء الاصطناعي.
 async function createServiceRequestInSupabase(params: {
   requesterId: string;
   description: string;
@@ -284,10 +251,8 @@ async function createServiceRequestInSupabase(params: {
   additionalInfo?: string;
   isUrgent: boolean;
   regionId: string;
-}): Promise<{ id: string }> {
+}): Promise<{ id: string; ai_failed: boolean }> {
   try {
-    // نحفظ الطلب أولًا للحصول على UUID الحقيقي، ثم ننتظر تحليل AI
-    // قبل إكمال العملية حتى تبدأ المطابقة ببيانات منظمة مؤكدة.
     const { data, error } = await supabase
       .from('service_requests')
       .insert({
@@ -313,19 +278,54 @@ async function createServiceRequestInSupabase(params: {
 
     console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
 
-    // ننتظر تحليل AI فعليًا قبل متابعة إنشاء الطلب في الواجهة.
-    // بهذه الطريقة لا نعتمد على مؤقت ثابت؛ مهما استغرق OpenRouter ضمن
-    // المهلة التي تفرضها خدمة Edge Function، لن نبدأ المطابقة قبل اكتمال التحليل.
     const analysis = await analyzeServiceRequest({
       description: params.description,
       serviceArea: params.serviceArea,
       additionalInfo: params.additionalInfo,
     });
 
+    // ⭐ إذا فشل AI: نكمل بـ fallback بدون ما نوقف العملية
     if (!analysis) {
-      throw new Error('تعذر تحليل طلب الخدمة بالذكاء الاصطناعي. حاول مرة أخرى.');
+      console.warn('[Supabase][startOrder] تحليل AI فشل، سيتم استخدام النص الخام كـ fallback.');
+
+      const fallbackStructuredData: Json = {
+        service: params.description,
+        category: null,
+        skills: [],
+        synonyms: [],
+        region: params.serviceArea || null,
+        location: null,
+        service_area: {
+          raw: params.serviceArea,
+          city: params.serviceArea,
+          type: 'city',
+          areas: [],
+        },
+        confidence: null,
+        ai_failed: true,
+      };
+
+      const { error: fallbackUpdateError } = await supabase
+        .from('service_requests')
+        .update({
+          structured_data: fallbackStructuredData,
+          ai_confidence: null,
+          needs_clarification: false,
+          clarification_question: null,
+        })
+        .eq('id', data.id)
+        .eq('requester_id', params.requesterId);
+
+      if (fallbackUpdateError) {
+        console.error('[Supabase][startOrder] فشل حفظ fallback:', fallbackUpdateError.message);
+      } else {
+        console.log('[Supabase][startOrder] تم حفظ fallback بدون AI:', data.id);
+      }
+
+      return { id: data.id, ai_failed: true };
     }
 
+    // ✅ AI نجح — نكمل عادي
     const { error: updateError } = await supabase
       .from('service_requests')
       .update({
@@ -344,7 +344,7 @@ async function createServiceRequestInSupabase(params: {
 
     console.log('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي:', data.id);
 
-    return data;
+    return { id: data.id, ai_failed: false };
   } catch (err) {
     console.error('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
     if (err instanceof Error && err.message.includes('تعذر إنشاء طلب الخدمة')) {
@@ -354,7 +354,6 @@ async function createServiceRequestInSupabase(params: {
   }
 }
 
-// [شرح الدالة: syncOpenChatToSupabase] ينشئ صف محادثة (conversation) بـ Supabase مطابق للمحادثة المحلية المفتوحة حديثًا.
 async function syncOpenChatToSupabase(
   thread: ChatThread,
   orderId: string,
@@ -392,7 +391,6 @@ async function syncOpenChatToSupabase(
   }
 }
 
-// [شرح الدالة: syncAgreementToSupabase] ينشئ اتفاقاً بـ Supabase عبر دالة create_agreement (RPC) المطابقة لاتفاق العميل ومقدم الخدمة.
 async function syncAgreementToSupabase(params: {
   threadId: string;
   requestId: string;
@@ -431,7 +429,6 @@ async function syncAgreementToSupabase(params: {
 // ═══════════════════════════════════════════════════════════
 // Provider
 // ═══════════════════════════════════════════════════════════
-// [شرح الدالة: OrderProvider] يوفر حالة الطلب ودوال التحكم بها لباقي مكونات التطبيق.
 export function OrderProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
@@ -442,10 +439,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [approvalRemainingSeconds, setApprovalRemainingSeconds] = useState(0);
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
 
-  // Self Onboarding
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
 
-  // يجلب ملف مقدم الخدمة الحقيقي وخدماته من Supabase عند تسجيل الدخول.
   const loadMyProviderProfile = useCallback(async (userId: string) => {
     try {
       const [profileResult, servicesResult] = await Promise.all([
@@ -500,14 +495,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     void loadMyProviderProfile(user.id);
   }, [user?.id, loadMyProviderProfile]);
 
-  // Wallet
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // عند تفعيل الـBackend، الرصيد وسجل العمليات مصدرهما الخادم وليس الحالة المحلية.
   useEffect(() => {
     let cancelled = false;
-// [شرح الدالة: loadWallet] يجلب أو يحمّل بيانات المحفظة اللازمة للطلب الحالي.
     const loadWallet = async () => {
       if (!api.wallet) return;
       const [summary, ledger] = await Promise.all([
@@ -522,13 +514,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Verification
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatusType>('not_verified');
   const [verificationRequest, setVerificationRequest] =
     useState<VerificationRequest | null>(null);
 
-  // Reports + Blocking
   const {
     notifications,
     unreadNotificationsCount,
@@ -548,19 +538,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     isProviderBlocked,
   } = useOrderSafety();
 
-  // ⭐ Disclaimer
   const [hasAcceptedDisclaimer, setHasAcceptedDisclaimer] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ⏱️ Timer
   useEffect(() => {
     if (!approvalDeadline) {
       setApprovalRemainingSeconds(0);
       return;
     }
 
-// [شرح الدالة: tick] ينفذ تحديثًا دوريًا للوقت/الحالة داخل سياق الطلب.
     const tick = () => {
       const remaining = Math.max(0, Math.floor((approvalDeadline - Date.now()) / 1000));
       setApprovalRemainingSeconds(remaining);
@@ -585,17 +572,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // ═══════════════════════════════════════════════════════════
-  // ⭐ Disclaimer
-  // ═══════════════════════════════════════════════════════════
   const acceptDisclaimer = useCallback(() => {
     setHasAcceptedDisclaimer(true);
   }, []);
 
-  // Notifications and safety state live in dedicated hooks.
-  // ═══════════════════════════════════════════════════════════
-  // Wallet
-  // ═══════════════════════════════════════════════════════════
   const addTransaction = useCallback(
     (
       type: Transaction['type'],
@@ -645,9 +625,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     [addTransaction],
   );
 
-  // ═══════════════════════════════════════════════════════════
-  // Verification
-  // ═══════════════════════════════════════════════════════════
   const submitVerification = useCallback((idPhotoUri: string, selfieUri: string) => {
     const req: VerificationRequest = {
       id: api.randomId('ver'),
@@ -666,10 +643,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     setVerificationStatus('not_verified');
   }, []);
 
-  // Reports and blocking state live in useOrderSafety.
-  // ═══════════════════════════════════════════════════════════
-  // Timeout
-  // ═══════════════════════════════════════════════════════════
   const handleTimeoutExpired = useCallback(() => {
     clearTimer();
     setAgreedProviderId(null);
@@ -706,8 +679,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       clearTimer();
       const requesterId = user?.id;
 
-      // قاعدة البيانات هي مصدر الحقيقة: لا ننشئ الطلب محليًا ولا ننتقل
-      // للبحث قبل نجاح إنشاء service_requests فعليًا.
       if (!requesterId) {
         throw new Error('يجب تسجيل الدخول قبل إنشاء طلب الخدمة.');
       }
@@ -721,7 +692,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         regionId: params.region_id,
       });
 
-      // بعد نجاح الحفظ فقط نبني الطلب المحلي باستخدام UUID الحقيقي من Supabase.
+      // ⭐ إذا فشل AI: نضيف إشعار (يظهر كـ banner بالجرس)
+      if (created.ai_failed) {
+        pushNotification({
+          type: 'ai_unavailable',
+          title: 'التحليل الذكي متوقف مؤقتاً',
+          body: 'سيتم عرض النتائج بناءً على النص الخام. قد تكون أقل دقة.',
+          route: '/(drawer)/(tabs)/orders',
+        });
+      }
+
       const order = {
         ...createOrder({ ...params, customer_id: requesterId }),
         id: created.id,
@@ -735,12 +715,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       return order;
     },
-    [clearTimer, user?.id],
+    [clearTimer, user?.id, pushNotification],
   );
 
   const setCandidates = useCallback(
     (providers: ServiceProvider[]) => {
-      // المحجوبين ما لازم يظهروا بنتائج البحث إطلاقاً (الوثيقة 4.3)
       setCandidatesState(providers.filter((p) => !blockedProviderIds.includes(p.id)));
     },
     [blockedProviderIds],
@@ -755,9 +734,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     setApprovalDeadline(null);
   }, [clearTimer]);
 
-  // ═══════════════════════════════════════════════════════════
-  // ⭐ طلب تاني
-  // ═══════════════════════════════════════════════════════════
   const hasCompletedOrderWith = useCallback(
     (providerId: string) =>
       orderHistory.some(
@@ -773,7 +749,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     (provider: ServiceProvider, description: string): Order => {
       clearTimer();
 
-      // 1. أنشئ طلب جديد
       const requesterId = user?.id;
       const order = createOrder({
         description,
@@ -782,21 +757,19 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         customer_id: requesterId ?? 'me',
       });
 
-      // 2. أنشئ محادثة جديدة مباشرة مع المقدم
       const thread = createNegotiationThread(order.id, provider, systemMessage(order.id, WELCOME_TEXT));
 
       setCurrentOrder(order);
-      setCandidatesState([provider]); // فقط هذا المقدم
+      setCandidatesState([provider]);
       setActiveChats([thread]);
       setAgreedProviderId(null);
       setApprovalDeadline(null);
 
-      // مزامنة أفضل محاولة (best-effort) — نفس نمط بقية العمليات هون: لا
-      // تغيّر شي بالحالة المحلية ولا بالواجهة، وأي فشل يُسجَّل فقط بالـ console.
       if (requesterId) {
         void createServiceRequestInSupabase({
           requesterId,
           description,
+          serviceArea: provider.region.name_ar || '',
           isUrgent: false,
           regionId: provider.region.id,
         }).then((created) => {
@@ -929,9 +902,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const now = new Date().toISOString();
       setApprovalDeadline(null);
       setApprovalRemainingSeconds(0);
-
-      // The real backend owns the financial transaction. The frontend only
-      // transitions the local prototype state after provider approval.
 
       setCurrentOrder((prev) =>
         prev ? { ...prev, status: OrderStatus.ACTIVE, updated_at: now } : prev,
@@ -1101,11 +1071,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  // ═══════════════════════════════════════════════════════════
-  // ⭐ الاعتماد التلقائي للتقييم بعد انتهاء المهلة (الوثيقة 1.3)
-  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
-// [شرح الدالة: checkRatingDeadlines] يفحص مواعيد التقييم ويحدّث الحالات التي تجاوزت المهلة.
     const checkRatingDeadlines = () => {
       const now = Date.now();
 
@@ -1117,7 +1083,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           const deadlineMs = new Date(o.rating_deadline).getTime();
           const remainingMs = deadlineMs - now;
 
-          // تذكير قبل 24 ساعة من انتهاء المهلة (مرة وحدة بس)
           if (remainingMs > 0 && remainingMs <= 24 * 60 * 60 * 1000 && !o.rating_reminder_sent) {
             changed = true;
             pushNotification({
@@ -1130,7 +1095,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
             return { ...o, rating_reminder_sent: true };
           }
 
-          // انتهت المهلة بدون تقييم → اعتماد تلقائي
           if (remainingMs <= 0 && !o.rating_auto_approved) {
             changed = true;
             pushNotification({
@@ -1162,22 +1126,18 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ═══════════════════════════════════════════════════════════
-  // Self Onboarding
-  // ═══════════════════════════════════════════════════════════
   const addFirstSkill = useCallback(
     async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }> => {
       const currentProfile = myProviderProfile;
       const isFirstSkill = !currentProfile || currentProfile.skills.length === 0;
 
-      // يُحفظ وصف/خبرة/نطاق سعر الخدمة فعليًا بجدول provider_services بـ Supabase.
       const response = await api.providerServices.create({
         description: skill.description?.trim() || skill.name.trim(),
         experience_years: skill.years_of_experience ?? 0,
         price_min: skill.price_min ?? 0,
         price_max: skill.price_max ?? 0,
-        service_area: skill.service_area.trim(),
-        additional_info: skill.additional_info?.trim() || '',
+        service_area: skill.service_area?.trim() ?? '',
+                additional_info: skill.additional_info?.trim() || '',
       });
 
       if (!response.success) {
@@ -1196,8 +1156,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         name: skill.name,
         years_of_experience: row.experience_years,
         description: row.description,
-        service_area: skill.service_area,
-        additional_info: skill.additional_info,
+        service_area: skill.service_area ?? '',
+                additional_info: skill.additional_info,
       };
 
       setMyProviderProfile((prev) => ({
@@ -1207,10 +1167,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         welcome_bonus_received: prev?.welcome_bonus_received ?? false,
       }));
 
-      // ملاحظة: منح مكافأة الانضمام بالمحفظة الحقيقية (ledger_entries) يحتاج
-      // دالة/RPC موثوقة بجانب قاعدة البيانات (الجدول ليس له سياسة INSERT من
-      // طرف العميل عن قصد). لحين توفيرها، تبقى المكافأة معروضة محليًا فقط
-      // كما كانت بالوضع التجريبي السابق.
       const alreadyReceived = currentProfile?.welcome_bonus_received ?? false;
       const shouldGiveBonus = isFirstSkill && !alreadyReceived;
       if (shouldGiveBonus) {
@@ -1273,9 +1229,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     });
   }, [user?.id]);
 
-  // ═══════════════════════════════════════════════════════════
-  // Helpers
-  // ═══════════════════════════════════════════════════════════
   const estimateCommission = useCallback(
     (messages: ChatMessage[]) => estimateCommissionFromChat(messages),
     [],
@@ -1408,7 +1361,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;
 }
 
-// [شرح الدالة: useOrder] يعيد Context الخاص بالطلبات حتى تتمكن المكونات من قراءة حالته ودواله.
 export function useOrder(): OrderContextValue {
   const ctx = useContext(OrderContext);
   if (!ctx) {

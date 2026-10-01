@@ -8,19 +8,20 @@
 // ═══════════════════════════════════════════════════════════
 // شاشة البحث عن مقدمي الخدمة
 // ═══════════════════════════════════════════════════════════
+import { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
+
 import { t } from '@/i18n/ar';
 import { api } from '@/services/api';
 import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: SearchingScreen] يعرض حالة البحث عن مقدمي الخدمة أثناء انتظار النتائج.
@@ -30,9 +31,12 @@ export default function SearchingScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
-
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [isSearching, setIsSearching] = useState(true);
+  const [showAiBanner, setShowAiBanner] = useState(false);
+
+  const bannerOpacity = useRef(new Animated.Value(0)).current;
+  const bannerTranslateY = useRef(new Animated.Value(20)).current;
 
   // يترك هذا الملف مسؤولية جلب مقدمي الخدمة فقط؛ المطابقة الفعلية تتم عبر Edge Function
   // التي تستخدم الذكاء الاصطناعي لمقارنة البيانات المنظمة بالمعنى وليس بالكلمات فقط.
@@ -67,8 +71,11 @@ export default function SearchingScreen() {
           }
         }
 
-        if (!requestStructuredData) {
+                if (!requestStructuredData) {
           console.warn('[Supabase][searching] تحليل طلب الخدمة لم يكتمل بعد، سيتم استخدام النص الخام كاحتياط.');
+        } else if (requestStructuredData.ai_failed === true) {
+          // ⭐ الـ AI فشل أثناء إنشاء الطلب → نعرض banner
+          setShowAiBanner(true);
         }
       }
 
@@ -250,9 +257,62 @@ export default function SearchingScreen() {
     return () => clearTimeout(searchTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.description, params.is_urgent, params.request_id]);
+  // ⭐ animation الـ banner: يطلع ويختفي لحاله
+  useEffect(() => {
+    if (!showAiBanner) return;
+
+    // يظهر
+    Animated.parallel([
+      Animated.timing(bannerOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bannerTranslateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // يختفي بعد 5 ثواني
+    const hideTimeout = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(bannerOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bannerTranslateY, {
+          toValue: 20,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setShowAiBanner(false));
+    }, 5000);
+
+    return () => clearTimeout(hideTimeout);
+  }, [showAiBanner, bannerOpacity, bannerTranslateY]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
+        {showAiBanner && (
+        <Animated.View
+          style={[
+            styles.aiBanner,
+            {
+              opacity: bannerOpacity,
+              transform: [{ translateY: bannerTranslateY }],
+            },
+          ]}
+        >
+          <Ionicons name="information-circle" size={20} color="#fff" />
+          <Text style={styles.aiBannerText}>
+            التحليل الذكي متوقف مؤقتاً — النتائج قد تكون أقل دقة
+          </Text>
+        </Animated.View>
+      )}
+
       <View style={styles.content}>
         {isSearching ? (
           <>
@@ -279,6 +339,32 @@ export default function SearchingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  aiBanner: {
+    position: 'absolute',
+    top: 16,
+    left: Spacing.four,
+    right: Spacing.four,
+    backgroundColor: '#F59E0B',
+    borderRadius: 12,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: Spacing.two,
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  aiBannerText: {
+    color: '#fff',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium,
+    flex: 1,
+    textAlign: 'right',
+  },
   content: {
     flex: 1,
     alignItems: 'center',
