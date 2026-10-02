@@ -156,21 +156,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await supabase.auth.getSession();
         if (cancelled) return;
 
-        if (data.session?.user) {
-          const user = await loadUserProfile(data.session.user);
+        let session = data.session;
+
+        // إذا كانت الجلسة المحفوظة منتهية، جدّدها صراحةً قبل أي طلب إلى قاعدة البيانات.
+        // هذا يمنع إرسال Access Token قديم إلى Supabase عند تشغيل التطبيق.
+        if (session?.expires_at && session.expires_at * 1000 <= Date.now()) {
+          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+
+          if (refreshError || !refreshed.session) {
+            console.error(
+              '[Supabase][Auth] فشل تجديد الجلسة المحفوظة:',
+              refreshError?.message ?? 'لم تعد جلسة صالحة',
+            );
+            session = null;
+          } else {
+            session = refreshed.session;
+          }
+        }
+
+        if (cancelled) return;
+
+        if (session?.user) {
+          const user = await loadUserProfile(session.user);
           setState((p) => ({
             ...p,
             user,
-            token: data.session!.access_token,
+            token: session!.access_token,
             isInitialized: true,
             lastError: null,
           }));
-          void ensureUserProfile(data.session.user);
+          void ensureUserProfile(session.user);
         } else {
-          setState((p) => ({ ...p, isInitialized: true }));
+          setState((p) => ({
+            ...p,
+            user: null,
+            token: null,
+            isInitialized: true,
+          }));
         }
       } catch {
-        if (!cancelled) setState((p) => ({ ...p, isInitialized: true }));
+        if (!cancelled) {
+          setState((p) => ({
+            ...p,
+            user: null,
+            token: null,
+            isInitialized: true,
+          }));
+        }
       }
     })();
 
