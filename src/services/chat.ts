@@ -30,6 +30,7 @@ export interface InboxConversation {
   other_name: string;
   other_avatar_url: string | null;
   other_region: string | null;
+  other_verification_status: string | null;
   request_text: string | null;
   last_message_body: string | null;
   last_message_at: string | null;

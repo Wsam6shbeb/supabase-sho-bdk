@@ -45,7 +45,7 @@ export default function ChatScreen() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
   const {
-    candidates,
+    allProviders,
     currentOrder,
     activeChats,
     getThreadByProviderId,
@@ -103,8 +103,10 @@ export default function ChatScreen() {
   // الرسالة الترحيبية وفقاعة الاتفاق تأتيان من حالة التطبيق (وليستا من السيرفر)
   const currentMessages = useMemo(() => {
     if (!thread) return [];
+    // نضيف فقط الرسائل التي لا تأتي من السيرفر (الترحيب/النظام وفقاعة الاتفاق)
     const extra = thread.last_message;
-    const list = extra && !remoteMessages.some((m) => m.id === extra.id)
+    const isLocalOnly = !!extra && (extra.is_system || extra.id.startsWith('agreement_'));
+    const list = extra && isLocalOnly && !remoteMessages.some((m) => m.id === extra.id)
       ? [...remoteMessages, extra]
       : remoteMessages;
     return [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -291,7 +293,7 @@ export default function ChatScreen() {
 
         <ProviderSwitcher
           threads={activeChats}
-          providers={candidates}
+          providers={allProviders}
           activeProviderId={activeProviderId}
           onSelect={handleSwitchProvider}
         />

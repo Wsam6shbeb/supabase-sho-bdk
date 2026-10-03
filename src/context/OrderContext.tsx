@@ -13,6 +13,7 @@ import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
 import { openConversation } from '@/services/chat';
+import { loadRequesterConversations } from '@/services/hydrateChats';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import { BUSINESS_CONFIG } from '@/config/business';
 import { estimateCommissionFromChat, extractPriceFromChat } from '@/domain/commission';
@@ -86,6 +87,8 @@ export interface MyProviderProfile {
 export interface OrderContextValue {
   currentOrder: Order | null;
   candidates: ServiceProvider[];
+  /** مرشحو البحث الحالي + مقدمو الخدمة المستعادون من المحادثات المحفوظة. */
+  allProviders: ServiceProvider[];
   activeChats: ChatThread[];
   agreedProviderId: string | null;
   approvalRemainingSeconds: number;
@@ -435,6 +438,49 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [approvalDeadline, setApprovalDeadline] = useState<number | null>(null);
   const [approvalRemainingSeconds, setApprovalRemainingSeconds] = useState(0);
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
+
+  // مقدمو خدمة تمت استعادتهم من القاعدة (لا نخلطهم مع مرشحي البحث الحالي)
+  const [knownProviders, setKnownProviders] = useState<ServiceProvider[]>([]);
+  const currentOrderRef = useRef<Order | null>(null);
+  useEffect(() => {
+    currentOrderRef.current = currentOrder;
+  }, [currentOrder]);
+
+  // استعادة آخر طلب مفتوح ومحادثاته من Supabase عند تسجيل الدخول/فتح التطبيق
+  useEffect(() => {
+    if (!user?.id) {
+      setKnownProviders([]);
+      return;
+    }
+    let cancelled = false;
+
+    void loadRequesterConversations(user.id).then((result) => {
+      if (cancelled || !result) return;
+
+      // إذا بدأ المستخدم طلباً جديداً قبل انتهاء الاستعادة فلا نستبدله
+      const existing = currentOrderRef.current;
+      if (existing && existing.id !== result.order.id) return;
+
+      setKnownProviders(result.providers);
+      setCurrentOrder((prev) => prev ?? result.order);
+      setActiveChats((prev) => [
+        ...prev,
+        ...result.threads.filter(
+          (t) =>
+            !prev.some(
+              (p) =>
+                p.conversation_id === t.conversation_id ||
+                (p.provider_id === t.provider_id && p.order_id === t.order_id),
+            ),
+        ),
+      ]);
+      setAgreedProviderId((prev) => prev ?? result.agreedProviderId);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
 
@@ -829,8 +875,15 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   );
 
   const getProviderById = useCallback(
-    (providerId: string) => candidates.find((p) => p.id === providerId),
-    [candidates],
+    (providerId: string) =>
+      candidates.find((p) => p.id === providerId) ?? knownProviders.find((p) => p.id === providerId),
+    [candidates, knownProviders],
+  );
+
+  // كل مقدمي الخدمة المعروفين (مرشحو البحث الحالي + من استُعيدوا من القاعدة)
+  const allProviders = useMemo(
+    () => [...candidates, ...knownProviders.filter((k) => !candidates.some((c) => c.id === k.id))],
+    [candidates, knownProviders],
   );
 
   // ═══════════════════════════════════════════════════════════
@@ -1254,6 +1307,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     () => ({
       currentOrder,
       candidates,
+      allProviders,
       activeChats,
       agreedProviderId,
       approvalRemainingSeconds,
@@ -1311,6 +1365,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     [
       currentOrder,
       candidates,
+      allProviders,
       activeChats,
       agreedProviderId,
       approvalRemainingSeconds,

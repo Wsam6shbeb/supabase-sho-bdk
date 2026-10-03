@@ -29,7 +29,7 @@ export default function MessagesTab() {
   const scheme = Colors[theme];
   const {
     activeChats,
-    candidates,
+    allProviders,
     orderHistory,
     hasCompletedOrderWith,
   } = useOrder();
@@ -51,7 +51,7 @@ export default function MessagesTab() {
     // نشطة
     ...activeChats.map((thread) => ({
       thread,
-      provider: candidates.find((p) => p.id === thread.provider_id),
+      provider: allProviders.find((p) => p.id === thread.provider_id),
       isCompleted: false,
     })),
   ].filter((x) => x.provider !== undefined);
@@ -60,7 +60,7 @@ export default function MessagesTab() {
   const completedProviders = orderHistory
     .filter((o) => o.status === OrderStatus.COMPLETED && o.provider_id)
     .map((order) => {
-      const provider = candidates.find((p) => p.id === order.provider_id);
+      const provider = allProviders.find((p) => p.id === order.provider_id);
       return {
         order,
         provider,
