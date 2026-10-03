@@ -21,13 +21,20 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { api } from '@/services/api';
-import { supabase } from '@/services/supabase';
+import {
+  fetchMessages,
+  openConversation,
+  sendMessage,
+  subscribeToMessages,
+  type DbMessage,
+} from '@/services/chat';
 import { ChatStatus } from '@/types/common';
 import type { ChatMessage } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+    Alert,
     FlatList,
     KeyboardAvoidingView,
     Platform,
@@ -71,14 +78,76 @@ export default function ChatScreen() {
   // الاتفاق (ما في حساب مقدم خدمة حقيقي بعد). يُحذف لما يصير في حساب مقدم خدمة حقيقي.
   const [viewAsProvider, setViewAsProvider] = useState(false);
 
+  // معرّف المحادثة الحقيقي إذا لم يصل بعد من الـ Context (مثلاً تأخر الشبكة)
+  const [fallbackConversationIds, setFallbackConversationIds] = useState<Record<string, string>>({});
+
   const provider = getProviderById(activeProviderId);
   const thread = getThreadByProviderId(activeProviderId);
+
+  const conversationId = thread
+    ? (thread.conversation_id ?? fallbackConversationIds[thread.id] ?? null)
+    : null;
+  const myId = user?.id ?? null;
+
+  // تحويل رسالة قاعدة البيانات إلى الشكل الذي تعرضه الواجهة
+  const mapDbMessage = (m: DbMessage): ChatMessage => ({
+    id: m.id,
+    order_id: thread?.order_id ?? '',
+    sender_id: m.message_type === 'system' ? 'system' : m.sender_id === myId ? 'me' : m.sender_id,
+    receiver_id: m.sender_id === myId ? (provider?.id ?? '') : (myId ?? ''),
+    content: m.body,
+    is_system: m.message_type === 'system',
+    created_at: m.created_at,
+    read_at: null,
+  });
+
+  // دمج رسائل قادمة من Supabase مع الحالية: يستبدل الرسالة المؤقتة (التفاؤلية) بالحقيقية
+  const mergeRemote = (threadId: string, incoming: DbMessage[], base: ChatMessage[]) => {
+    setMessages((prev) => {
+      const byId = new Map((prev[threadId] ?? base).map((m) => [m.id, m]));
+      for (const m of incoming) {
+        if (m.client_dedupe_key) byId.delete(m.client_dedupe_key);
+        byId.set(m.id, mapDbMessage(m));
+      }
+      const merged = Array.from(byId.values()).sort((a, b) =>
+        a.created_at.localeCompare(b.created_at),
+      );
+      return { ...prev, [threadId]: merged };
+    });
+  };
+
+  // تحميل السجل + اشتراك لحظي بالرسائل الجديدة
+  useEffect(() => {
+    if (!thread || !conversationId || !myId) return;
+    const threadId = thread.id;
+    const base = thread.last_message ? [thread.last_message] : [];
+    let cancelled = false;
+
+    void fetchMessages(conversationId).then((rows) => {
+      if (!cancelled && rows.length) mergeRemote(threadId, rows, base);
+    });
+
+    const unsubscribe = subscribeToMessages(conversationId, (row) => {
+      if (!cancelled) mergeRemote(threadId, [row], base);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, myId, thread?.id]);
 
   const currentMessages = useMemo(() => {
     if (!thread) return [];
     const local = messages[thread.id];
-    if (local) return local;
-    return thread.last_message ? [thread.last_message] : [];
+    const base = local ?? (thread.last_message ? [thread.last_message] : []);
+    // فقاعة الاتفاق تأتي من حالة الـ Context وليست من السيرفر، فنبقيها ظاهرة
+    const agreement = thread.last_message;
+    if (local && agreement && agreement.id.startsWith('agreement_') && !local.some((m) => m.id === agreement.id)) {
+      return [...local, agreement];
+    }
+    return base;
   }, [messages, thread]);
 
   if (!provider || !thread) {
@@ -100,10 +169,14 @@ export default function ChatScreen() {
     );
   }
 
-// [شرح الدالة: handleSend] يرسل البيانات الحالية إلى العملية المرتبطة بالصفحة، مثل الرسالة أو رمز التحقق.
-  const handleSend = (text: string) => {
-    const newMessage: ChatMessage = {
-      id: api.randomId('msg'),
+// [شرح الدالة: handleSend] يرسل الرسالة عبر Supabase مع عرضها فوراً (تفاؤلياً) ثم تثبيتها عند وصول الرد.
+  const handleSend = async (text: string) => {
+    const clientKey = api.randomId('msg');
+    const threadId = thread.id;
+    const base = thread.last_message ? [thread.last_message] : [];
+
+    const optimistic: ChatMessage = {
+      id: clientKey,
       order_id: thread.order_id,
       sender_id: 'me',
       receiver_id: provider.id,
@@ -112,53 +185,45 @@ export default function ChatScreen() {
       created_at: new Date().toISOString(),
       read_at: null,
     };
-    setMessages((prev) => ({
-      ...prev,
-      [thread.id]: [
-        ...(prev[thread.id] ?? (thread.last_message ? [thread.last_message] : [])),
-        newMessage,
-      ],
-    }));
+    setMessages((prev) => ({ ...prev, [threadId]: [...(prev[threadId] ?? base), optimistic] }));
 
-    // مزامنة أفضل محاولة (best-effort) مع Supabase — لا تُغيّر الحالة المحلية
-    // أعلاه ولا الواجهة. conversation_id هون هو معرّف المحادثة المحلي (thread.id)
-    // وقد لا يقابل صفاً حقيقياً بجدول conversations بعد (نظام الطلبات/المحادثات
-    // الحالي محلي بالكامل)، فمن المتوقع فشل الإدراج بهالحالة، وبيتم تسجيله فقط.
-    (async () => {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error('[Supabase][handleSend] تعذر جلب المستخدم الحالي:', authError.message);
-          return;
-        }
-        const senderId = authData.user?.id;
-        if (!senderId) {
-          console.error('[Supabase][handleSend] لا يوجد مستخدم مسجّل دخول، تم تجاوز حفظ الرسالة.');
-          return;
-        }
+    const removeOptimistic = () =>
+      setMessages((prev) => ({
+        ...prev,
+        [threadId]: (prev[threadId] ?? base).filter((m) => m.id !== clientKey),
+      }));
 
-        const { data, error } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: thread.id,
-            sender_id: senderId,
-            body: text,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('[Supabase][handleSend] فشل حفظ الرسالة:', error.message, {
-            conversation_id: thread.id,
-          });
-          return;
-        }
-
-        console.log('[Supabase][handleSend] تم حفظ الرسالة بنجاح:', data.id);
-      } catch (err) {
-        console.error('[Supabase][handleSend] خطأ غير متوقع أثناء حفظ الرسالة:', err);
+    // إذا لم تُفتح المحادثة بعد في قاعدة البيانات نفتحها الآن
+    let convId = conversationId;
+    if (!convId) {
+      const opened = await openConversation(currentOrder?.id ?? thread.order_id, provider.id);
+      if (opened.id) {
+        convId = opened.id;
+        setFallbackConversationIds((prev) => ({ ...prev, [threadId]: opened.id as string }));
       }
-    })();
+    }
+
+    if (!convId || !myId) {
+      removeOptimistic();
+      Alert.alert('', 'تعذر إرسال الرسالة. تحقق من الاتصال وحاول مرة أخرى.');
+      return;
+    }
+
+    const { message, error } = await sendMessage({
+      conversationId: convId,
+      senderId: myId,
+      body: text,
+      clientKey,
+    });
+
+    if (error && error !== 'DUPLICATE') {
+      console.error('[chat] فشل إرسال الرسالة:', error);
+      removeOptimistic();
+      Alert.alert('', 'تعذر إرسال الرسالة. حاول مرة أخرى.');
+      return;
+    }
+
+    if (message) mergeRemote(threadId, [message], base);
   };
 
 // [شرح الدالة: handleCustomerAgree] يعالج موافقة العميل على الاتفاق داخل المحادثة.

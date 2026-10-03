@@ -15,9 +15,11 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
+import { fetchMyConversations, subscribeToInbox, type InboxConversation } from '@/services/chat';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,6 +33,18 @@ export default function MessagesTab() {
     orderHistory,
     hasCompletedOrderWith,
   } = useOrder();
+
+  // المحادثات الواردة: التي أنا فيها مقدم الخدمة (من Supabase مع تحديث لحظي)
+  const [incoming, setIncoming] = useState<InboxConversation[]>([]);
+  const loadInbox = useCallback(() => {
+    void fetchMyConversations().then((rows) =>
+      setIncoming(rows.filter((r) => r.my_role === 'provider')),
+    );
+  }, []);
+  useEffect(() => {
+    loadInbox();
+    return subscribeToInbox(loadInbox);
+  }, [loadInbox]);
 
   // دمج المحادثات النشطة + المكتملة
   const allThreads = [
@@ -101,7 +115,7 @@ export default function MessagesTab() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {allThreads.length === 0 && completedProviders.length === 0 ? (
+      {allThreads.length === 0 && completedProviders.length === 0 && incoming.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="chatbubbles-outline" size={64} color={scheme.textTertiary} />
           <Text style={[styles.emptyTitle, { color: scheme.text }]}>
@@ -114,6 +128,7 @@ export default function MessagesTab() {
       ) : (
         <FlatList
           data={[
+            ...incoming.map((conv) => ({ type: 'incoming' as const, conv })),
             ...allThreads.map((item) => ({ type: 'active' as const, ...item })),
             ...completedProviders.map((item) => ({
               type: 'completed' as const,
@@ -122,11 +137,45 @@ export default function MessagesTab() {
             })),
           ]}
           keyExtractor={(item, index) =>
-            item.type === 'active'
-              ? item.thread!.id
-              : `completed_${item.order!.id}_${index}`
+            item.type === 'incoming'
+              ? `incoming_${item.conv.conversation_id}`
+              : item.type === 'active'
+                ? item.thread!.id
+                : `completed_${item.order!.id}_${index}`
           }
           renderItem={({ item }) => {
+            if (item.type === 'incoming') {
+              const { conv } = item;
+              return (
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/orders/conversation',
+                      params: { conversation_id: conv.conversation_id, name: conv.other_name },
+                    })
+                  }
+                >
+                  <AppCard padding="three" elevation="sm" style={styles.card}>
+                    <View style={styles.row}>
+                      <Ionicons name="chatbubble-ellipses" size={28} color={scheme.primary} />
+                      <View style={{ flex: 1, marginStart: Spacing.three }}>
+                        <Text style={[{ color: scheme.text, fontWeight: FontWeights.bold, fontSize: FontSizes.base }]} numberOfLines={1}>
+                          {conv.other_name}
+                        </Text>
+                        {!!conv.request_text && (
+                          <Text style={{ color: scheme.textSecondary, fontSize: FontSizes.xs }} numberOfLines={1}>
+                            {conv.request_text}
+                          </Text>
+                        )}
+                        <Text style={{ color: scheme.textSecondary, fontSize: FontSizes.sm }} numberOfLines={1}>
+                          {conv.last_message_body ?? 'لا توجد رسائل بعد'}
+                        </Text>
+                      </View>
+                    </View>
+                  </AppCard>
+                </Pressable>
+              );
+            }
             if (item.type === 'active') {
               const { thread, provider } = item;
               if (!thread || !provider) return null;

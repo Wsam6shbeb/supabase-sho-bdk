@@ -91,6 +91,7 @@ function RootStack() {
         <Stack.Screen name="orders/candidates" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/provider-profile" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/chat" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="orders/conversation" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="orders/rate" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/become-provider" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/welcome-bonus" options={{ headerShown: false, animation: 'fade' }} />

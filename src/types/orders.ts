@@ -96,6 +96,8 @@ export interface ChatMessage {
 /** موضوع محادثة مع مقدم خدمة */
 export interface ChatThread {
   id: string;
+  /** معرّف المحادثة الحقيقي في Supabase (conversations.id) بعد فتحها. */
+  conversation_id?: string | null;
   order_id: string;
   provider_id: string;
   customer_id: string;

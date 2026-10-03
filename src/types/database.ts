@@ -909,6 +909,28 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      open_conversation: {
+        Args: { p_request_id: string; p_provider_id: string }
+        Returns: string
+      }
+      get_my_conversations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          conversation_id: string
+          request_id: string
+          state: string
+          my_role: string
+          other_user_id: string
+          other_name: string
+          other_avatar_url: string | null
+          other_region: string | null
+          request_text: string | null
+          last_message_body: string | null
+          last_message_at: string | null
+          last_message_sender: string | null
+          updated_at: string
+        }[]
+      }
       get_request_candidates: {
         Args: { p_request_id: string }
         Returns: {

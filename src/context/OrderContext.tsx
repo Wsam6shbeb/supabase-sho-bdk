@@ -11,6 +11,7 @@
 
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
+import { openConversation } from '@/services/chat';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import { BUSINESS_CONFIG } from '@/config/business';
 import { estimateCommissionFromChat, extractPriceFromChat } from '@/domain/commission';
@@ -359,35 +360,29 @@ async function syncOpenChatToSupabase(
   orderId: string,
   providerId: string,
   requesterId: string | undefined,
-) {
+): Promise<string | null> {
   try {
     if (!requesterId) {
       console.error('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
-      return;
+      return null;
     }
 
-    const { data, error } = await supabase
-      .from('conversations')
-      .insert({
-        request_id: orderId,
-        requester_id: requesterId,
-        provider_id: providerId,
-      })
-      .select()
-      .single();
+    const { id, error } = await openConversation(orderId, providerId);
 
-    if (error) {
-      console.error('[Supabase][openChat] فشل إنشاء المحادثة:', error.message, {
+    if (error || !id) {
+      console.error('[Supabase][openChat] فشل فتح المحادثة:', error, {
         threadId: thread.id,
         orderId,
         providerId,
       });
-      return;
+      return null;
     }
 
-    console.log('[Supabase][openChat] تم إنشاء المحادثة بنجاح:', data.id);
+    console.log('[Supabase][openChat] المحادثة جاهزة:', id);
+    return id;
   } catch (err) {
-    console.error('[Supabase][openChat] خطأ غير متوقع أثناء إنشاء المحادثة:', err);
+    console.error('[Supabase][openChat] خطأ غير متوقع أثناء فتح المحادثة:', err);
+    return null;
   }
 }
 
@@ -775,7 +770,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         }).then((created) => {
           if (!created) return;
           setCurrentOrder((prev) => (prev && prev.id === order.id ? { ...prev, id: created.id } : prev));
-          void syncOpenChatToSupabase(thread, created.id, provider.id, requesterId);
+          void syncOpenChatToSupabase(thread, created.id, provider.id, requesterId).then((conversationId) => {
+            if (!conversationId) return;
+            setActiveChats((prev) =>
+              prev.map((t) => (t.id === thread.id ? { ...t, conversation_id: conversationId } : t)),
+            );
+          });
         });
       } else {
         console.error('[Supabase][requestProviderAgain] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة/المحادثة.');
@@ -806,7 +806,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const thread = createNegotiationThread(orderId, provider, systemMessage(orderId, WELCOME_TEXT));
 
       setActiveChats((prev) => [...prev, thread]);
-      void syncOpenChatToSupabase(thread, orderId, provider.id, user?.id);
+      void syncOpenChatToSupabase(thread, orderId, provider.id, user?.id).then((conversationId) => {
+        if (!conversationId) return;
+        setActiveChats((prev) =>
+          prev.map((t) => (t.id === thread.id ? { ...t, conversation_id: conversationId } : t)),
+        );
+      });
       return { ok: true, thread };
     },
     [activeChats, agreedProviderId, blockedProviderIds, currentOrder?.id, user?.id],
