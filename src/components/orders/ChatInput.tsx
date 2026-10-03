@@ -15,12 +15,14 @@ import { StyleSheet, TextInput, View } from 'react-native';
 
 interface ChatInputProps {
   onSend: (text: string) => void;
+  /** يُستدعى مع كل تغيير في النص (لمؤشر "يكتب الآن"). */
+  onChangeText?: (text: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }
 
 // [شرح الدالة: ChatInput] يعرض حقل كتابة الرسالة وزر الإرسال داخل المحادثة.
-export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
+export function ChatInput({ onSend, onChangeText, disabled, placeholder }: ChatInputProps) {
   const theme = useTheme();
   const scheme = Colors[theme];
   const [text, setText] = useState('');
@@ -31,6 +33,7 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
     if (!trimmed) return;
     onSend(trimmed);
     setText('');
+    onChangeText?.('');
   };
 
   return (
@@ -42,7 +45,10 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
     >
       <TextInput
         value={text}
-        onChangeText={setText}
+        onChangeText={(value) => {
+          setText(value);
+          onChangeText?.(value);
+        }}
         placeholder={placeholder ?? t('orders.chat.inputPlaceholder')}
         placeholderTextColor={scheme.textTertiary}
         multiline

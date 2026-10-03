@@ -11,6 +11,7 @@
 
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
+import { useChatDelivery } from '@/hooks/use-chat-delivery';
 import { openConversation } from '@/services/chat';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import { BUSINESS_CONFIG } from '@/config/business';
@@ -426,6 +427,7 @@ async function syncAgreementToSupabase(params: {
 // ═══════════════════════════════════════════════════════════
 export function OrderProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  useChatDelivery(user?.id);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [candidates, setCandidatesState] = useState<ServiceProvider[]>([]);
   const [activeChats, setActiveChats] = useState<ChatThread[]>([]);

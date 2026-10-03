@@ -8,19 +8,12 @@ import { ChatInput } from '@/components/orders/ChatInput';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
-import { api } from '@/services/api';
-import {
-  fetchMessages,
-  sendMessage,
-  subscribeToMessages,
-  type DbMessage,
-} from '@/services/chat';
+import { useConversation } from '@/hooks/use-conversation';
 import type { ChatMessage } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -41,80 +34,12 @@ export default function ConversationScreen() {
   const otherName = typeof params.name === 'string' && params.name ? params.name : 'محادثة';
   const myId = user?.id ?? null;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  const toChat = (m: DbMessage): ChatMessage => ({
-    id: m.id,
-    order_id: '',
-    sender_id: m.message_type === 'system' ? 'system' : m.sender_id === myId ? 'me' : m.sender_id,
-    receiver_id: '',
-    content: m.body,
-    is_system: m.message_type === 'system',
-    created_at: m.created_at,
-    read_at: null,
+  const { messages, send, retry, partnerTyping, notifyTyping, loadFailed } = useConversation({
+    conversationId: conversationId || null,
+    myId,
   });
-
-  const merge = (incoming: DbMessage[]) =>
-    setMessages((prev) => {
-      const byId = new Map(prev.map((m) => [m.id, m]));
-      for (const m of incoming) {
-        if (m.client_dedupe_key) byId.delete(m.client_dedupe_key); // استبدال الرسالة المؤقتة
-        byId.set(m.id, toChat(m));
-      }
-      return Array.from(byId.values()).sort((a, b) => a.created_at.localeCompare(b.created_at));
-    });
-
-  useEffect(() => {
-    if (!conversationId || !myId) return;
-    let cancelled = false;
-
-    void fetchMessages(conversationId).then((rows) => {
-      if (!cancelled) merge(rows);
-    });
-    const unsubscribe = subscribeToMessages(conversationId, (row) => {
-      if (!cancelled) merge([row]);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, myId]);
-
-  const handleSend = async (text: string) => {
-    if (!conversationId || !myId) return;
-    const clientKey = api.randomId('msg');
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: clientKey,
-        order_id: '',
-        sender_id: 'me',
-        receiver_id: '',
-        content: text,
-        is_system: false,
-        created_at: new Date().toISOString(),
-        read_at: null,
-      },
-    ]);
-
-    const { message, error } = await sendMessage({
-      conversationId,
-      senderId: myId,
-      body: text,
-      clientKey,
-    });
-
-    if (error && error !== 'DUPLICATE') {
-      setMessages((prev) => prev.filter((m) => m.id !== clientKey));
-      Alert.alert('', 'تعذر إرسال الرسالة. حاول مرة أخرى.');
-      return;
-    }
-    if (message) merge([message]);
-  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
@@ -141,14 +66,25 @@ export default function ConversationScreen() {
           ref={listRef}
           data={messages}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ChatBubble message={item} isMine={item.sender_id === 'me'} />}
+          renderItem={({ item }) => (
+            <ChatBubble message={item} isMine={item.sender_id === 'me'} onRetry={retry} />
+          )}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         />
 
-        <ChatInput onSend={handleSend} />
+        {loadFailed && (
+          <Text style={[styles.statusText, { color: scheme.danger }]}>
+            تعذر تحميل الرسائل. تحقق من الاتصال.
+          </Text>
+        )}
+        {partnerTyping && (
+          <Text style={[styles.statusText, { color: scheme.textSecondary }]}>يكتب الآن...</Text>
+        )}
+
+        <ChatInput onSend={(text) => void send(text)} onChangeText={notifyTyping} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -173,4 +109,11 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   content: { padding: Spacing.three, gap: Spacing.two },
+  statusText: {
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.one,
+  },
 });

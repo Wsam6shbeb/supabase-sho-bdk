@@ -159,9 +159,18 @@ export default function MessagesTab() {
                     <View style={styles.row}>
                       <Ionicons name="chatbubble-ellipses" size={28} color={scheme.primary} />
                       <View style={{ flex: 1, marginStart: Spacing.three }}>
-                        <Text style={[{ color: scheme.text, fontWeight: FontWeights.bold, fontSize: FontSizes.base }]} numberOfLines={1}>
-                          {conv.other_name}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+                          <Text style={[{ flex: 1, color: scheme.text, fontWeight: FontWeights.bold, fontSize: FontSizes.base }]} numberOfLines={1}>
+                            {conv.other_name}
+                          </Text>
+                          {conv.unread_count > 0 && (
+                            <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: scheme.primary }}>
+                              <Text style={{ color: scheme.primaryContrast, fontSize: FontSizes.xs, fontWeight: FontWeights.bold }}>
+                                {conv.unread_count > 99 ? '99+' : conv.unread_count}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                         {!!conv.request_text && (
                           <Text style={{ color: scheme.textSecondary, fontSize: FontSizes.xs }} numberOfLines={1}>
                             {conv.request_text}

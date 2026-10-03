@@ -90,8 +90,13 @@ export interface ChatMessage {
   content: string;
   is_system: boolean;
   created_at: string;
+  delivered_at?: string | null;
   read_at?: string | null;
+  /** حالة الرسالة التي أرسلتها أنا: جاري الإرسال، أُرسلت، وصلت، قُرئت، فشلت. */
+  status?: MessageStatus;
 }
+
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 /** موضوع محادثة مع مقدم خدمة */
 export interface ChatThread {

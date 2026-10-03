@@ -20,19 +20,12 @@ import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
-import { api } from '@/services/api';
-import {
-  fetchMessages,
-  openConversation,
-  sendMessage,
-  subscribeToMessages,
-  type DbMessage,
-} from '@/services/chat';
+import { openConversation } from '@/services/chat';
+import { useConversation } from '@/hooks/use-conversation';
 import { ChatStatus } from '@/types/common';
-import type { ChatMessage } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -72,7 +65,6 @@ export default function ChatScreen() {
   const [activeProviderId, setActiveProviderId] = useState(initialProviderId);
   const [showCustomerConfirm, setShowCustomerConfirm] = useState(false);
   const [sharePhone, setSharePhone] = useState(false);
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   // 🧪 زر تجربة مؤقت — يخليك تشوف الشاشة كأنك مقدم الخدمة عشان تجرب موافقة/رفض
   // الاتفاق (ما في حساب مقدم خدمة حقيقي بعد). يُحذف لما يصير في حساب مقدم خدمة حقيقي.
@@ -89,66 +81,34 @@ export default function ChatScreen() {
     : null;
   const myId = user?.id ?? null;
 
-  // تحويل رسالة قاعدة البيانات إلى الشكل الذي تعرضه الواجهة
-  const mapDbMessage = (m: DbMessage): ChatMessage => ({
-    id: m.id,
-    order_id: thread?.order_id ?? '',
-    sender_id: m.message_type === 'system' ? 'system' : m.sender_id === myId ? 'me' : m.sender_id,
-    receiver_id: m.sender_id === myId ? (provider?.id ?? '') : (myId ?? ''),
-    content: m.body,
-    is_system: m.message_type === 'system',
-    created_at: m.created_at,
-    read_at: null,
-  });
+  // إذا لم تُفتح المحادثة بعد في قاعدة البيانات نفتحها عند أول إرسال
+  const ensureConversationId = useCallback(async () => {
+    if (!thread || !provider) return null;
+    const opened = await openConversation(currentOrder?.id ?? thread.order_id, provider.id);
+    if (opened.id) {
+      setFallbackConversationIds((prev) => ({ ...prev, [thread.id]: opened.id as string }));
+    }
+    return opened.id;
+  }, [thread, provider, currentOrder?.id]);
 
-  // دمج رسائل قادمة من Supabase مع الحالية: يستبدل الرسالة المؤقتة (التفاؤلية) بالحقيقية
-  const mergeRemote = (threadId: string, incoming: DbMessage[], base: ChatMessage[]) => {
-    setMessages((prev) => {
-      const byId = new Map((prev[threadId] ?? base).map((m) => [m.id, m]));
-      for (const m of incoming) {
-        if (m.client_dedupe_key) byId.delete(m.client_dedupe_key);
-        byId.set(m.id, mapDbMessage(m));
-      }
-      const merged = Array.from(byId.values()).sort((a, b) =>
-        a.created_at.localeCompare(b.created_at),
-      );
-      return { ...prev, [threadId]: merged };
-    });
-  };
+  // كل منطق الريال تايم/الإرسال/حالات الرسائل في الـ Hook الموحّد
+  const {
+    messages: remoteMessages,
+    send: sendChatMessage,
+    retry: retryMessage,
+    partnerTyping,
+    notifyTyping,
+  } = useConversation({ conversationId, myId, ensureConversationId });
 
-  // تحميل السجل + اشتراك لحظي بالرسائل الجديدة
-  useEffect(() => {
-    if (!thread || !conversationId || !myId) return;
-    const threadId = thread.id;
-    const base = thread.last_message ? [thread.last_message] : [];
-    let cancelled = false;
-
-    void fetchMessages(conversationId).then((rows) => {
-      if (!cancelled && rows.length) mergeRemote(threadId, rows, base);
-    });
-
-    const unsubscribe = subscribeToMessages(conversationId, (row) => {
-      if (!cancelled) mergeRemote(threadId, [row], base);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, myId, thread?.id]);
-
+  // الرسالة الترحيبية وفقاعة الاتفاق تأتيان من حالة التطبيق (وليستا من السيرفر)
   const currentMessages = useMemo(() => {
     if (!thread) return [];
-    const local = messages[thread.id];
-    const base = local ?? (thread.last_message ? [thread.last_message] : []);
-    // فقاعة الاتفاق تأتي من حالة الـ Context وليست من السيرفر، فنبقيها ظاهرة
-    const agreement = thread.last_message;
-    if (local && agreement && agreement.id.startsWith('agreement_') && !local.some((m) => m.id === agreement.id)) {
-      return [...local, agreement];
-    }
-    return base;
-  }, [messages, thread]);
+    const extra = thread.last_message;
+    const list = extra && !remoteMessages.some((m) => m.id === extra.id)
+      ? [...remoteMessages, extra]
+      : remoteMessages;
+    return [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }, [remoteMessages, thread]);
 
   if (!provider || !thread) {
     return (
@@ -169,61 +129,9 @@ export default function ChatScreen() {
     );
   }
 
-// [شرح الدالة: handleSend] يرسل الرسالة عبر Supabase مع عرضها فوراً (تفاؤلياً) ثم تثبيتها عند وصول الرد.
-  const handleSend = async (text: string) => {
-    const clientKey = api.randomId('msg');
-    const threadId = thread.id;
-    const base = thread.last_message ? [thread.last_message] : [];
-
-    const optimistic: ChatMessage = {
-      id: clientKey,
-      order_id: thread.order_id,
-      sender_id: 'me',
-      receiver_id: provider.id,
-      content: text,
-      is_system: false,
-      created_at: new Date().toISOString(),
-      read_at: null,
-    };
-    setMessages((prev) => ({ ...prev, [threadId]: [...(prev[threadId] ?? base), optimistic] }));
-
-    const removeOptimistic = () =>
-      setMessages((prev) => ({
-        ...prev,
-        [threadId]: (prev[threadId] ?? base).filter((m) => m.id !== clientKey),
-      }));
-
-    // إذا لم تُفتح المحادثة بعد في قاعدة البيانات نفتحها الآن
-    let convId = conversationId;
-    if (!convId) {
-      const opened = await openConversation(currentOrder?.id ?? thread.order_id, provider.id);
-      if (opened.id) {
-        convId = opened.id;
-        setFallbackConversationIds((prev) => ({ ...prev, [threadId]: opened.id as string }));
-      }
-    }
-
-    if (!convId || !myId) {
-      removeOptimistic();
-      Alert.alert('', 'تعذر إرسال الرسالة. تحقق من الاتصال وحاول مرة أخرى.');
-      return;
-    }
-
-    const { message, error } = await sendMessage({
-      conversationId: convId,
-      senderId: myId,
-      body: text,
-      clientKey,
-    });
-
-    if (error && error !== 'DUPLICATE') {
-      console.error('[chat] فشل إرسال الرسالة:', error);
-      removeOptimistic();
-      Alert.alert('', 'تعذر إرسال الرسالة. حاول مرة أخرى.');
-      return;
-    }
-
-    if (message) mergeRemote(threadId, [message], base);
+// [شرح الدالة: handleSend] يرسل الرسالة عبر Supabase (التفاصيل داخل useConversation).
+  const handleSend = (text: string) => {
+    void sendChatMessage(text);
   };
 
 // [شرح الدالة: handleCustomerAgree] يعالج موافقة العميل على الاتفاق داخل المحادثة.
@@ -404,13 +312,25 @@ export default function ChatScreen() {
                 />
               );
             }
-            return <ChatBubble message={item} isMine={item.sender_id === 'me'} />;
+            return (
+              <ChatBubble
+                message={item}
+                isMine={item.sender_id === 'me'}
+                onRetry={retryMessage}
+              />
+            );
           }}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         />
+
+        {partnerTyping && (
+          <Text style={[styles.typingText, { color: scheme.textSecondary }]}>
+            يكتب الآن...
+          </Text>
+        )}
 
         {canCustomerCancel && (
           <View
@@ -576,6 +496,7 @@ export default function ChatScreen() {
         {!showCustomerConfirm && (
           <ChatInput
             onSend={handleSend}
+            onChangeText={notifyTyping}
             disabled={!canSendMessage}
             placeholder={
               canSendMessage
@@ -590,6 +511,13 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  typingText: {
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.one,
+  },
   safe: { flex: 1 },
   flex: { flex: 1 },
   header: {

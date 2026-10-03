@@ -356,6 +356,8 @@ export type Database = {
         Row: {
           body: string
           client_dedupe_key: string | null
+          delivered_at: string | null
+          read_at: string | null
           conversation_id: string
           created_at: string
           id: string
@@ -365,6 +367,8 @@ export type Database = {
         Insert: {
           body: string
           client_dedupe_key?: string | null
+          delivered_at?: string | null
+          read_at?: string | null
           conversation_id: string
           created_at?: string
           id?: string
@@ -374,6 +378,8 @@ export type Database = {
         Update: {
           body?: string
           client_dedupe_key?: string | null
+          delivered_at?: string | null
+          read_at?: string | null
           conversation_id?: string
           created_at?: string
           id?: string
@@ -909,6 +915,18 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      mark_messages_delivered: {
+        Args: { p_conversation_id: string }
+        Returns: number
+      }
+      mark_messages_read: {
+        Args: { p_conversation_id: string }
+        Returns: number
+      }
+      mark_all_my_messages_delivered: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       open_conversation: {
         Args: { p_request_id: string; p_provider_id: string }
         Returns: string
@@ -928,6 +946,7 @@ export type Database = {
           last_message_body: string | null
           last_message_at: string | null
           last_message_sender: string | null
+          unread_count: number
           updated_at: string
         }[]
       }
@@ -1196,8 +1215,9 @@ export type CompositeTypes<
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : never
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
