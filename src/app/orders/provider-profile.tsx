@@ -33,6 +33,8 @@ export default function ProviderProfileScreen() {
     isProviderBlocked,
     hasCompletedOrderWith,
     getProviderById,
+    openChat,
+    getThreadByProviderId,
   } = useOrder();
 
   const providerId = params.provider_id as string;
@@ -40,6 +42,8 @@ export default function ProviderProfileScreen() {
   const provider = getProviderById(providerId);
 
   const blocked = isProviderBlocked(providerId);
+  const hasChat = !!getThreadByProviderId(providerId);
+  const openedFromChat = params.from === 'chat';
   const canRequestAgain = hasCompletedOrderWith(providerId);
 
   if (!provider) {
@@ -58,6 +62,33 @@ export default function ProviderProfileScreen() {
 
 // [شرح الدالة: handleClose] يغلق النافذة/الصفحة الحالية ويعيد المستخدم للمكان السابق.
   const handleClose = () => router.back();
+
+// [شرح الدالة: handleOpenChat] يفتح محادثة مع مقدم الخدمة مباشرة من البروفايل.
+  const handleOpenChat = () => {
+    // إذا جئنا من شاشة المحادثة نفسها نرجع إليها بدل تكديس شاشة جديدة.
+    if (openedFromChat && hasChat) {
+      router.back();
+      return;
+    }
+
+    const result = openChat(provider);
+    if (!result.ok) {
+      Alert.alert(
+        '',
+        result.reason === 'MAX_CHATS'
+          ? t('orders.candidates.maxChatsWarning')
+          : result.reason === 'BLOCKED'
+            ? t('orders.candidates.blockedWarning')
+            : t('orders.candidates.alreadyAgreedWarning'),
+      );
+      return;
+    }
+
+    router.push({
+      pathname: '/orders/chat',
+      params: { provider_id: provider.id },
+    });
+  };
 
 // [شرح الدالة: handleRequestAgain] يبدأ طلب خدمة جديدًا اعتمادًا على المحادثة/الطلب السابق.
   const handleRequestAgain = () => {
@@ -164,6 +195,22 @@ export default function ProviderProfileScreen() {
             },
           ]}
         >
+          {!blocked && (
+            <AppButton
+              title={hasChat ? t('orders.candidates.returnToChat') : t('orders.candidates.openChat')}
+              variant={hasChat ? 'secondary' : 'primary'}
+              size="lg"
+              onPress={handleOpenChat}
+              leadingIcon={
+                <Ionicons
+                  name="chatbubble-ellipses"
+                  size={18}
+                  color={hasChat ? scheme.primary : scheme.primaryContrast}
+                />
+              }
+            />
+          )}
+
           <Pressable onPress={handleReport} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
             <Ionicons name="flag-outline" size={20} color={scheme.warning} />
             <Text style={[styles.actionText, { color: scheme.warning }]}>

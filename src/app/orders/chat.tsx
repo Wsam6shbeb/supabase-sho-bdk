@@ -254,7 +254,7 @@ export default function ChatScreen() {
             onPress={() =>
               router.push({
                 pathname: '/orders/provider-profile',
-                params: { provider_id: provider.id },
+                params: { provider_id: provider.id, from: 'chat' },
               })
             }
           >
