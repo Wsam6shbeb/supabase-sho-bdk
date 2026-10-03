@@ -66,27 +66,29 @@ export default function CandidatesScreen() {
     let cancelled = false;
 
     const loadCandidates = async () => {
-      const { data, error } = await supabase
-        .from('candidates')
-        .select(`
-          provider_id,
-          rank,
-          match_score,
-          provider_profiles!candidates_provider_id_fkey(
-            user_id,
-            rating_avg,
-            completed_services_count,
-            users!provider_profiles_user_id_fkey(
-              id,
-              full_name,
-              avatar_url,
-              region,
-              verification_status
-            )
-          )
-        `)
-        .eq('request_id', requestId)
-        .order('rank', { ascending: true });
+      // نستخدم RPC لأن قراءة جدول users مباشرة تُحجب بسياسة RLS (users_select_own).
+      const { data: rpcRows, error } = await supabase.rpc('get_request_candidates', {
+        p_request_id: requestId,
+      });
+
+      // نعيد تشكيل الصفوف لتطابق البنية التي يتوقعها بقية الكود.
+      const data = (rpcRows ?? []).map((row: any) => ({
+        provider_id: row.provider_id,
+        rank: row.rank,
+        match_score: row.match_score,
+        provider_profiles: {
+          user_id: row.provider_id,
+          rating_avg: row.rating_avg,
+          completed_services_count: row.completed_services_count,
+          users: {
+            id: row.provider_id,
+            full_name: row.full_name,
+            avatar_url: row.avatar_url,
+            region: row.region,
+            verification_status: row.verification_status,
+          },
+        },
+      }));
 
       if (cancelled) return;
 

@@ -909,6 +909,20 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      get_request_candidates: {
+        Args: { p_request_id: string }
+        Returns: {
+          provider_id: string
+          rank: number
+          match_score: number | null
+          rating_avg: number
+          completed_services_count: number
+          full_name: string
+          avatar_url: string | null
+          region: string
+          verification_status: string
+        }[]
+      }
       approve_agreement: {
         Args: { p_agreement_id: string; p_provider_id: string }
         Returns: {
