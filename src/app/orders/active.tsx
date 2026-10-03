@@ -18,7 +18,7 @@ import { t } from '@/i18n/ar';
 import { OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: ActiveOrderScreen] يعرض تفاصيل الطلب النشط والإجراءات المتاحة خلال تنفيذه.
@@ -53,9 +53,14 @@ export default function ActiveOrderScreen() {
   };
 
 // [شرح الدالة: finishService] ينفذ خطوة إنهاء الخدمة/الطلب.
-  const finishService = () => {
-    completeOrder();
-    router.replace({ pathname: '/orders/rate', params: { order_id: currentOrder.id } });
+  const finishService = async () => {
+    const orderId = currentOrder.id;
+    const result = await completeOrder();
+    if (!result.ok) {
+      Alert.alert('', result.error ?? 'تعذر إنهاء الخدمة. حاول مرة أخرى.');
+      return;
+    }
+    router.replace({ pathname: '/orders/rate', params: { order_id: orderId } });
   };
 
   return (

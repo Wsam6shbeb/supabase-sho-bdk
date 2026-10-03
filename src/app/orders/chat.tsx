@@ -152,9 +152,13 @@ export default function ChatScreen() {
   };
 
 // [شرح الدالة: handleCompleteOrder] ينفذ خطوة إكمال الطلب بعد انتهاء الخدمة.
-  const handleCompleteOrder = () => {
+  const handleCompleteOrder = async () => {
     const orderId = thread.order_id;
-    completeOrder();
+    const result = await completeOrder();
+    if (!result.ok) {
+      Alert.alert('', result.error ?? 'تعذر إنهاء الخدمة. حاول مرة أخرى.');
+      return;
+    }
     router.replace({
       pathname: '/orders/rate',
       params: { order_id: orderId },

@@ -12,7 +12,6 @@
 import { RatingStars } from '@/components/orders/RatingStars';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
-import { supabase } from '@/services/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -58,6 +57,7 @@ export default function RateOrderScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>(order?.customer_tags ?? []);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // ═══════════════════════════════════════════════════════════
   // Guard
@@ -112,43 +112,19 @@ export default function RateOrderScreen() {
       return;
     }
 
-    // 1) نحفظ محلياً (للـ UI السريع)
-    rateOrder({
+    // التقييم يُحفظ في السيرفر (هو الذي يغلق الطلب ويحدّث سمعة مقدم الخدمة)
+    setSubmitting(true);
+    const result = await rateOrder({
       order_id: orderId,
       stars,
       comment: comment.trim() || undefined,
       tags: selectedTags,
     });
+    setSubmitting(false);
 
-    // 2) نرسل لـ Supabase
-    const providerId = order?.provider_id;
-    if (providerId) {
-      const { data, error: sbError } = await supabase
-        .from('ratings')
-        .insert({
-          request_id: orderId,
-          from_user_id: user.id,
-          to_user_id: providerId,
-          score: stars,
-          comment: comment.trim() || null,
-          tags: selectedTags,
-        })
-        .select('id')
-        .single();
-
-      if (sbError) {
-        console.log('❌ Supabase rating error:', sbError);
-        setError('فشل حفظ التقييم: ' + sbError.message);
-        return;
-      }
-
-      console.log('✅ تم حفظ التقييم:', data);
-
-      // 3) نحدّث حالة الطلب بـ Supabase
-      await supabase
-        .from('service_requests')
-        .update({ state: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', orderId);
+    if (!result.ok) {
+      setError(result.error ?? 'فشل حفظ التقييم. حاول مرة أخرى.');
+      return;
     }
 
     setSubmitted(true);
@@ -335,6 +311,8 @@ export default function RateOrderScreen() {
               variant="primary"
               size="lg"
               onPress={() => { void handleSubmit(); }}
+              loading={submitting}
+              disabled={submitting}
               leadingIcon={
                 <Ionicons
                   name="checkmark-circle"

@@ -915,6 +915,39 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      complete_request: {
+        Args: { p_request_id: string }
+        Returns: Database["public"]["Tables"]["service_requests"]["Row"]
+      }
+      submit_rating: {
+        Args: { p_request_id: string; p_score: number; p_comment?: string; p_tags?: string[] }
+        Returns: Database["public"]["Tables"]["ratings"]["Row"]
+      }
+      finalize_overdue_requests: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_my_order_history: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          request_id: string
+          description: string
+          state: string
+          region: string | null
+          is_urgent: boolean
+          created_at: string
+          updated_at: string
+          completed_at: string | null
+          rating_deadline: string | null
+          provider_id: string | null
+          provider_name: string | null
+          agreed_price: number | null
+          commission_amount: number | null
+          my_rating: number | null
+          my_comment: string | null
+          my_tags: string[] | null
+        }[]
+      }
       request_agreement: {
         Args: { p_conversation_id: string; p_price?: number }
         Returns: Database["public"]["Tables"]["agreements"]["Row"]

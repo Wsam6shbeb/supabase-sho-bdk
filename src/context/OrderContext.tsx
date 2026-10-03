@@ -21,6 +21,13 @@ import {
   subscribeToAgreementChanges,
 } from '@/services/agreements';
 import { loadRequesterConversations, type HydratedChats } from '@/services/hydrateChats';
+import {
+  completeRequest,
+  fetchOrderHistory,
+  finalizeOverdueRequests,
+  orderErrorMessage,
+  submitRating,
+} from '@/services/orders';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import { BUSINESS_CONFIG } from '@/config/business';
 import { estimateCommissionFromChat, extractPriceFromChat } from '@/domain/commission';
@@ -155,8 +162,10 @@ export interface OrderContextValue {
   ) => Promise<{ ok: boolean; error?: string }>;
   customerCancelsAgreement: () => Promise<void>;
 
-  completeOrder: () => void;
-  rateOrder: (dto: RatingDto) => void;
+  /** ينهي الخدمة في السيرفر. يرجع ok=false مع رسالة مفهومة عند الفشل. */
+  completeOrder: () => Promise<{ ok: boolean; error?: string }>;
+  /** يحفظ التقييم في السيرفر (يغلق الطلب ويحدّث سمعة مقدم الخدمة). */
+  rateOrder: (dto: RatingDto) => Promise<{ ok: boolean; error?: string }>;
 
   addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
@@ -1131,10 +1140,17 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   // ═══════════════════════════════════════════════════════════
   // Complete + Rate
   // ═══════════════════════════════════════════════════════════
-  const completeOrder = useCallback(() => {
-    if (!currentOrder) return;
-    const now = new Date().toISOString();
+  const completeOrder = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+    if (!currentOrder) return { ok: false, error: orderErrorMessage('REQUEST_NOT_FOUND') };
 
+    // الإنهاء يتم في السيرفر أولاً؛ لا نغيّر الحالة المحلية إذا فشل
+    const { ok, error } = await completeRequest(currentOrder.id);
+    if (!ok) {
+      console.error('[Supabase][completeOrder] فشل إنهاء الخدمة:', error);
+      return { ok: false, error: orderErrorMessage(error) };
+    }
+
+    const now = new Date().toISOString();
     const pendingRating: Order = {
       ...currentOrder,
       status: OrderStatus.COMPLETION_PENDING_RATING,
@@ -1145,10 +1161,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       rating_reminder_sent: false,
     };
 
-    setOrderHistory((prev) => [pendingRating, ...prev]);
+    setOrderHistory((prev) => [pendingRating, ...prev.filter((o) => o.id !== pendingRating.id)]);
     setCurrentOrder(null);
     setActiveChats([]);
     setAgreedProviderId(null);
+    setPendingAgreementId(null);
 
     pushNotification({
       type: 'order_completed',
@@ -1157,38 +1174,79 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       referenceId: pendingRating.id,
       route: '/(drawer)/(tabs)/orders',
     });
+    return { ok: true };
   }, [currentOrder, pushNotification]);
 
-  const rateOrder = useCallback((dto: RatingDto) => {
-    setOrderHistory((prev) =>
-      prev.map((o) =>
-        o.id === dto.order_id
-          ? {
-              ...o,
-              customer_rating: dto.stars,
-              customer_comment: dto.comment ?? null,
-              customer_tags: dto.tags ?? [],
-              status: OrderStatus.COMPLETED,
-              rating_deadline: null,
-              rating_auto_approved: false,
-              updated_at: new Date().toISOString(),
-            }
-          : o,
-      ),
-    );
-  }, []);
+  const rateOrder = useCallback(
+    async (dto: RatingDto): Promise<{ ok: boolean; error?: string }> => {
+      const { ok, error } = await submitRating({
+        requestId: dto.order_id,
+        score: dto.stars,
+        comment: dto.comment,
+        tags: dto.tags,
+      });
+      // ALREADY_RATED: التقييم محفوظ سابقاً، نعتبرها نجاحاً ونزامن السجل
+      if (!ok && !(error ?? '').includes('ALREADY_RATED')) {
+        console.error('[Supabase][rateOrder] فشل حفظ التقييم:', error);
+        return { ok: false, error: orderErrorMessage(error) };
+      }
+
+      setOrderHistory((prev) =>
+        prev.map((o) =>
+          o.id === dto.order_id
+            ? {
+                ...o,
+                customer_rating: dto.stars,
+                customer_comment: dto.comment ?? null,
+                customer_tags: dto.tags ?? [],
+                status: OrderStatus.COMPLETED,
+                rating_deadline: null,
+                rating_auto_approved: false,
+                updated_at: new Date().toISOString(),
+              }
+            : o,
+        ),
+      );
+      return { ok: true };
+    },
+    [],
+  );
+
+  // سجل الطلبات من السيرفر: عند الدخول، وبعد اعتماد المتأخر منها (مهلة التقييم)
+  const refreshOrderHistory = useCallback(async () => {
+    if (!user?.id) return;
+    await finalizeOverdueRequests();
+    const history = await fetchOrderHistory(user.id);
+    if (!history) return;
+    setOrderHistory((prev) => {
+      // نحتفظ بأعلام التذكير المحلية فقط
+      const reminders = new Map(prev.map((o) => [o.id, o.rating_reminder_sent]));
+      const merged = history.map((o) => ({ ...o, rating_reminder_sent: reminders.get(o.id) ?? false }));
+      // طلب أنهيته للتو ولم يظهر بعد في الرد يبقى ظاهراً
+      const extras = prev.filter((o) => !merged.some((m) => m.id === o.id));
+      return [...merged, ...extras];
+    });
+  }, [user?.id]);
 
   useEffect(() => {
-    const checkRatingDeadlines = () => {
+    if (!user?.id) {
+      setOrderHistory([]);
+      return;
+    }
+    void refreshOrderHistory();
+  }, [user?.id, refreshOrderHistory]);
+
+  // تذكير قبل 24 ساعة من انتهاء مهلة التقييم؛ وعند الانتهاء نترك السيرفر يعتمد الطلب
+  useEffect(() => {
+    const check = () => {
       const now = Date.now();
+      let needsServerFinalize = false;
 
       setOrderHistory((prev) => {
         let changed = false;
         const next = prev.map((o) => {
           if (!o.rating_deadline || o.customer_rating) return o;
-
-          const deadlineMs = new Date(o.rating_deadline).getTime();
-          const remainingMs = deadlineMs - now;
+          const remainingMs = new Date(o.rating_deadline).getTime() - now;
 
           if (remainingMs > 0 && remainingMs <= 24 * 60 * 60 * 1000 && !o.rating_reminder_sent) {
             changed = true;
@@ -1202,36 +1260,28 @@ export function OrderProvider({ children }: { children: ReactNode }) {
             return { ...o, rating_reminder_sent: true };
           }
 
-          if (remainingMs <= 0 && !o.rating_auto_approved) {
-            changed = true;
-            pushNotification({
-              type: 'rating_auto_approved',
-              title: 'تم اعتماد الطلب تلقائياً',
-              body: 'انتهت مهلة التقييم بدون تقييم فعلي، فتم اعتماد الطلب تلقائياً كمكتمل.',
-              referenceId: o.id,
-              route: '/(drawer)/(tabs)/orders',
-            });
-            return {
-              ...o,
-              status: OrderStatus.COMPLETED,
-              rating_auto_approved: true,
-              rating_deadline: null,
-              updated_at: new Date().toISOString(),
-            };
-          }
-
+          if (remainingMs <= 0) needsServerFinalize = true;
           return o;
         });
-
         return changed ? next : prev;
       });
+
+      if (needsServerFinalize) {
+        void refreshOrderHistory().then(() =>
+          pushNotification({
+            type: 'rating_auto_approved',
+            title: 'تم اعتماد الطلب تلقائياً',
+            body: 'انتهت مهلة التقييم بدون تقييم فعلي، فتم اعتماد الطلب تلقائياً كمكتمل.',
+            route: '/(drawer)/(tabs)/orders',
+          }),
+        );
+      }
     };
 
-    checkRatingDeadlines();
-    const interval = setInterval(checkRatingDeadlines, 30 * 1000);
+    check();
+    const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pushNotification, refreshOrderHistory]);
 
   const addFirstSkill = useCallback(
     async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }> => {
