@@ -3,17 +3,26 @@
 // تُفتح بمعرّف المحادثة الحقيقي: /orders/conversation?conversation_id=...&name=...
 // ===============================================================
 
+import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useConversation } from '@/hooks/use-conversation';
+import {
+  agreementErrorMessage,
+  getConversationAgreement,
+  respondToAgreement,
+  subscribeToAgreementChanges,
+  type DbAgreement,
+} from '@/services/agreements';
 import type { ChatMessage } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -35,11 +44,72 @@ export default function ConversationScreen() {
   const myId = user?.id ?? null;
 
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const [sharePhone, setSharePhone] = useState(false);
 
   const { messages, send, retry, partnerTyping, notifyTyping, loadFailed } = useConversation({
     conversationId: conversationId || null,
     myId,
   });
+
+  // ---------- الاتفاق: مقدم الخدمة يوافق/يرفض من هنا (كله عبر Supabase) ----------
+  const [agreement, setAgreement] = useState<DbAgreement | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+
+  const loadAgreement = useCallback(async () => {
+    if (!conversationId) return;
+    const result = await getConversationAgreement(conversationId);
+    if (result !== undefined) setAgreement(result);
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!conversationId || !myId) return;
+    // الاشتراك يستدعي loadAgreement عند أول اتصال وعند كل تغيّر/إعادة اتصال
+    return subscribeToAgreementChanges(() => void loadAgreement(), { conversationId });
+  }, [conversationId, myId, loadAgreement]);
+
+  const pendingForMe =
+    agreement?.state === 'pending' && agreement.provider_id === myId ? agreement : null;
+
+  // العدّ التنازلي لمهلة الموافقة؛ عند انتهائها نسأل السيرفر لينهي الاتفاق
+  useEffect(() => {
+    if (!pendingForMe) {
+      setRemainingSeconds(0);
+      return;
+    }
+    const expiresAt = new Date(pendingForMe.expires_at).getTime();
+    let expiryChecked = false;
+    const tick = () => {
+      const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setRemainingSeconds(left);
+      if (left <= 0 && !expiryChecked) {
+        expiryChecked = true; // مرة واحدة فقط: السيرفر ينهي الاتفاق ويصلنا التغيير
+        void loadAgreement();
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [pendingForMe?.id, pendingForMe?.expires_at, loadAgreement]);
+
+  const respond = async (approve: boolean): Promise<boolean> => {
+    if (!pendingForMe) return false;
+    const { agreement: updated, error } = await respondToAgreement({
+      agreementId: pendingForMe.id,
+      approve,
+      sharePhone: approve ? sharePhone : false,
+      reason: approve ? undefined : 'rejected_by_provider',
+    });
+    if (error || !updated) {
+      Alert.alert('', agreementErrorMessage(error));
+      void loadAgreement();
+      return false;
+    }
+    setAgreement(updated);
+    if (updated.state === 'expired') {
+      Alert.alert('', 'انتهت مهلة الموافقة على هالاتفاق.');
+    }
+    return true;
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
@@ -73,6 +143,19 @@ export default function ConversationScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+          ListFooterComponent={
+            pendingForMe ? (
+              <AgreementBubble
+                customerName={otherName}
+                agreedPrice={pendingForMe.price != null ? Number(pendingForMe.price) : null}
+                commissionAmount={Number(pendingForMe.commission_amount)}
+                remainingSeconds={remainingSeconds}
+                onApprove={() => respond(true)}
+                onReject={() => respond(false)}
+                onSharePhoneChange={setSharePhone}
+              />
+            ) : null
+          }
         />
 
         {loadFailed && (

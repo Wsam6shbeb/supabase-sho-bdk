@@ -13,7 +13,14 @@ import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
 import { openConversation } from '@/services/chat';
-import { loadRequesterConversations } from '@/services/hydrateChats';
+import {
+  agreementErrorMessage,
+  cancelAgreement,
+  getConversationAgreement,
+  requestAgreement,
+  subscribeToAgreementChanges,
+} from '@/services/agreements';
+import { loadRequesterConversations, type HydratedChats } from '@/services/hydrateChats';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import { BUSINESS_CONFIG } from '@/config/business';
 import { estimateCommissionFromChat, extractPriceFromChat } from '@/domain/commission';
@@ -47,6 +54,7 @@ import {
     useState,
     type ReactNode,
 } from 'react';
+import { Alert } from 'react-native';
 
 // ═══════════════════════════════════════════════════════════
 // الثوابت
@@ -138,15 +146,14 @@ export interface OrderContextValue {
   hasCompletedOrderWith: (providerId: string) => boolean;
   requestProviderAgain: (provider: ServiceProvider, description: string) => Order;
 
+  /** يطلب الاتفاق من السيرفر (العمولة تُحسب هناك). يرجع ok=false مع رسالة مفهومة عند الفشل. */
   customerAgrees: (
     threadId: string,
     providerId: string,
     customerName: string,
     chatHistory: ChatMessage[],
-  ) => void;
-  providerApproves: (threadId: string) => void;
-  providerRejects: (threadId: string) => void;
-  customerCancelsAgreement: () => void;
+  ) => Promise<{ ok: boolean; error?: string }>;
+  customerCancelsAgreement: () => Promise<void>;
 
   completeOrder: () => void;
   rateOrder: (dto: RatingDto) => void;
@@ -390,41 +397,6 @@ async function syncOpenChatToSupabase(
   }
 }
 
-async function syncAgreementToSupabase(params: {
-  threadId: string;
-  requestId: string;
-  providerId: string;
-  requesterId: string | undefined;
-  price: number | null;
-  commission: number;
-}) {
-  try {
-    if (!params.requesterId) {
-      console.error('[Supabase][customerAgrees] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء الاتفاق.');
-      return;
-    }
-
-    const { data, error } = await supabase.rpc('create_agreement', {
-      p_request_id: params.requestId,
-      p_conversation_id: params.threadId,
-      p_requester_id: params.requesterId,
-      p_provider_id: params.providerId,
-      p_price: params.price,
-      p_price_source: params.price != null ? 'user_confirmed' : 'default',
-      p_commission: params.commission,
-    });
-
-    if (error) {
-      console.error('[Supabase][customerAgrees] فشل إنشاء الاتفاق:', error.message, params);
-      return;
-    }
-
-    console.log('[Supabase][customerAgrees] تم إنشاء الاتفاق بنجاح:', data?.id);
-  } catch (err) {
-    console.error('[Supabase][customerAgrees] خطأ غير متوقع أثناء إنشاء الاتفاق:', err);
-  }
-}
-
 // ═══════════════════════════════════════════════════════════
 // Provider
 // ═══════════════════════════════════════════════════════════
@@ -446,41 +418,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     currentOrderRef.current = currentOrder;
   }, [currentOrder]);
 
-  // استعادة آخر طلب مفتوح ومحادثاته من Supabase عند تسجيل الدخول/فتح التطبيق
-  useEffect(() => {
-    if (!user?.id) {
-      setKnownProviders([]);
-      return;
-    }
-    let cancelled = false;
-
-    void loadRequesterConversations(user.id).then((result) => {
-      if (cancelled || !result) return;
-
-      // إذا بدأ المستخدم طلباً جديداً قبل انتهاء الاستعادة فلا نستبدله
-      const existing = currentOrderRef.current;
-      if (existing && existing.id !== result.order.id) return;
-
-      setKnownProviders(result.providers);
-      setCurrentOrder((prev) => prev ?? result.order);
-      setActiveChats((prev) => [
-        ...prev,
-        ...result.threads.filter(
-          (t) =>
-            !prev.some(
-              (p) =>
-                p.conversation_id === t.conversation_id ||
-                (p.provider_id === t.provider_id && p.order_id === t.order_id),
-            ),
-        ),
-      ]);
-      setAgreedProviderId((prev) => prev ?? result.agreedProviderId);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+  // الاتفاق القائم على الخادم (للإلغاء) والمحادثة المرتبطة به (لإنهاء المهلة)
+  const [pendingAgreementId, setPendingAgreementId] = useState<string | null>(null);
+  const agreementConversationRef = useRef<string | null>(null);
+  const lastAgreementRef = useRef<{ id: string; state: string } | null>(null);
 
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
 
@@ -688,6 +629,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const handleTimeoutExpired = useCallback(() => {
     clearTimer();
+    // ننهي الاتفاق في الخادم أيضاً (إرجاع الطلب والمحادثات إلى التفاوض)
+    if (agreementConversationRef.current) {
+      void getConversationAgreement(agreementConversationRef.current);
+    }
+    setPendingAgreementId(null);
     setAgreedProviderId(null);
     setApprovalDeadline(null);
     setApprovalRemainingSeconds(0);
@@ -713,6 +659,138 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       route: '/(drawer)/(tabs)/orders',
     });
   }, [clearTimer, pushNotification]);
+
+  // ═══════════════════════════════════════════════════════════
+  // مزامنة حالة الطلب/المحادثات/الاتفاق مع Supabase (مصدر الحقيقة)
+  // ═══════════════════════════════════════════════════════════
+  const applyServerState = useCallback(
+    (result: HydratedChats) => {
+      const { agreement } = result;
+      const pending = agreement?.state === 'pending';
+
+      // إشعار الزبون عند تغيّر حالة الاتفاق من الطرف الآخر
+      const last = lastAgreementRef.current;
+      if (last && agreement && last.id === agreement.id && last.state === 'pending') {
+        if (agreement.state === 'active') {
+          pushNotification({
+            type: 'agreement_approved',
+            title: 'تم قبول الاتفاق!',
+            body: 'مقدم الخدمة وافق على الاتفاق. الطلب صار نشطاً.',
+            referenceId: agreement.conversation_id,
+            route: '/(drawer)/(tabs)/orders',
+          });
+        }
+      } else if (last && !agreement && last.state === 'pending') {
+        // اختفى الاتفاق المعلّق: إما رُفض أو انتهت مهلته (يظهر السبب في المحادثة)
+        pushNotification({
+          type: 'agreement_rejected',
+          title: 'لم يكتمل الاتفاق',
+          body: 'رُفض الاتفاق أو انتهت مهلته. تقدر تكمل التفاوض مع مقدم الخدمة.',
+          route: '/(drawer)/(tabs)/orders',
+        });
+      }
+      lastAgreementRef.current = agreement ? { id: agreement.id, state: agreement.state } : null;
+      agreementConversationRef.current = pending ? agreement.conversation_id : null;
+
+      setKnownProviders(result.providers);
+
+      setCurrentOrder((prev) => {
+        if (!prev) return result.order;
+        if (prev.id !== result.order.id) return prev;
+        return {
+          ...prev,
+          status: result.order.status,
+          provider_id: result.order.provider_id,
+          provider_name: result.order.provider_name,
+          commission_amount: result.order.commission_amount,
+          agreed_price: result.order.agreed_price,
+          updated_at: result.order.updated_at,
+        };
+      });
+
+      setActiveChats((prev) => {
+        const merged = prev.map((existing) => {
+          const fromServer = result.threads.find(
+            (t) =>
+              t.conversation_id === existing.conversation_id ||
+              (t.provider_id === existing.provider_id && t.order_id === existing.order_id),
+          );
+          return fromServer
+            ? {
+                ...existing,
+                conversation_id: fromServer.conversation_id,
+                status: fromServer.status,
+                unread_count: fromServer.unread_count,
+                updated_at: fromServer.updated_at,
+              }
+            : existing;
+        });
+        const added = result.threads.filter(
+          (t) =>
+            !prev.some(
+              (p) =>
+                p.conversation_id === t.conversation_id ||
+                (p.provider_id === t.provider_id && p.order_id === t.order_id),
+            ),
+        );
+        return [...merged, ...added];
+      });
+
+      setAgreedProviderId(result.agreedProviderId);
+      setPendingAgreementId(pending ? agreement.id : null);
+      setApprovalDeadline(pending ? new Date(agreement.expires_at).getTime() : null);
+    },
+    [pushNotification],
+  );
+
+  // عند تسجيل الدخول/فتح التطبيق: استعادة آخر طلب مفتوح ومحادثاته واتفاقه
+  useEffect(() => {
+    if (!user?.id) {
+      setKnownProviders([]);
+      return;
+    }
+    let cancelled = false;
+
+    void loadRequesterConversations(user.id).then((result) => {
+      if (cancelled || !result) return;
+      // إذا بدأ المستخدم طلباً جديداً قبل انتهاء الاستعادة فلا نستبدله
+      const existing = currentOrderRef.current;
+      if (existing && existing.id !== result.order.id) return;
+      applyServerState(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, applyServerState]);
+
+  // لحظياً: أي تغيّر في اتفاق/محادثة يخصني (موافقة، رفض، إلغاء، انتهاء مهلة) يحدّث الشاشة
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void loadRequesterConversations(userId).then((result) => {
+          if (cancelled || !result) return;
+          const existing = currentOrderRef.current;
+          // نحدّث فقط الطلب الحالي (أو نستعيده إذا لم يكن هناك طلب)
+          if (existing && existing.id !== result.order.id) return;
+          applyServerState(result);
+        });
+      }, 400);
+    };
+
+    const unsubscribe = subscribeToAgreementChanges(refresh);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [user?.id, applyServerState]);
 
   // ═══════════════════════════════════════════════════════════
   // Order
@@ -890,20 +968,52 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   // Agreement
   // ═══════════════════════════════════════════════════════════
   const customerAgrees = useCallback(
-    (
+    async (
       threadId: string,
       providerId: string,
       customerName: string,
       chatHistory: ChatMessage[],
-    ) => {
-      clearTimer();
-      const agreedPrice = extractPriceFromChat(chatHistory);
-      const commission = estimateCommissionFromChat(chatHistory);
-      const now = new Date().toISOString();
-      const provider = candidates.find((p) => p.id === providerId);
+    ): Promise<{ ok: boolean; error?: string }> => {
+      const thread = activeChats.find((t) => t.id === threadId);
+      if (!thread) return { ok: false, error: agreementErrorMessage('CONVERSATION_NOT_FOUND') };
 
+      // الاتفاق يحتاج المحادثة الحقيقية في السيرفر (نفتحها إن لم تكن جاهزة)
+      let conversationId = thread.conversation_id ?? null;
+      if (!conversationId) {
+        const opened = await openConversation(thread.order_id, providerId);
+        conversationId = opened.id;
+        if (conversationId) {
+          const readyId = conversationId;
+          setActiveChats((prev) =>
+            prev.map((t) => (t.id === threadId ? { ...t, conversation_id: readyId } : t)),
+          );
+        }
+      }
+      if (!conversationId) {
+        return { ok: false, error: agreementErrorMessage(null) };
+      }
+
+      // السعر من المحادثة (تقدير)، أما العمولة فيحسبها السيرفر
+      const { agreement, error } = await requestAgreement(
+        conversationId,
+        extractPriceFromChat(chatHistory),
+      );
+      if (error || !agreement) {
+        console.error('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
+        return { ok: false, error: agreementErrorMessage(error) };
+      }
+
+      clearTimer();
+      const commission = Number(agreement.commission_amount);
+      const agreedPrice = agreement.price != null ? Number(agreement.price) : null;
+      const now = new Date().toISOString();
+      const provider = getProviderById(providerId);
+
+      agreementConversationRef.current = conversationId;
+      lastAgreementRef.current = { id: agreement.id, state: agreement.state };
+      setPendingAgreementId(agreement.id);
       setAgreedProviderId(providerId);
-      setApprovalDeadline(Date.now() + APPROVAL_TIMEOUT_MS);
+      setApprovalDeadline(new Date(agreement.expires_at).getTime());
 
       setCurrentOrder((prev) =>
         prev
@@ -920,20 +1030,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           : prev,
       );
 
-      const approvalMessage = systemMessage(
-        activeChats.find((t) => t.id === threadId)?.order_id ?? '',
-        `لقد أكّد ${customerName} أنه اتفق معك لإتمام العمل. قيمة العمولة المتوقعة: ${commission} ل.س. بالموافقة بينخصم المبلغ فوراً وتبلش الخدمة.`,
-      );
-      approvalMessage.id = `agreement_${threadId}`;
-
+      // رسالة الاتفاق نفسها يضيفها السيرفر في المحادثة؛ هنا نقفل المحادثات الأخرى فقط
       setActiveChats((prev) =>
-        lockUnselectedThreads(prev, providerId, (thread) =>
-          systemMessage(thread.order_id, 'ربما يتم الاتفاق مع شخص آخر لإتمام هذه المهمة.'),
-        ).map((thread) =>
-          thread.id === threadId
-            ? { ...thread, last_message: approvalMessage, updated_at: now }
-            : { ...thread, updated_at: now },
-        ),
+        lockUnselectedThreads(prev, providerId, (t) =>
+          systemMessage(t.order_id, 'ربما يتم الاتفاق مع شخص آخر لإتمام هذه المهمة.'),
+        ).map((t) => ({ ...t, updated_at: now })),
       );
 
       pushNotification({
@@ -944,82 +1045,28 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         route: '/orders/active',
       });
 
-      void syncAgreementToSupabase({
-        threadId,
-        requestId: activeChats.find((t) => t.id === threadId)?.order_id ?? currentOrder?.id ?? '',
-        providerId,
-        requesterId: user?.id,
-        price: agreedPrice,
-        commission,
-      });
+      void customerName;
+      return { ok: true };
     },
-    [activeChats, candidates, clearTimer, currentOrder, pushNotification, user?.id],
+    [activeChats, clearTimer, getProviderById, pushNotification],
   );
 
-  const providerApproves = useCallback(
-    (threadId: string) => {
-      clearTimer();
-      const now = new Date().toISOString();
-      setApprovalDeadline(null);
-      setApprovalRemainingSeconds(0);
+  const customerCancelsAgreement = useCallback(async () => {
+    // نلغي في السيرفر أولاً؛ إذا فشل لا نغيّر الحالة المحلية حتى لا تنفصل عن الحقيقة
+    if (pendingAgreementId) {
+      const { error } = await cancelAgreement(pendingAgreementId);
+      if (error) {
+        console.error('[Supabase][cancelAgreement] فشل إلغاء الاتفاق:', error);
+        Alert.alert('', agreementErrorMessage(error));
+        return;
+      }
+    }
 
-      setCurrentOrder((prev) =>
-        prev ? { ...prev, status: OrderStatus.ACTIVE, updated_at: now } : prev,
-      );
-
-      setActiveChats((prev) =>
-        prev.map((t) =>
-          t.id === threadId ? { ...t, status: ChatStatus.ACTIVE, updated_at: now } : t,
-        ),
-      );
-
-      pushNotification({
-        type: 'agreement_approved',
-        title: 'تم قبول الاتفاق!',
-        body: 'مقدم الخدمة وافق على الاتفاق. الطلب صار نشطاً.',
-        referenceId: threadId,
-        route: '/(drawer)/(tabs)/orders',
-      });
-    },
-    [clearTimer, pushNotification],
-  );
-
-  const providerRejects = useCallback(
-    (threadId: string) => {
-      clearTimer();
-      const now = new Date().toISOString();
-      setAgreedProviderId(null);
-      setApprovalDeadline(null);
-      setApprovalRemainingSeconds(0);
-
-      setCurrentOrder((prev) => (prev ? { ...resetPendingAgreement(prev), updated_at: now } : prev));
-
-      setActiveChats((prev) =>
-        prev.map((t) => {
-          if (t.id === threadId) {
-            return { ...t, status: ChatStatus.NEGOTIATING, updated_at: now };
-          }
-          if (t.status === ChatStatus.LOCKED_NOT_CHOSEN) {
-            return { ...t, status: ChatStatus.NEGOTIATING, updated_at: now };
-          }
-          return t;
-        }),
-      );
-
-      pushNotification({
-        type: 'agreement_rejected',
-        title: 'تم رفض الاتفاق',
-        body: 'مقدم الخدمة رفض الاتفاق. يمكنك التفاوض مع مرشح آخر.',
-        referenceId: threadId,
-        route: '/(drawer)/(tabs)/orders',
-      });
-    },
-    [clearTimer, pushNotification],
-  );
-
-  const customerCancelsAgreement = useCallback(() => {
     clearTimer();
     const now = new Date().toISOString();
+    agreementConversationRef.current = null;
+    lastAgreementRef.current = null;
+    setPendingAgreementId(null);
     setAgreedProviderId(null);
     setApprovalDeadline(null);
     setApprovalRemainingSeconds(0);
@@ -1037,7 +1084,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         return t;
       }),
     );
-  }, [clearTimer]);
+  }, [clearTimer, pendingAgreementId]);
 
   const reportNonExecution = useCallback((dto: CreateNonExecutionReportDto) => {
     const now = new Date().toISOString();
@@ -1342,8 +1389,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       hasCompletedOrderWith,
       requestProviderAgain,
       customerAgrees,
-      providerApproves,
-      providerRejects,
       customerCancelsAgreement,
       completeOrder,
       rateOrder,
@@ -1398,8 +1443,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       hasCompletedOrderWith,
       requestProviderAgain,
       customerAgrees,
-      providerApproves,
-      providerRejects,
       customerCancelsAgreement,
       completeOrder,
       rateOrder,

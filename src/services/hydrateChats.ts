@@ -5,6 +5,7 @@
 // ===============================================================
 
 import { buildProviderServiceInfo } from '@/domain/providerServices';
+import { getConversationAgreement, type DbAgreement } from '@/services/agreements';
 import { fetchMyConversations, type InboxConversation } from '@/services/chat';
 import { supabase } from '@/services/supabase';
 import { ChatStatus, OrderStatus } from '@/types/common';
@@ -16,6 +17,8 @@ export interface HydratedChats {
   providers: ServiceProvider[];
   /** مقدم الخدمة الذي بدأ معه اتفاق (قيد الموافقة أو فعّال) إن وُجد. */
   agreedProviderId: string | null;
+  /** الاتفاق القائم (بانتظار الموافقة أو فعّال) لهذا الطلب إن وُجد. */
+  agreement: DbAgreement | null;
 }
 
 // حالات الطلب التي ما زالت "مفتوحة" ويجب استعادتها
@@ -114,6 +117,23 @@ export async function loadRequesterConversations(userId: string): Promise<Hydrat
       console.error('[hydrate] فشل جلب خدمات مقدمي الخدمة:', servicesResult.error.message);
     }
 
+    // الاتفاق القائم للطلب (وإنهاء مهلته تلقائياً إذا انتهت)
+    const loadAgreement = async () => {
+      const { data } = await supabase
+        .from('agreements')
+        .select('*')
+        .eq('request_id', openRequest.id)
+        .in('state', ['pending', 'active'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+      return (data?.[0] as DbAgreement | undefined) ?? null;
+    };
+    let agreement = await loadAgreement();
+    if (agreement && agreement.state === 'pending' && new Date(agreement.expires_at) < new Date()) {
+      await getConversationAgreement(agreement.conversation_id); // ينهيها في السيرفر
+      agreement = await loadAgreement();
+    }
+
     const order: Order = {
       id: openRequest.id,
       customer_id: userId,
@@ -123,8 +143,10 @@ export async function loadRequesterConversations(userId: string): Promise<Hydrat
       region_id: openRequest.region ?? '',
       created_at: openRequest.created_at,
       updated_at: openRequest.updated_at,
-      provider_id: null,
+      provider_id: agreement?.provider_id ?? null,
       provider_name: null,
+      commission_amount: agreement ? Number(agreement.commission_amount) : null,
+      agreed_price: agreement?.price != null ? Number(agreement.price) : null,
     };
 
     const providers: ServiceProvider[] = conversations.map((c) => {
@@ -178,12 +200,14 @@ export async function loadRequesterConversations(userId: string): Promise<Hydrat
     }));
 
     const agreed = conversations.find((c) => c.state === 'agreement_pending' || c.state === 'active');
+    order.provider_name = providers.find((p) => p.id === order.provider_id)?.name ?? null;
 
     return {
       order,
       threads,
       providers,
       agreedProviderId: agreed?.other_user_id ?? null,
+      agreement,
     };
   } catch (err) {
     console.error('[hydrate] خطأ غير متوقع أثناء استعادة المحادثات:', err);

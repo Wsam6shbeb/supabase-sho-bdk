@@ -915,6 +915,27 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      request_agreement: {
+        Args: { p_conversation_id: string; p_price?: number }
+        Returns: Database["public"]["Tables"]["agreements"]["Row"]
+      }
+      respond_agreement: {
+        Args: {
+          p_agreement_id: string
+          p_approve: boolean
+          p_reason?: string
+          p_share_phone?: boolean
+        }
+        Returns: Database["public"]["Tables"]["agreements"]["Row"]
+      }
+      cancel_agreement: {
+        Args: { p_agreement_id: string }
+        Returns: Database["public"]["Tables"]["agreements"]["Row"]
+      }
+      get_conversation_agreement: {
+        Args: { p_conversation_id: string }
+        Returns: Database["public"]["Tables"]["agreements"]["Row"][]
+      }
       mark_messages_delivered: {
         Args: { p_conversation_id: string }
         Returns: number

@@ -9,7 +9,6 @@
 // شاشة المحادثة مع مقدم الخدمة
 // ═══════════════════════════════════════════════════════════
 
-import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { ChatStatusBar } from '@/components/orders/ChatStatusBar';
@@ -52,8 +51,6 @@ export default function ChatScreen() {
     getProviderById,
     openChat,
     customerAgrees,
-    providerApproves,
-    providerRejects,
     customerCancelsAgreement,
     approvalRemainingSeconds,
     estimateCommission,
@@ -68,7 +65,6 @@ export default function ChatScreen() {
 
   // 🧪 زر تجربة مؤقت — يخليك تشوف الشاشة كأنك مقدم الخدمة عشان تجرب موافقة/رفض
   // الاتفاق (ما في حساب مقدم خدمة حقيقي بعد). يُحذف لما يصير في حساب مقدم خدمة حقيقي.
-  const [viewAsProvider, setViewAsProvider] = useState(false);
 
   // معرّف المحادثة الحقيقي إذا لم يصل بعد من الـ Context (مثلاً تأخر الشبكة)
   const [fallbackConversationIds, setFallbackConversationIds] = useState<Record<string, string>>({});
@@ -140,21 +136,19 @@ export default function ChatScreen() {
   const handleCustomerAgree = () => setShowCustomerConfirm(true);
 
 // [شرح الدالة: confirmCustomerAgreement] يؤكد موافقة العميل بعد إتمام خطوة التأكيد المطلوبة.
-  const confirmCustomerAgreement = () => {
-    customerAgrees(thread.id, provider.id, user?.name ?? 'الزبون', currentMessages);
+  const confirmCustomerAgreement = async () => {
+    const result = await customerAgrees(
+      thread.id,
+      provider.id,
+      user?.name ?? 'الزبون',
+      currentMessages,
+    );
+    if (!result.ok) {
+      Alert.alert('', result.error ?? 'تعذر إرسال طلب الاتفاق. حاول مرة أخرى.');
+      return;
+    }
     setShowCustomerConfirm(false);
     setSharePhone(false);
-  };
-
-// [شرح الدالة: handleProviderApprove] يعالج موافقة مقدم الخدمة على الاتفاق.
-  const handleProviderApprove = () => {
-    providerApproves(thread.id);
-    setViewAsProvider(false);
-  };
-// [شرح الدالة: handleProviderReject] يعالج رفض مقدم الخدمة للاتفاق.
-  const handleProviderReject = () => {
-    providerRejects(thread.id);
-    setViewAsProvider(false);
   };
 
 // [شرح الدالة: handleCompleteOrder] ينفذ خطوة إكمال الطلب بعد انتهاء الخدمة.
@@ -183,22 +177,13 @@ export default function ChatScreen() {
     setActiveProviderId(providerId);
   };
 
-  const canCustomerAgree =
-    !viewAsProvider && thread.status === ChatStatus.NEGOTIATING;
-  const canCustomerCancel =
-    !viewAsProvider && thread.status === ChatStatus.AWAITING_APPROVAL;
-  const canProviderDecide =
-    viewAsProvider && thread.status === ChatStatus.AWAITING_APPROVAL;
-  const canCustomerComplete = !viewAsProvider && thread.status === ChatStatus.ACTIVE;
-  const canSendMessage = !viewAsProvider && (
-    thread.status === ChatStatus.NEGOTIATING || thread.status === ChatStatus.ACTIVE
-  );
+  const canCustomerAgree = thread.status === ChatStatus.NEGOTIATING;
+  const canCustomerCancel = thread.status === ChatStatus.AWAITING_APPROVAL;
+  const canCustomerComplete = thread.status === ChatStatus.ACTIVE;
+  const canSendMessage =
+    thread.status === ChatStatus.NEGOTIATING || thread.status === ChatStatus.ACTIVE;
   const isLocked = thread.status === ChatStatus.LOCKED_NOT_CHOSEN;
   const isActive = thread.status === ChatStatus.ACTIVE;
-
-  const isAgreementBubble = currentMessages.some(
-    (m) => m.id === `agreement_${thread.id}`,
-  );
 
   return (
     <SafeAreaView
@@ -264,33 +249,6 @@ export default function ChatScreen() {
 
         <ChatStatusBar status={thread.status} />
 
-        {/* 🧪 زر تجربة مؤقت — يُحذف لما يصير في حساب مقدم خدمة حقيقي */}
-        {__DEV__ && thread.status === ChatStatus.AWAITING_APPROVAL && (
-          <Pressable
-            onPress={() => setViewAsProvider((v) => !v)}
-            style={[
-              styles.devToggle,
-              { backgroundColor: viewAsProvider ? scheme.urgent : `${scheme.textTertiary}20` },
-            ]}
-          >
-            <Ionicons
-              name="flask"
-              size={14}
-              color={viewAsProvider ? scheme.urgentContrast : scheme.textSecondary}
-            />
-            <Text
-              style={[
-                styles.devToggleText,
-                { color: viewAsProvider ? scheme.urgentContrast : scheme.textSecondary },
-              ]}
-            >
-              {viewAsProvider
-                ? t('orders.chat.devToggleOn')
-                : t('orders.chat.devToggleOff')}
-            </Text>
-          </Pressable>
-        )}
-
         <ProviderSwitcher
           threads={activeChats}
           providers={allProviders}
@@ -301,19 +259,6 @@ export default function ChatScreen() {
         <FlatList
           data={currentMessages}
           renderItem={({ item }) => {
-            if (item.id === `agreement_${thread.id}` && canProviderDecide) {
-              return (
-                <AgreementBubble
-                  customerName={user?.name ?? 'الزبون'}
-                  agreedPrice={currentOrder?.agreed_price ?? null}
-                  commissionAmount={currentOrder?.commission_amount ?? estimateCommission(currentMessages)}
-                  remainingSeconds={approvalRemainingSeconds}
-                  onApprove={handleProviderApprove}
-                  onReject={handleProviderReject}
-                  onSharePhoneChange={setSharePhone}
-                />
-              );
-            }
             return (
               <ChatBubble
                 message={item}
@@ -381,7 +326,7 @@ export default function ChatScreen() {
           </View>
         )}
 
-        {canCustomerAgree && !showCustomerConfirm && !isAgreementBubble && (
+        {canCustomerAgree && !showCustomerConfirm && (
           <View style={styles.actionWrap}>
             <AppButton
               title={t('orders.chat.agreeBtn')}
@@ -561,21 +506,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     writingDirection: 'rtl',
     marginTop: 2,
-  },
-  devToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radii.full,
-    marginTop: Spacing.two,
-  },
-  devToggleText: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.semibold,
-    writingDirection: 'rtl',
   },
   messagesContent: {
     paddingVertical: Spacing.four,

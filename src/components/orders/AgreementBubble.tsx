@@ -18,8 +18,9 @@ interface AgreementBubbleProps {
   agreedPrice: number | null;
   commissionAmount: number;
   remainingSeconds?: number;
-  onApprove: () => void;
-  onReject: () => void;
+  /** يرجع false عند الفشل (مثلاً رصيد غير كافٍ) فيعود الزر للعمل ويمكن المحاولة ثانية. */
+  onApprove: () => void | Promise<boolean | void>;
+  onReject: () => void | Promise<boolean | void>;
   onSharePhoneChange?: (share: boolean) => void;
 }
 
@@ -39,16 +40,18 @@ export function AgreementBubble({
   const [decided, setDecided] = useState<'approved' | 'rejected' | null>(null);
 
 // [شرح الدالة: handleApprove] يعالج موافقة المستخدم على الاتفاق الحالي وينفذ الخطوة التالية في سير الطلب.
-  const handleApprove = () => {
+  const handleApprove = async () => {
     setDecided('approved');
     onSharePhoneChange?.(sharePhone);
-    onApprove();
+    const ok = await onApprove();
+    if (ok === false) setDecided(null);
   };
 
 // [شرح الدالة: handleReject] يعالج رفض الاتفاق الحالي ويحدث حالة الطلب/المحادثة وفقًا لذلك.
-  const handleReject = () => {
+  const handleReject = async () => {
     setDecided('rejected');
-    onReject();
+    const ok = await onReject();
+    if (ok === false) setDecided(null);
   };
 
   return (

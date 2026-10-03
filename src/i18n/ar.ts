@@ -219,8 +219,6 @@ export const ar = {
     chat: {
       title: 'محادثة تفاوضية',
       profileHint: 'اضغط لعرض البروفايل الكامل',
-      devToggleOff: '🧪 اضغط لتشوف كمقدم الخدمة',
-      devToggleOn: '🧪 عم تشوف كمقدم الخدمة الآن',
       inputPlaceholder: 'اكتب رسالتك...',
       inputDisabled: 'المحادثة غير متاحة للإرسال حالياً',
       sendBtn: 'إرسال',
