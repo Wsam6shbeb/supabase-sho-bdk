@@ -19,6 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 import { t } from '@/i18n/ar';
 import { api } from '@/services/api';
+import { buildProviderServiceInfo } from '@/domain/providerServices';
 import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -205,7 +206,8 @@ export default function SearchingScreen() {
           name: p.users?.full_name ?? 'مقدم خدمة',
           avatar_url: p.users?.avatar_url ?? null,
           region: { id: p.users?.region ?? '', name_ar: p.users?.region ?? '' },
-          skills: [],
+          skills: buildProviderServiceInfo(p.services).skills,
+          services: buildProviderServiceInfo(p.services).services,
           rating: Number(p.rating_avg) || 0,
           total_orders: p.completed_services_count ?? 0,
           completion_rate: 0,

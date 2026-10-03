@@ -23,6 +23,7 @@ import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { ChatStatus } from '@/types/common';
+import { buildProviderServiceInfo } from '@/domain/providerServices';
 import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -184,6 +185,9 @@ export default function CandidatesScreen() {
               name_ar: user.region ?? '',
             },
             skills: Array.from(skillSet),
+            services: buildProviderServiceInfo(
+              providerServices.map((sv: any) => sv.structured_data ?? { service: sv.description }),
+            ).services,
             rating: Number(profile.rating_avg) || 0,
             total_orders: Number(profile.completed_services_count) || 0,
             completion_rate: 0,
@@ -222,7 +226,8 @@ export default function CandidatesScreen() {
               region: databaseProvider.region,
               rating: databaseProvider.rating,
               total_orders: databaseProvider.total_orders,
-              skills: databaseProvider.skills,
+              skills: databaseProvider.skills.length ? databaseProvider.skills : provider.skills,
+              services: databaseProvider.services?.length ? databaseProvider.services : provider.services,
               verification_status: databaseProvider.verification_status,
               service_request_id: requestId,
             };

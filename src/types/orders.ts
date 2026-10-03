@@ -12,12 +12,23 @@ import { OrderStatus, ChatStatus } from './common';
 // ═══════════════════════════════════════════════════════════
 
 /** معلومات مقدم الخدمة */
+/** معلومات خدمة واحدة يقدمها المزوّد (من provider_services.structured_data). */
+export interface ProviderServiceInfo {
+  service: string;
+  skills: string[];
+  service_area?: string;
+  additional_info?: string;
+  delivery_mode?: string;
+}
+
 export interface ServiceProvider {
   id: string;
   name: string;
   avatar_url?: string | null;
   region: Region;
   skills: string[];
+  /** تفاصيل الخدمات: المنطقة والمعلومات الاختيارية وطريقة التقديم. */
+  services?: ProviderServiceInfo[];
   rating: number;
   total_orders: number;
   completion_rate: number;

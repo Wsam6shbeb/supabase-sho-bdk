@@ -130,14 +130,6 @@ export function ProviderProfileCard({
           </View>
         )}
 
-        {provider.balance < 10 && (
-          <View style={[styles.lowBalanceBadge, { backgroundColor: `${scheme.warning}15` }]}>
-            <Ionicons name="wallet" size={16} color={scheme.warning} />
-            <Text style={[styles.lowBalanceText, { color: scheme.warning }]}>
-              {t('orders.providerProfile.lowBalance')}
-            </Text>
-          </View>
-        )}
       </AppCard>
 
       {/* Skills Section */}
@@ -158,6 +150,39 @@ export function ProviderProfileCard({
           ))}
         </View>
       </AppCard>
+
+      {/* Service details: المنطقة والمعلومات الاختيارية */}
+      {(provider.services ?? []).some(
+        (sv) => sv.service_area || sv.additional_info || sv.delivery_mode,
+      ) && (
+        <AppCard padding="four" elevation="sm" style={styles.sectionCard}>
+          <Text style={[styles.sectionTitle, { color: scheme.text }]}>
+            {t('orders.providerProfile.serviceDetails')}
+          </Text>
+          {(provider.services ?? []).map((sv, index) => (
+            <View key={index} style={styles.detailBlock}>
+              {!!sv.service && (
+                <Text style={[styles.detailService, { color: scheme.text }]}>{sv.service}</Text>
+              )}
+              {!!sv.service_area && (
+                <Text style={[styles.detailLine, { color: scheme.textSecondary }]}>
+                  {t('orders.providerProfile.serviceArea')}: {sv.service_area}
+                </Text>
+              )}
+              {!!sv.delivery_mode && (
+                <Text style={[styles.detailLine, { color: scheme.textSecondary }]}>
+                  {t('orders.providerProfile.deliveryMode')}: {sv.delivery_mode}
+                </Text>
+              )}
+              {!!sv.additional_info && (
+                <Text style={[styles.detailLine, { color: scheme.textSecondary }]}>
+                  {t('orders.providerProfile.additionalInfo')}: {sv.additional_info}
+                </Text>
+              )}
+            </View>
+          ))}
+        </AppCard>
+      )}
 
       {/* Stats Section */}
       <AppCard padding="four" elevation="sm" style={styles.sectionCard}>
@@ -218,7 +243,7 @@ export function ProviderProfileCard({
             variant="primary"
             size="lg"
             onPress={onRequestAgain}
-            disabled={!provider.is_available || provider.balance < 10}
+            disabled={!provider.is_available}
             leadingIcon={
               <Ionicons name="refresh" size={18} color={scheme.primaryContrast} />
             }
@@ -319,19 +344,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.medium,
   },
-  lowBalanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radii.md,
-    marginTop: Spacing.two,
-    gap: Spacing.two,
-  },
-  lowBalanceText: {
-    fontSize: FontSizes.sm,
-    fontWeight: FontWeights.medium,
-  },
   sectionCard: {
     marginBottom: Spacing.three,
   },
@@ -339,6 +351,21 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold,
     marginBottom: Spacing.three,
+  },
+  detailBlock: {
+    marginBottom: Spacing.three,
+    gap: Spacing.one,
+  },
+  detailService: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.semibold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  detailLine: {
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   skillsContainer: {
     flexDirection: 'row',
