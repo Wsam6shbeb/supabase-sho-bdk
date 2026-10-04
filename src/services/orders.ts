@@ -107,3 +107,25 @@ export async function fetchOrderHistory(userId: string): Promise<Order[] | null>
     rating_reminder_sent: false,
   }));
 }
+
+export interface ConversationRatingStatus {
+  request_id: string;
+  request_state: string;
+  i_rated: boolean;
+  my_score: number | null;
+}
+
+/** حالة الطلب في هذه المحادثة وهل قيّمتُ الطرف الآخر (لبطاقة تقييم مقدم الخدمة). */
+export async function getConversationRatingStatus(
+  conversationId: string,
+): Promise<ConversationRatingStatus | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_conversation_rating_status', {
+      p_conversation_id: conversationId,
+    });
+    if (error || !data) return null;
+    return data as unknown as ConversationRatingStatus;
+  } catch {
+    return null;
+  }
+}

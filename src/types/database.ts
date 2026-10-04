@@ -915,6 +915,10 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      get_conversation_rating_status: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
       claim_welcome_bonus: {
         Args: Record<PropertyKey, never>
         Returns: Json

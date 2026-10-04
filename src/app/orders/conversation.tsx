@@ -4,12 +4,19 @@
 // ===============================================================
 
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
+import { AppButton } from '@/components/ui/AppButton';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
-import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useConversation } from '@/hooks/use-conversation';
+import {
+  getConversationRatingStatus,
+  orderErrorMessage,
+  submitRating,
+  type ConversationRatingStatus,
+} from '@/services/orders';
 import {
   agreementErrorMessage,
   getConversationAgreement,
@@ -61,11 +68,46 @@ export default function ConversationScreen() {
     if (result !== undefined) setAgreement(result);
   }, [conversationId]);
 
+  // ---------- تقييم الزبون (مقدم الخدمة يقيّم بعد إنهاء الخدمة) ----------
+  const [ratingStatus, setRatingStatus] = useState<ConversationRatingStatus | null>(null);
+  const [stars, setStars] = useState(0);
+  const [ratingBusy, setRatingBusy] = useState(false);
+
+  const loadRatingStatus = useCallback(async () => {
+    if (!conversationId) return;
+    setRatingStatus(await getConversationRatingStatus(conversationId));
+  }, [conversationId]);
+
   useEffect(() => {
     if (!conversationId || !myId) return;
-    // الاشتراك يستدعي loadAgreement عند أول اتصال وعند كل تغيّر/إعادة اتصال
-    return subscribeToAgreementChanges(() => void loadAgreement(), { conversationId });
-  }, [conversationId, myId, loadAgreement]);
+    // الاشتراك يستدعي المزامنة عند أول اتصال وعند كل تغيّر/إعادة اتصال
+    return subscribeToAgreementChanges(
+      () => {
+        void loadAgreement();
+        void loadRatingStatus();
+      },
+      { conversationId },
+    );
+  }, [conversationId, myId, loadAgreement, loadRatingStatus]);
+
+  const orderFinished =
+    ratingStatus?.request_state === 'completion_pending_rating' ||
+    ratingStatus?.request_state === 'completed';
+  const iAmProvider = agreement?.provider_id === myId;
+  const canRateCustomer = !!ratingStatus && orderFinished && !ratingStatus.i_rated && iAmProvider;
+
+  const handleRateCustomer = async () => {
+    if (!ratingStatus || stars < 1) return;
+    setRatingBusy(true);
+    const result = await submitRating({ requestId: ratingStatus.request_id, score: stars });
+    setRatingBusy(false);
+    if (!result.ok && !(result.error ?? '').includes('ALREADY_RATED')) {
+      Alert.alert('', orderErrorMessage(result.error));
+      return;
+    }
+    setStars(0);
+    void loadRatingStatus();
+  };
 
   const pendingForMe =
     agreement?.state === 'pending' && agreement.provider_id === myId ? agreement : null;
@@ -144,7 +186,34 @@ export default function ConversationScreen() {
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           ListFooterComponent={
-            pendingForMe ? (
+            canRateCustomer ? (
+              <View style={[styles.ratingCard, { backgroundColor: scheme.backgroundElevated, borderColor: scheme.border }]}>
+                <Text style={[styles.ratingTitle, { color: scheme.text }]}>كيف كانت تجربتك مع {otherName}؟</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable key={n} onPress={() => setStars(n)} hitSlop={6}>
+                      <Ionicons
+                        name={n <= stars ? 'star' : 'star-outline'}
+                        size={34}
+                        color={n <= stars ? scheme.warning : scheme.textSecondary}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+                <AppButton
+                  title="إرسال التقييم"
+                  variant="primary"
+                  size="md"
+                  onPress={() => void handleRateCustomer()}
+                  disabled={stars < 1 || ratingBusy}
+                  loading={ratingBusy}
+                />
+              </View>
+            ) : ratingStatus?.i_rated && orderFinished && iAmProvider ? (
+              <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
+                قيّمت الزبون بـ {ratingStatus.my_score} من 5 نجوم.
+              </Text>
+            ) : pendingForMe ? (
               <AgreementBubble
                 customerName={otherName}
                 agreedPrice={pendingForMe.price != null ? Number(pendingForMe.price) : null}
@@ -192,6 +261,21 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   content: { padding: Spacing.three, gap: Spacing.two },
+  ratingCard: {
+    borderWidth: 1,
+    borderRadius: Radii.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    marginTop: Spacing.three,
+    alignItems: 'center',
+  },
+  ratingTitle: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  starsRow: { flexDirection: 'row', gap: Spacing.two },
   statusText: {
     fontSize: FontSizes.sm,
     textAlign: 'right',
