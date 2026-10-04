@@ -915,6 +915,36 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      get_my_blocked_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          full_name: string
+          region: string | null
+          blocked_at: string
+        }[]
+      }
+      get_my_provider_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          agreement_id: string
+          request_id: string
+          conversation_id: string
+          agreement_state: string
+          request_state: string
+          requester_id: string
+          requester_name: string
+          request_text: string
+          region: string | null
+          price: number | null
+          commission_amount: number
+          created_at: string
+          expires_at: string
+          completed_at: string | null
+          rating_received: number | null
+          rating_given: number | null
+        }[]
+      }
       register_push_token: {
         Args: { p_token: string; p_platform?: string }
         Returns: undefined
