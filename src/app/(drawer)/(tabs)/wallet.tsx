@@ -33,15 +33,22 @@ export default function WalletTab() {
     topUp,
   } = useOrder();
 
-// [شرح الدالة: handleTopUp] يعالج طلب شحن/إضافة رصيد إلى المحفظة.
+// [شرح الدالة: handleTopUp] يعالج طلب شحن/إضافة رصيد إلى المحفظة (عبر السيرفر).
+  const runTopUp = async (method: string) => {
+    const result = await topUp(5000, method);
+    if (!result.ok) {
+      Alert.alert(t('wallet.topUpTitle'), result.error ?? 'تعذر إضافة الرصيد. حاول مرة أخرى.');
+    }
+  };
+
   const handleTopUp = () => {
     Alert.alert(
       t('wallet.topUpTitle'),
       t('wallet.topUpSubtitle'),
       [
         { text: 'إلغاء', style: 'cancel' },
-        { text: 'شام كاش', onPress: () => topUp(5000, 'شام كاش') },
-        { text: 'سيرياتيل كاش', onPress: () => topUp(5000, 'سيرياتيل كاش') },
+        { text: 'شام كاش', onPress: () => void runTopUp('شام كاش') },
+        { text: 'سيرياتيل كاش', onPress: () => void runTopUp('سيرياتيل كاش') },
       ],
     );
   };

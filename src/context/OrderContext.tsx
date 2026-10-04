@@ -21,6 +21,7 @@ import {
   subscribeToAgreementChanges,
 } from '@/services/agreements';
 import { loadRequesterConversations, type HydratedChats } from '@/services/hydrateChats';
+import { claimWelcomeBonus, requestTestTopUp, walletErrorMessage } from '@/services/wallet';
 import {
   completeRequest,
   fetchOrderHistory,
@@ -66,15 +67,14 @@ import { Alert } from 'react-native';
 // ═══════════════════════════════════════════════════════════
 // الثوابت
 // ═══════════════════════════════════════════════════════════
-const WELCOME_BONUS_AMOUNT = BUSINESS_CONFIG.welcomeBonus;
-
 const DEV_FAST_TIMERS = false;
 
 const APPROVAL_TIMEOUT_MS = DEV_FAST_TIMERS ? 20 * 1000 : 4 * 60 * 1000;
 const RATING_TIMEOUT_MS = DEV_FAST_TIMERS ? 30 * 1000 : 48 * 60 * 60 * 1000;
 
-const LOW_BALANCE_THRESHOLD = 20;
-const CRITICAL_BALANCE_THRESHOLD = 10;
+// أقل من الحد الأدنى للعمولة = لا يستطيع مقدم الخدمة الموافقة على اتفاق
+const CRITICAL_BALANCE_THRESHOLD = BUSINESS_CONFIG.commission.min;
+const LOW_BALANCE_THRESHOLD = BUSINESS_CONFIG.commission.min * 3;
 
 // ═══════════════════════════════════════════════════════════
 // الأنواع
@@ -171,14 +171,8 @@ export interface OrderContextValue {
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
   toggleAvailability: () => void;
 
-  addTransaction: (
-    type: Transaction['type'],
-    amount: number,
-    reason: TransactionReason,
-    description: string,
-    extra?: { order_id?: string; counterparty_name?: string },
-  ) => void;
-  topUp: (amount: number, method: string) => void;
+  /** يشحن الرصيد عبر السيرفر (مغلق افتراضياً حتى تتوفر بوابة دفع). */
+  topUp: (amount: number, method: string) => Promise<{ ok: boolean; error?: string }>;
 
   submitVerification: (idPhotoUri: string, selfieUri: string) => void;
   resetVerification: () => void;
@@ -489,25 +483,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     void loadMyProviderProfile(user.id);
   }, [user?.id, loadMyProviderProfile]);
 
-  const [balance, setBalance] = useState(0);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadWallet = async () => {
-      if (!api.wallet) return;
-      const [summary, ledger] = await Promise.all([
-        api.wallet.getSummary(),
-        api.wallet.getTransactions(),
-      ]);
-      if (cancelled) return;
-      if (summary.success) setBalance(Number(summary.data.balance ?? 0));
-      if (ledger.success) setTransactions(ledger.data);
-    };
-    void loadWallet();
-    return () => { cancelled = true; };
-  }, []);
-
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatusType>('not_verified');
   const [verificationRequest, setVerificationRequest] =
@@ -531,6 +506,79 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     unblockProvider,
     isProviderBlocked,
   } = useOrderSafety(user?.id);
+
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const balanceRef = useRef<number | null>(null);
+
+  const refreshWallet = useCallback(async () => {
+    if (!api.wallet) return;
+    const [summary, ledger] = await Promise.all([
+      api.wallet.getSummary(),
+      api.wallet.getTransactions(),
+    ]);
+    if (summary.success) {
+      const next = Number(summary.data.balance ?? 0);
+      const prev = balanceRef.current;
+      balanceRef.current = next;
+      setBalance(next);
+      // تنبيه عند هبوط الرصيد تحت الحد (لا عند أول تحميل)
+      if (prev !== null && prev >= CRITICAL_BALANCE_THRESHOLD && next < CRITICAL_BALANCE_THRESHOLD) {
+        pushNotification({
+          type: 'balance_low',
+          title: 'رصيدك منخفض',
+          body: 'رصيدك أقل من الحد الأدنى. أضف رصيداً لتستمر في استقبال الطلبات.',
+          route: '/(drawer)/(tabs)/wallet',
+        });
+      }
+    }
+    if (ledger.success) setTransactions(ledger.data);
+  }, [pushNotification]);
+
+  // الرصيد والحركات من السيرفر عند الدخول، ولحظياً عند أي تغيير (موافقة اتفاق، شحن، مكافأة)
+  useEffect(() => {
+    if (!user?.id) {
+      balanceRef.current = null;
+      setBalance(0);
+      setTransactions([]);
+      return;
+    }
+    const userId = user.id;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!cancelled) void refreshWallet();
+      }, 300);
+    };
+
+    void refreshWallet();
+
+    const channel = supabase
+      .channel(`wallet:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${userId}` },
+        refresh,
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ledger_entries', filter: `user_id=eq.${userId}` },
+        refresh,
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') refresh();
+      });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, refreshWallet]);
+
 
   const [hasAcceptedDisclaimer, setHasAcceptedDisclaimer] = useState(false);
 
@@ -570,53 +618,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     setHasAcceptedDisclaimer(true);
   }, []);
 
-  const addTransaction = useCallback(
-    (
-      type: Transaction['type'],
-      amount: number,
-      reason: TransactionReason,
-      description: string,
-      extra?: { order_id?: string; counterparty_name?: string },
-    ) => {
-      setBalance((prevBalance) => {
-        const newBalance =
-          type === 'credit' ? prevBalance + amount : prevBalance - amount;
-
-        const tx: Transaction = {
-          id: api.randomId('tx'),
-          user_id: 'me',
-          type,
-          amount,
-          balance_after: newBalance,
-          reason,
-          description,
-          order_id: extra?.order_id ?? null,
-          counterparty_name: extra?.counterparty_name ?? null,
-          created_at: new Date().toISOString(),
-        };
-
-        setTransactions((prev) => [tx, ...prev]);
-
-        if (newBalance < CRITICAL_BALANCE_THRESHOLD && newBalance >= 0) {
-          pushNotification({
-            type: 'balance_low',
-            title: 'رصيدك منخفض',
-            body: 'رصيدك أقل من الحد الأدنى. أضف رصيداً لتستمر في استقبال الطلبات.',
-            route: '/(drawer)/(tabs)/wallet',
-          });
-        }
-
-        return newBalance;
-      });
-    },
-    [pushNotification],
-  );
-
   const topUp = useCallback(
-    (amount: number, method: string) => {
-      addTransaction('credit', amount, 'top_up', `إضافة رصيد عبر ${method}`);
+    async (amount: number, _method: string): Promise<{ ok: boolean; error?: string }> => {
+      const { ok, error } = await requestTestTopUp(amount);
+      if (!ok) return { ok: false, error: walletErrorMessage(error) };
+      await refreshWallet();
+      return { ok: true };
     },
-    [addTransaction],
+    [refreshWallet],
   );
 
   const submitVerification = useCallback((idPhotoUri: string, selfieUri: string) => {
@@ -1299,21 +1308,27 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         welcome_bonus_received: prev?.welcome_bonus_received ?? false,
       }));
 
-      const alreadyReceived = currentProfile?.welcome_bonus_received ?? false;
-      const shouldGiveBonus = isFirstSkill && !alreadyReceived;
-      if (shouldGiveBonus) {
-        setMyProviderProfile((prev) => (prev ? { ...prev, welcome_bonus_received: true } : prev));
-        addTransaction('credit', WELCOME_BONUS_AMOUNT, 'welcome_bonus', 'مكافأة انضمام مقدم خدمة جديد');
-        pushNotification({
-          type: 'welcome_bonus',
-          title: 'مبروك! مكافأة انضمام',
-          body: `حصلت على ${WELCOME_BONUS_AMOUNT} ل.س كمكافأة انضمام.`,
-          route: '/(drawer)/(tabs)/wallet',
-        });
+      // مكافأة الانضمام تُمنح من السيرفر (مرة واحدة، والمبلغ من الإعدادات)
+      let welcomeBonus = false;
+      if (isFirstSkill) {
+        const bonus = await claimWelcomeBonus();
+        if (bonus.error) {
+          console.error('[Supabase][welcomeBonus] فشل منح المكافأة:', bonus.error);
+        } else if (bonus.granted) {
+          welcomeBonus = true;
+          setMyProviderProfile((prev) => (prev ? { ...prev, welcome_bonus_received: true } : prev));
+          await refreshWallet();
+          pushNotification({
+            type: 'welcome_bonus',
+            title: 'مبروك! مكافأة انضمام',
+            body: `حصلت على ${bonus.amount} ل.س كمكافأة انضمام.`,
+            route: '/(drawer)/(tabs)/wallet',
+          });
+        }
       }
-      return { welcomeBonus: shouldGiveBonus };
+      return { welcomeBonus };
     },
-    [myProviderProfile, addTransaction, pushNotification],
+    [myProviderProfile, refreshWallet, pushNotification],
   );
 
   const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
@@ -1420,7 +1435,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       addFirstSkill,
       updateProviderProfile,
       toggleAvailability,
-      addTransaction,
       topUp,
       submitVerification,
       resetVerification,
@@ -1474,7 +1488,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       addFirstSkill,
       updateProviderProfile,
       toggleAvailability,
-      addTransaction,
       topUp,
       submitVerification,
       resetVerification,

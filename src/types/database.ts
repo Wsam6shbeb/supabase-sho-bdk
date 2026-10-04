@@ -915,6 +915,14 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      claim_welcome_bonus: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      request_test_topup: {
+        Args: { p_amount: number }
+        Returns: number
+      }
       complete_request: {
         Args: { p_request_id: string }
         Returns: Database["public"]["Tables"]["service_requests"]["Row"]

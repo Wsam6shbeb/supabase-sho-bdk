@@ -13,7 +13,7 @@ export const BUSINESS_CONFIG = {
   commission: {
     min: 50,
     max: 1000,
-    default: 50,
+    default: 100,
     rate: 0.05,
   },
   agreementApprovalTimeoutSeconds: 4 * 60,
