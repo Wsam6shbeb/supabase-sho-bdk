@@ -111,9 +111,9 @@ export default function DisclaimerScreen() {
         </AppCard>
 
         {errorMessage ? (
-          <View style={[styles.errorBox, { borderColor: scheme.error, backgroundColor: scheme.error + '15' }]}>
-            <Ionicons name="alert-circle" size={22} color={scheme.error} />
-            <Text style={[styles.errorText, { color: scheme.error }]}>
+          <View style={[styles.errorBox, { borderColor: scheme.danger, backgroundColor: scheme.danger + '15' }]}>
+            <Ionicons name="alert-circle" size={22} color={scheme.danger} />
+            <Text style={[styles.errorText, { color: scheme.danger }]}>
               {errorMessage}
             </Text>
           </View>

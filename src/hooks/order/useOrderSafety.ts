@@ -1,43 +1,154 @@
 // ===============================================================
-// شرح الملف: هذا Hook خاص بمنطق الطلبات (useOrderSafety).
-// الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: useOrderSafety.
-// ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
+// الحظر والبلاغات عبر Supabase.
+// - blocks: الحظر يُطبَّق في السيرفر أيضاً (لا محادثة جديدة ولا رسائل بين المحظورَين).
+// - reports: البلاغات تُحفظ لمراجعة الإدارة.
 // ===============================================================
 
-import { useCallback, useState } from 'react';
-import { api } from '@/services/api';
-import type { CreateReportDto, Report } from '@/types/reports';
+import { supabase } from '@/services/supabase';
+import type { CreateReportDto, Report, ReportStatus } from '@/types/reports';
+import { useCallback, useEffect, useState } from 'react';
 
-/** Local safety state for the prototype. The Backend will become the source of truth later. */
-// [شرح الدالة: useOrderSafety] يجمع منطق حماية/سلامة الطلب في Hook واحد.
-export function useOrderSafety() {
+const REPORT_STATUS_MAP: Record<string, ReportStatus> = {
+  open: 'pending',
+  reviewed: 'reviewed',
+  resolved: 'resolved',
+  dismissed: 'rejected',
+};
+
+export function useOrderSafety(userId?: string | null) {
   const [reports, setReports] = useState<Report[]>([]);
   const [blockedProviderIds, setBlockedProviderIds] = useState<string[]>([]);
 
-  const submitReport = useCallback((dto: CreateReportDto) => {
-    const report: Report = {
-      id: api.randomId('rep'),
-      reporter_id: 'me',
-      reporter_name: 'أنا',
-      reported_user_id: dto.reported_user_id,
-      reported_user_name: dto.reported_user_name,
-      order_id: dto.order_id ?? null,
-      category: dto.category,
-      description: dto.description,
-      status: 'pending',
-      created_at: new Date().toISOString(),
+  // استعادة قائمة المحظورين وبلاغاتي من السيرفر عند الدخول
+  useEffect(() => {
+    if (!userId) {
+      setReports([]);
+      setBlockedProviderIds([]);
+      return;
+    }
+    let cancelled = false;
+
+    void (async () => {
+      const [blocksResult, reportsResult] = await Promise.all([
+        supabase.from('blocks').select('blocked_id').eq('blocker_id', userId),
+        supabase
+          .from('reports')
+          .select('id, reporter_id, target_user_id, request_id, reason, details, status, created_at')
+          .eq('reporter_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(100),
+      ]);
+      if (cancelled) return;
+
+      if (blocksResult.error) {
+        console.error('[safety] فشل جلب المحظورين:', blocksResult.error.message);
+      } else {
+        setBlockedProviderIds((blocksResult.data ?? []).map((b) => b.blocked_id));
+      }
+
+      if (reportsResult.error) {
+        console.error('[safety] فشل جلب البلاغات:', reportsResult.error.message);
+      } else {
+        setReports(
+          (reportsResult.data ?? []).map((r) => ({
+            id: r.id,
+            reporter_id: r.reporter_id,
+            reporter_name: 'أنا',
+            reported_user_id: r.target_user_id ?? '',
+            reported_user_name: '',
+            order_id: r.request_id,
+            category: (r.reason as Report['category']) ?? 'other',
+            description: r.details ?? '',
+            status: REPORT_STATUS_MAP[r.status] ?? 'pending',
+            created_at: r.created_at,
+          })),
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    setReports((prev) => [report, ...prev]);
-  }, []);
+  }, [userId]);
 
-  const blockProvider = useCallback((providerId: string) => {
-    setBlockedProviderIds((prev) => (prev.includes(providerId) ? prev : [...prev, providerId]));
-  }, []);
+  /** يحفظ البلاغ في السيرفر. يرجع ok=false عند الفشل ليعرض الواجهة الخطأ. */
+  const submitReport = useCallback(
+    async (dto: CreateReportDto): Promise<{ ok: boolean; error?: string }> => {
+      if (!userId) return { ok: false, error: 'يجب تسجيل الدخول لإرسال بلاغ.' };
 
-  const unblockProvider = useCallback((providerId: string) => {
-    setBlockedProviderIds((prev) => prev.filter((id) => id !== providerId));
-  }, []);
+      const { data, error } = await supabase
+        .from('reports')
+        .insert({
+          reporter_id: userId,
+          target_user_id: dto.reported_user_id || null,
+          request_id: dto.order_id || null,
+          reason: dto.category,
+          details: dto.description,
+        })
+        .select('id, created_at')
+        .single();
+
+      if (error || !data) {
+        console.error('[safety] فشل إرسال البلاغ:', error?.message);
+        return { ok: false, error: 'تعذر إرسال البلاغ. تحقق من الاتصال وحاول مرة أخرى.' };
+      }
+
+      setReports((prev) => [
+        {
+          id: data.id,
+          reporter_id: userId,
+          reporter_name: 'أنا',
+          reported_user_id: dto.reported_user_id,
+          reported_user_name: dto.reported_user_name,
+          order_id: dto.order_id ?? null,
+          category: dto.category,
+          description: dto.description,
+          status: 'pending',
+          created_at: data.created_at,
+        },
+        ...prev,
+      ]);
+      return { ok: true };
+    },
+    [userId],
+  );
+
+  const blockProvider = useCallback(
+    (providerId: string) => {
+      setBlockedProviderIds((prev) => (prev.includes(providerId) ? prev : [...prev, providerId]));
+      if (!userId) return;
+      void supabase
+        .from('blocks')
+        .upsert({ blocker_id: userId, blocked_id: providerId }, { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true })
+        .then(({ error }) => {
+          if (error) {
+            console.error('[safety] فشل حفظ الحظر:', error.message);
+            // نتراجع محلياً حتى لا تظهر الحالة محظورة وهي غير محفوظة
+            setBlockedProviderIds((prev) => prev.filter((id) => id !== providerId));
+          }
+        });
+    },
+    [userId],
+  );
+
+  const unblockProvider = useCallback(
+    (providerId: string) => {
+      setBlockedProviderIds((prev) => prev.filter((id) => id !== providerId));
+      if (!userId) return;
+      void supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', userId)
+        .eq('blocked_id', providerId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('[safety] فشل إلغاء الحظر:', error.message);
+            setBlockedProviderIds((prev) => (prev.includes(providerId) ? prev : [...prev, providerId]));
+          }
+        });
+    },
+    [userId],
+  );
 
   const isProviderBlocked = useCallback(
     (providerId: string) => blockedProviderIds.includes(providerId),

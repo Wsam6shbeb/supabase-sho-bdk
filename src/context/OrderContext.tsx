@@ -183,7 +183,8 @@ export interface OrderContextValue {
   submitVerification: (idPhotoUri: string, selfieUri: string) => void;
   resetVerification: () => void;
 
-  submitReport: (dto: CreateReportDto) => void;
+  /** يحفظ البلاغ في السيرفر؛ ok=false مع رسالة عند الفشل. */
+  submitReport: (dto: CreateReportDto) => Promise<{ ok: boolean; error?: string }>;
   reportNonExecution: (dto: CreateNonExecutionReportDto) => void;
   blockProvider: (providerId: string) => void;
   unblockProvider: (providerId: string) => void;
@@ -520,7 +521,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     markAllNotificationsRead,
     clearNotification,
     clearAllNotifications,
-  } = useOrderNotifications();
+  } = useOrderNotifications(user?.id);
 
   const {
     reports,
@@ -529,7 +530,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     blockProvider,
     unblockProvider,
     isProviderBlocked,
-  } = useOrderSafety();
+  } = useOrderSafety(user?.id);
 
   const [hasAcceptedDisclaimer, setHasAcceptedDisclaimer] = useState(false);
 
@@ -661,13 +662,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
     setActiveChats((prev) => reopenNegotiations(prev).map((thread) => ({ ...thread, updated_at: new Date().toISOString() })));
 
-    pushNotification({
-      type: 'agreement_rejected',
-      title: 'انتهت مهلة الموافقة',
-      body: 'تم إلغاء الاتفاق تلقائياً لأن مقدم الخدمة لم يرد.',
-      route: '/(drawer)/(tabs)/orders',
-    });
-  }, [clearTimer, pushNotification]);
+  }, [clearTimer]);
 
   // ═══════════════════════════════════════════════════════════
   // مزامنة حالة الطلب/المحادثات/الاتفاق مع Supabase (مصدر الحقيقة)
@@ -677,27 +672,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const { agreement } = result;
       const pending = agreement?.state === 'pending';
 
-      // إشعار الزبون عند تغيّر حالة الاتفاق من الطرف الآخر
-      const last = lastAgreementRef.current;
-      if (last && agreement && last.id === agreement.id && last.state === 'pending') {
-        if (agreement.state === 'active') {
-          pushNotification({
-            type: 'agreement_approved',
-            title: 'تم قبول الاتفاق!',
-            body: 'مقدم الخدمة وافق على الاتفاق. الطلب صار نشطاً.',
-            referenceId: agreement.conversation_id,
-            route: '/(drawer)/(tabs)/orders',
-          });
-        }
-      } else if (last && !agreement && last.state === 'pending') {
-        // اختفى الاتفاق المعلّق: إما رُفض أو انتهت مهلته (يظهر السبب في المحادثة)
-        pushNotification({
-          type: 'agreement_rejected',
-          title: 'لم يكتمل الاتفاق',
-          body: 'رُفض الاتفاق أو انتهت مهلته. تقدر تكمل التفاوض مع مقدم الخدمة.',
-          route: '/(drawer)/(tabs)/orders',
-        });
-      }
+      // إشعارات قبول/رفض/انتهاء الاتفاق يولّدها السيرفر (محفوظة ولحظية)، فلا نكررها محلياً
       lastAgreementRef.current = agreement ? { id: agreement.id, state: agreement.state } : null;
       agreementConversationRef.current = pending ? agreement.conversation_id : null;
 

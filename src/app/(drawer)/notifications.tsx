@@ -40,6 +40,7 @@ const NOTIFICATION_CONFIG: Record<
   welcome_bonus: { icon: 'gift-outline', colorKey: 'warning' },
   rating_reminder: { icon: 'star-half-outline', colorKey: 'warning' },
   rating_auto_approved: { icon: 'checkmark-done-circle-outline', colorKey: 'textSecondary' },
+  ai_unavailable: { icon: 'cloud-offline-outline', colorKey: 'warning' },
 };
 
 // [شرح الدالة: NotificationsScreen] يعرض إشعارات المستخدم والإجراءات المرتبطة بها.

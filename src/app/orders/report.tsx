@@ -44,9 +44,10 @@ export default function ReportScreen() {
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
 // [شرح الدالة: handleSubmit] يعالج إرسال النموذج الحالي بعد التحقق من البيانات وتنفيذ العملية المطلوبة.
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError(null);
 
     if (!description.trim()) {
@@ -54,13 +55,20 @@ export default function ReportScreen() {
       return;
     }
 
-    submitReport({
+    setSubmitting(true);
+    const result = await submitReport({
       reported_user_id: reportedUserId,
       reported_user_name: reportedUserName,
       order_id: orderId,
       category: 'other', // تصنيف داخلي فقط؛ المستخدم يشرح المشكلة بحرية في النص.
       description: description.trim(),
     });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error ?? 'تعذر إرسال البلاغ. حاول مرة أخرى.');
+      return;
+    }
 
     setSubmitted(true);
   };
