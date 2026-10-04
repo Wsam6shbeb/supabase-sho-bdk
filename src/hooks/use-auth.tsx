@@ -2,6 +2,7 @@
 // useAuth — Supabase Auth مباشرة
 // ===============================================================
 
+import { unregisterPushToken } from '@/services/push';
 import { supabase } from '@/services/supabase';
 import type {
   AuthResult,
@@ -481,6 +482,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastError: null,
       isLoading: false,
     }));
+
+    // نزيل رمز Push لهذا الجهاز قبل إنهاء الجلسة (يحتاج جلسة فعّالة)
+    await unregisterPushToken();
 
     try {
       // إنهاء الجلسة المحلية المحفوظة على الجهاز/المتصفح.

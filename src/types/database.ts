@@ -915,6 +915,14 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      register_push_token: {
+        Args: { p_token: string; p_platform?: string }
+        Returns: undefined
+      }
+      unregister_push_token: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
       report_non_execution: {
         Args: { p_request_id: string; p_reason: string }
         Returns: Database["public"]["Tables"]["reports"]["Row"]
