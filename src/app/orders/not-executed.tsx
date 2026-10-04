@@ -32,14 +32,22 @@ export default function NotExecutedScreen() {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
 // [شرح الدالة: submit] ينفذ إرسال النموذج الحالي ويعالج النتيجة.
-  const submit = () => {
+  const submit = async () => {
+    setError(null);
     if (!reason.trim()) {
       setError(t('notExecuted.reasonRequired'));
       return;
     }
-    reportNonExecution({ order_id: orderId, reporter_role: role, reason: reason.trim() });
+    setSubmitting(true);
+    const result = await reportNonExecution({ order_id: orderId, reporter_role: role, reason: reason.trim() });
+    setSubmitting(false);
+    if (!result.ok) {
+      setError(result.error ?? 'تعذر تسجيل البلاغ. حاول مرة أخرى.');
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -109,7 +117,7 @@ export default function NotExecutedScreen() {
             style={{ minHeight: 140, textAlignVertical: 'top' }}
           />
         </AppCard>
-        <AppButton title={t('notExecuted.submitBtn')} variant="danger" size="lg" onPress={submit} leadingIcon={<Ionicons name="flag-outline" size={20} color={scheme.dangerContrast} />} />
+        <AppButton title={t('notExecuted.submitBtn')} variant="danger" size="lg" onPress={() => void submit()} loading={submitting} disabled={submitting} leadingIcon={<Ionicons name="flag-outline" size={20} color={scheme.dangerContrast} />} />
       </ScrollView>
     </SafeAreaView>
   );

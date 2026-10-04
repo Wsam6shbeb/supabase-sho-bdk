@@ -915,6 +915,10 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      report_non_execution: {
+        Args: { p_request_id: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["reports"]["Row"]
+      }
       get_conversation_rating_status: {
         Args: { p_conversation_id: string }
         Returns: Json

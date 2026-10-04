@@ -21,6 +21,8 @@ export function orderErrorMessage(code: string | null): string {
       return 'التقييم لازم يكون من 1 لـ 5 نجوم.';
     case 'FORBIDDEN':
       return 'ما عندك صلاحية لهالإجراء.';
+    case 'REASON_REQUIRED':
+      return 'اكتب سبب البلاغ.';
     default:
       return 'صار خطأ بالاتصال. جرّب مرة ثانية.';
   }
@@ -127,5 +129,21 @@ export async function getConversationRatingStatus(
     return data as unknown as ConversationRatingStatus;
   } catch {
     return null;
+  }
+}
+
+/** بلاغ عدم تنفيذ الخدمة: يغلق الطلب ويسجّل بلاغاً للمراجعة (بلا استرداد تلقائي). */
+export async function reportNonExecution(
+  requestId: string,
+  reason: string,
+): Promise<{ ok: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase.rpc('report_non_execution', {
+      p_request_id: requestId,
+      p_reason: reason,
+    });
+    return error ? { ok: false, error: error.message } : { ok: true, error: null };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'NETWORK_ERROR' };
   }
 }

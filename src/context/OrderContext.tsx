@@ -25,6 +25,7 @@ import { claimWelcomeBonus, requestTestTopUp, walletErrorMessage } from '@/servi
 import {
   completeRequest,
   fetchOrderHistory,
+  reportNonExecution as reportNonExecutionOnServer,
   finalizeOverdueRequests,
   orderErrorMessage,
   submitRating,
@@ -179,7 +180,8 @@ export interface OrderContextValue {
 
   /** يحفظ البلاغ في السيرفر؛ ok=false مع رسالة عند الفشل. */
   submitReport: (dto: CreateReportDto) => Promise<{ ok: boolean; error?: string }>;
-  reportNonExecution: (dto: CreateNonExecutionReportDto) => void;
+  /** يسجّل البلاغ في السيرفر (يغلق الطلب ويُراجَع يدوياً). */
+  reportNonExecution: (dto: CreateNonExecutionReportDto) => Promise<{ ok: boolean; error?: string }>;
   blockProvider: (providerId: string) => void;
   unblockProvider: (providerId: string) => void;
   isProviderBlocked: (providerId: string) => boolean;
@@ -1079,7 +1081,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   }, [clearTimer, pendingAgreementId]);
 
-  const reportNonExecution = useCallback((dto: CreateNonExecutionReportDto) => {
+  const reportNonExecution = useCallback(async (dto: CreateNonExecutionReportDto): Promise<{ ok: boolean; error?: string }> => {
+    // البلاغ يُسجَّل في السيرفر أولاً؛ لا نغلق الطلب محلياً إذا فشل
+    const { ok, error } = await reportNonExecutionOnServer(dto.order_id, dto.reason);
+    if (!ok) {
+      console.error('[Supabase][reportNonExecution] فشل تسجيل البلاغ:', error);
+      return { ok: false, error: orderErrorMessage(error) };
+    }
+
     const now = new Date().toISOString();
     const isProviderReport = dto.reporter_role === 'provider';
     const nextStatus = isProviderReport
@@ -1119,6 +1128,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         route: '/(drawer)/(tabs)/orders',
       });
     }
+    return { ok: true };
   }, [pushNotification]);
 
   // ═══════════════════════════════════════════════════════════
