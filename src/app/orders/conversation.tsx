@@ -3,10 +3,12 @@
 // تُفتح بمعرّف المحادثة الحقيقي: /orders/conversation?conversation_id=...&name=...
 // ===============================================================
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
+import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -32,7 +34,6 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -157,7 +158,7 @@ export default function ConversationScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOR}
       >
         <View
           style={[
@@ -237,6 +238,9 @@ export default function ConversationScreen() {
         )}
 
         <ChatInput onSend={(text) => void send(text)} onChangeText={notifyTyping} />
+
+        {/* مساحة لأزرار النظام السفلية حتى لا يختفي حقل الكتابة خلفها */}
+        <BottomInsetSpacer color={scheme.backgroundElevated} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -9,6 +9,7 @@
 // شاشة إنشاء حساب جديد
 // ═══════════════════════════════════════════════════════════
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
@@ -35,13 +36,11 @@ import {
     Image,
     KeyboardAvoidingView,
     Modal,
-    Platform,
     Pressable,
-    SafeAreaView as RNSafeArea,
     ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FormErrors {
   name?: string | null;
@@ -55,6 +54,7 @@ interface FormErrors {
 
 // [شرح الدالة: RegisterScreen] يعرض نموذج إنشاء الحساب ويجمع بيانات المستخدم المطلوبة.
 export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = Colors[theme];
   const { register, isLoading, lastError, clearError } = useAuth();
@@ -185,7 +185,7 @@ export default function RegisterScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOR}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -371,7 +371,7 @@ export default function RegisterScreen() {
           onRequestClose={() => setRegionPickerOpen(false)}
         >
           <View style={[styles.modalBackdrop, { backgroundColor: scheme.overlay }]}>
-            <RNSafeArea style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: insets.bottom }}>
               <AppCard style={styles.modalCard} padding="six" elevation="lg">
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: scheme.text }]}>اختر المنطقة</Text>
@@ -416,7 +416,7 @@ export default function RegisterScreen() {
                   }}
                 />
               </AppCard>
-            </RNSafeArea>
+            </View>
           </View>
         </Modal>
 
@@ -427,7 +427,7 @@ export default function RegisterScreen() {
           onRequestClose={() => setAvatarPickerOpen(false)}
         >
           <View style={[styles.modalBackdrop, { backgroundColor: scheme.overlay }]}>
-            <RNSafeArea style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: insets.bottom }}>
               <AppCard style={styles.modalCard} padding="six" elevation="lg">
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: scheme.text }]}>{t('auth.register.avatarLabel')}</Text>
@@ -489,7 +489,7 @@ export default function RegisterScreen() {
                   ) : null}
                 </View>
               </AppCard>
-            </RNSafeArea>
+            </View>
           </View>
         </Modal>
       </KeyboardAvoidingView>

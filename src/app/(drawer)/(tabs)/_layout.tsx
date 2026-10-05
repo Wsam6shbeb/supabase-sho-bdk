@@ -10,11 +10,14 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // [شرح الدالة: TabsLayout] يبني شريط التبويبات الرئيسي وينظم صفحات التبويبات.
 export default function TabsLayout() {
   const theme = useTheme();
   const scheme = Colors[theme];
+  // الارتفاع الثابت كان يلغي هامش أزرار النظام فيقع الشريط تحتها؛ نضيفه يدوياً
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -23,9 +26,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: scheme.backgroundElevated,
           borderTopColor: scheme.border,
-          height: 68,
+          height: 68 + insets.bottom,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: 8 + insets.bottom,
         },
         tabBarActiveTintColor: scheme.primary,
         tabBarInactiveTintColor: scheme.textTertiary,

@@ -297,7 +297,7 @@ export default function SearchingScreen() {
   }, [showAiBanner, bannerOpacity, bannerTranslateY]);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
         {showAiBanner && (
         <Animated.View
           style={[

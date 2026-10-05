@@ -4,12 +4,14 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights } from '@/constants/theme';
+import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer } from 'expo-router/drawer';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 // زر الرجوع الموحد داخل صفحات الـ Drawer.
@@ -42,6 +44,8 @@ function DrawerContent(props: any) {
   const theme = useTheme();
   const scheme = Colors[theme];
   const { logout } = useAuth();
+  const { myProviderProfile } = useOrder();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     // على الويب نستخدم نافذة تأكيد المتصفح لأن Alert.alert لا يظهر هناك.
@@ -71,6 +75,10 @@ function DrawerContent(props: any) {
   const items = [
     { name: '(tabs)', label: t('home.appName'), icon: 'home-outline' as const },
     { name: 'profile', label: t('tabs.profile'), icon: 'person-outline' as const },
+    // "أعمالي" يظهر فقط لمن سجّل خدمة كمقدم خدمة
+    ...(myProviderProfile
+      ? [{ name: 'my-jobs', label: 'أعمالي', icon: 'briefcase-outline' as const }]
+      : []),
     { name: 'notifications', label: 'الإشعارات', icon: 'notifications-outline' as const },
     { name: 'settings', label: 'الإعدادات', icon: 'settings-outline' as const },
     { name: 'about', label: 'عن التطبيق', icon: 'information-circle-outline' as const },
@@ -83,8 +91,9 @@ function DrawerContent(props: any) {
       contentContainerStyle={{
         flexGrow: 1,
         backgroundColor: scheme.backgroundElevated,
-        paddingTop: 24,
-        paddingBottom: 16,
+        // الدرج يمتد تحت شريط الحالة وأزرار النظام، فنضيف هوامشهما حتى لا يختفي زر تسجيل الخروج
+        paddingTop: 24 + insets.top,
+        paddingBottom: 16 + insets.bottom,
       }}
     >
       <View style={{ gap: 6 }}>
@@ -190,6 +199,7 @@ export default function DrawerLayout() {
     >
       <Drawer.Screen name="(tabs)" options={{ title: t('home.appName'), drawerLabel: t('home.appName'), headerLeft: () => false }} />
       <Drawer.Screen name="profile" options={{ title: t('tabs.profile'), drawerLabel: t('tabs.profile') }} />
+      <Drawer.Screen name="my-jobs" options={{ title: 'أعمالي', drawerLabel: 'أعمالي' }} />
       <Drawer.Screen name="notifications" options={{ title: 'الإشعارات', drawerLabel: 'الإشعارات' }} />
       <Drawer.Screen name="settings" options={{ title: 'الإعدادات', drawerLabel: 'الإعدادات' }} />
       <Drawer.Screen name="about" options={{ title: 'عن التطبيق', drawerLabel: 'عن التطبيق' }} />

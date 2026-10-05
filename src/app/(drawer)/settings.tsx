@@ -9,6 +9,7 @@
 // شاشة الإعدادات
 // ═══════════════════════════════════════════════════════════
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -21,6 +22,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 're
 
 // [شرح الدالة: SettingsScreen] يعرض إعدادات التطبيق والحساب والإجراءات الخاصة بها.
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = Colors[theme];
   const { logout } = useAuth();
@@ -50,7 +52,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: scheme.background }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
     >
       {/* Notifications */}
       <AppCard padding="four" elevation="sm" style={styles.section}>

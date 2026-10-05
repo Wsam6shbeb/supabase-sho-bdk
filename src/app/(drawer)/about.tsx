@@ -9,6 +9,7 @@
 // شاشة معلومات التطبيق
 // ═══════════════════════════════════════════════════════════
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -41,6 +42,7 @@ const FAQ_ITEMS = [
 
 // [شرح الدالة: AboutScreen] يعرض معلومات عن التطبيق ووسائل التواصل والأسئلة الشائعة.
 export default function AboutScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = Colors[theme];
 
@@ -57,7 +59,7 @@ export default function AboutScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: scheme.background }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
     >
       {/* App Info */}
       <View style={styles.appHeader}>

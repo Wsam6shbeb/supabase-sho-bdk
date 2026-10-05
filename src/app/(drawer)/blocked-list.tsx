@@ -15,9 +15,10 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
-import { api } from '@/services/api';
+import { fetchBlockedUsers, type BlockedUser } from '@/services/providerJobs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,10 +28,28 @@ export default function BlockedListScreen() {
   const scheme = Colors[theme];
   const { blockedProviderIds, unblockProvider } = useOrder();
 
-  // اجلب بيانات المقدمين المحجوبين
-  const blockedProviders = blockedProviderIds
-    .map((id) => api.providers.getProviderById(id))
-    .filter((p) => p !== undefined);
+  // أسماء المحظورين من السيرفر (تُحدَّث كلما تغيّرت قائمة الحظر)
+  const [loaded, setLoaded] = useState<BlockedUser[]>([]);
+  const blockedKey = blockedProviderIds.join(',');
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBlockedUsers().then((rows) => {
+      if (!cancelled && rows) setLoaded(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockedKey]);
+
+  // نعرض فقط من ما زال محظوراً (فور إلغاء الحظر يختفي من القائمة)
+  const blockedProviders = loaded
+    .filter((u) => blockedProviderIds.includes(u.user_id))
+    .map((u) => ({
+      id: u.user_id,
+      name: u.full_name,
+      region: { name_ar: u.region ?? '' },
+      card_color: scheme.primary,
+    }));
 
   return (
     <SafeAreaView

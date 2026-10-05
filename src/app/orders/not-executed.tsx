@@ -67,7 +67,7 @@ export default function NotExecutedScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
       <View style={styles.header}>
         <AppButton title={t('common.back')} variant="ghost" size="sm" onPress={() => router.back()} />
         <Text style={[styles.headerTitle, { color: scheme.text }]}>{t('notExecuted.title')}</Text>
