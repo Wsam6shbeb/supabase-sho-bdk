@@ -5,6 +5,7 @@
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -12,7 +13,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: ResetPasswordScreen] يعرض نموذج تعيين كلمة المرور الجديدة.
@@ -37,7 +38,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={KEYBOARD_AVOIDING_BEHAVIOR}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={[styles.title, { color: scheme.text }]}>تعيين كلمة مرور جديدة</Text>
           <Text style={[styles.subtitle, { color: scheme.textSecondary }]}>أدخل رمز الاستعادة الذي وصلك بالبريد.</Text>

@@ -9,6 +9,7 @@
 // شاشة المحادثة مع مقدم الخدمة
 // ═══════════════════════════════════════════════════════════
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
@@ -196,8 +197,7 @@ export default function ChatScreen() {
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        // Android يعمل بنمط edge-to-edge: النافذة لا تتقلّص مع لوحة المفاتيح، فنحتاج padding هنا أيضاً
-        behavior="padding"
+        behavior={KEYBOARD_AVOIDING_BEHAVIOR}
       >
         {/* Header */}
         <View

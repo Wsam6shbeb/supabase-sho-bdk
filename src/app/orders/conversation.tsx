@@ -3,6 +3,7 @@
 // تُفتح بمعرّف المحادثة الحقيقي: /orders/conversation?conversation_id=...&name=...
 // ===============================================================
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChatBubble } from '@/components/orders/ChatBubble';
@@ -157,8 +158,7 @@ export default function ConversationScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.flex}
-        // Android يعمل بنمط edge-to-edge: النافذة لا تتقلّص مع لوحة المفاتيح، فنحتاج padding هنا أيضاً
-        behavior="padding"
+        behavior={KEYBOARD_AVOIDING_BEHAVIOR}
       >
         <View
           style={[

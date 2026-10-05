@@ -9,6 +9,7 @@
 // شاشة تسجيل الدخول
 // ═══════════════════════════════════════════════════════════
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { GoogleButton } from '@/components/ui/GoogleButton';
@@ -21,7 +22,6 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
     KeyboardAvoidingView,
-    Platform,
     ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
@@ -104,7 +104,7 @@ export default function LoginScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOR}
       >
         <ScrollView
           style={{ flex: 1 }}

@@ -9,6 +9,7 @@
 // شاشة الشروط والأحكام
 // ═══════════════════════════════════════════════════════════
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -16,13 +17,14 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // [شرح الدالة: LegalScreen] يعرض الشروط والمعلومات القانونية الخاصة بالتطبيق.
 export default function LegalScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = Colors[theme];
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: scheme.background }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
     >
       {/* Disclaimer */}
       <AppCard padding="four" elevation="md" style={styles.card}>

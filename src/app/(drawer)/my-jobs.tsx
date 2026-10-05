@@ -3,6 +3,7 @@
 // مع إحصائياتي (تقييمي، الأعمال المنجزة، العمولات المدفوعة). كلها من Supabase ولحظية.
 // ===============================================================
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -42,6 +43,7 @@ const STAGE_COLOR: Record<JobStage, ColorKey> = {
 };
 
 export default function MyJobsScreen() {
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = Colors[theme];
   const { user } = useAuth();
@@ -125,7 +127,7 @@ export default function MyJobsScreen() {
       <FlatList
         data={sorted}
         keyExtractor={(item) => item.agreement_id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         ListHeaderComponent={
           <>
             {header}

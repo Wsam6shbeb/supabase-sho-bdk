@@ -11,6 +11,7 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer } from 'expo-router/drawer';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 // زر الرجوع الموحد داخل صفحات الـ Drawer.
@@ -44,6 +45,7 @@ function DrawerContent(props: any) {
   const scheme = Colors[theme];
   const { logout } = useAuth();
   const { myProviderProfile } = useOrder();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     // على الويب نستخدم نافذة تأكيد المتصفح لأن Alert.alert لا يظهر هناك.
@@ -89,8 +91,9 @@ function DrawerContent(props: any) {
       contentContainerStyle={{
         flexGrow: 1,
         backgroundColor: scheme.backgroundElevated,
-        paddingTop: 24,
-        paddingBottom: 16,
+        // الدرج يمتد تحت شريط الحالة وأزرار النظام، فنضيف هوامشهما حتى لا يختفي زر تسجيل الخروج
+        paddingTop: 24 + insets.top,
+        paddingBottom: 16 + insets.bottom,
       }}
     >
       <View style={{ gap: 6 }}>

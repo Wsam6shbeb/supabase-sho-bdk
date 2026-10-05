@@ -9,6 +9,7 @@
 // شاشة استعادة كلمة المرور
 // ═══════════════════════════════════════════════════════════
 
+import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
@@ -21,7 +22,6 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
     KeyboardAvoidingView,
-    Platform,
     Pressable,
     ScrollView, StyleSheet, Text,
     View
@@ -87,7 +87,7 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={KEYBOARD_AVOIDING_BEHAVIOR}
       >
         <ScrollView
           style={{ flex: 1 }}
