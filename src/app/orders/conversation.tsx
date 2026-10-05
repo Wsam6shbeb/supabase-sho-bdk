@@ -6,10 +6,12 @@
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { AppButton } from '@/components/ui/AppButton';
+import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
+import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useConversation } from '@/hooks/use-conversation';
@@ -46,6 +48,7 @@ export default function ConversationScreen() {
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
   const { user } = useAuth();
+  const { isProviderBlocked, unblockProvider } = useOrder();
 
   const conversationId = typeof params.conversation_id === 'string' ? params.conversation_id : '';
   const otherName = typeof params.name === 'string' && params.name ? params.name : 'محادثة';
@@ -54,10 +57,25 @@ export default function ConversationScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const [sharePhone, setSharePhone] = useState(false);
 
-  const { messages, send, retry, partnerTyping, notifyTyping, loadFailed } = useConversation({
+  const { messages, send, retry, partnerTyping, notifyTyping, loadFailed, writeStatus, refreshWriteStatus } = useConversation({
     conversationId: conversationId || null,
     myId,
   });
+
+  // ---------- الحظر / إغلاق المحادثة: لا حقل كتابة، بل شرح مناسب ----------
+  const otherUserId = writeStatus?.other_user_id ?? null;
+  const blockReason: 'blocked_by_me' | 'unavailable' | 'closed' | null =
+    otherUserId && isProviderBlocked(otherUserId)
+      ? 'blocked_by_me'
+      : writeStatus?.reason === 'unavailable' || writeStatus?.reason === 'closed'
+        ? writeStatus.reason
+        : null;
+
+  const handleUnblock = async () => {
+    if (!otherUserId) return;
+    await unblockProvider(otherUserId);
+    await refreshWriteStatus();
+  };
 
   // ---------- الاتفاق: مقدم الخدمة يوافق/يرفض من هنا (كله عبر Supabase) ----------
   const [agreement, setAgreement] = useState<DbAgreement | null>(null);
@@ -237,7 +255,14 @@ export default function ConversationScreen() {
           <Text style={[styles.statusText, { color: scheme.textSecondary }]}>يكتب الآن...</Text>
         )}
 
-        <ChatInput onSend={(text) => void send(text)} onChangeText={notifyTyping} />
+        {blockReason ? (
+          <ChatBlockedNotice
+            reason={blockReason}
+            onUnblock={blockReason === 'blocked_by_me' ? handleUnblock : undefined}
+          />
+        ) : (
+          <ChatInput onSend={(text) => void send(text)} onChangeText={notifyTyping} />
+        )}
 
         {/* مساحة لأزرار النظام السفلية حتى لا يختفي حقل الكتابة خلفها */}
         <BottomInsetSpacer color={scheme.backgroundElevated} />

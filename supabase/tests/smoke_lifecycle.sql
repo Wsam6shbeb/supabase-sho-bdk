@@ -102,6 +102,43 @@ begin
   if public.mark_messages_read(conv) <> 1 then fails := fails || 'mark_messages_read'; end if;
 
   ---------------------------------------------------------------- 3) agreement
+  ---------------------------------------------------------------- 2b) blocks: no writing, no agreements, and the blocked user is not told
+  perform set_config('request.jwt.claims', json_build_object('sub', req, 'role', 'authenticated')::text, true);
+  insert into public.blocks(blocker_id, blocked_id) values (req, prov);
+
+  checks := checks + 1;
+  if (public.get_conversation_write_status(conv)->>'reason') is distinct from 'blocked_by_me' then
+    fails := fails || 'blocker should see blocked_by_me';
+  end if;
+  checks := checks + 1;
+  begin
+    insert into public.messages(conversation_id, sender_id, body, client_dedupe_key) values (conv, req, 'x', 'blk1');
+    fails := fails || 'blocker could still send a message';
+  exception when others then null; end;
+  checks := checks + 1;
+  begin
+    perform public.request_agreement(conv, 4000);
+    fails := fails || 'agreement allowed while blocked';
+  exception when others then null; end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', prov, 'role', 'authenticated')::text, true);
+  checks := checks + 1;
+  if (public.get_conversation_write_status(conv)->>'reason') is distinct from 'unavailable' then
+    fails := fails || 'blocked user must only see the neutral reason (unavailable)';
+  end if;
+  checks := checks + 1;
+  begin
+    insert into public.messages(conversation_id, sender_id, body, client_dedupe_key) values (conv, prov, 'x', 'blk2');
+    fails := fails || 'blocked user could send a message';
+  exception when others then null; end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', req, 'role', 'authenticated')::text, true);
+  delete from public.blocks where blocker_id = req and blocked_id = prov;
+  checks := checks + 1;
+  if (public.get_conversation_write_status(conv)->>'writable') is distinct from 'true' then
+    fails := fails || 'conversation should be writable again after unblock';
+  end if;
+
   perform set_config('request.jwt.claims', json_build_object('sub', req, 'role', 'authenticated')::text, true);
   ag := public.request_agreement(conv, 4000);
   checks := checks + 1;

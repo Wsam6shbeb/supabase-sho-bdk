@@ -183,7 +183,8 @@ export interface OrderContextValue {
   /** يسجّل البلاغ في السيرفر (يغلق الطلب ويُراجَع يدوياً). */
   reportNonExecution: (dto: CreateNonExecutionReportDto) => Promise<{ ok: boolean; error?: string }>;
   blockProvider: (providerId: string) => void;
-  unblockProvider: (providerId: string) => void;
+  /** يلغي الحظر في السيرفر ويحدّث الحالة؛ يُحلّ الوعد بعد اكتمال العملية. */
+  unblockProvider: (providerId: string) => Promise<void>;
   isProviderBlocked: (providerId: string) => boolean;
 
   estimateCommission: (messages: ChatMessage[]) => number;

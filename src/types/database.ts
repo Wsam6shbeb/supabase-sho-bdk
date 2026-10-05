@@ -915,6 +915,10 @@ export type Database = {
           preliminary_score: number
         }[]
       }
+      get_conversation_write_status: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
       get_my_blocked_users: {
         Args: Record<PropertyKey, never>
         Returns: {

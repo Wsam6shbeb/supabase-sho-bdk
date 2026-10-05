@@ -136,6 +136,10 @@ export function agreementErrorMessage(code: string | null): string {
       return 'ما بقدر تبدأ اتفاق بهالمرحلة من المحادثة.';
     case 'ALREADY_AGREED':
       return 'في اتفاق قائم بالفعل على هالطلب.';
+    case 'BLOCKED':
+      return 'ما بقدر تتفق مع شخص حاظره. ألغِ الحظر أولاً.';
+    case 'AGREEMENT_UNAVAILABLE':
+      return 'هالاتفاق غير متاح حالياً.';
     case 'FORBIDDEN':
       return 'ما عندك صلاحية لهالإجراء.';
     case 'AGREEMENT_NOT_FOUND':

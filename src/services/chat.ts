@@ -201,3 +201,25 @@ export function subscribeToInbox(onChange: () => void): () => void {
     void supabase.removeChannel(channel);
   };
 }
+
+export interface WriteStatus {
+  writable: boolean;
+  /** blocked_by_me: أنا حظرته | unavailable: غير متاحة (لا نكشف للمحظور أنه محظور) | closed: انتهت المراسلة */
+  reason: 'blocked_by_me' | 'unavailable' | 'closed' | null;
+  other_user_id: string;
+}
+
+/** هل أستطيع الكتابة في هذه المحادثة ولماذا؟ undefined عند فشل الاتصال، null إن لم أكن طرفاً فيها. */
+export async function getConversationWriteStatus(
+  conversationId: string,
+): Promise<WriteStatus | null | undefined> {
+  try {
+    const { data, error } = await supabase.rpc('get_conversation_write_status', {
+      p_conversation_id: conversationId,
+    });
+    if (error) return undefined;
+    return (data as unknown as WriteStatus | null) ?? null;
+  } catch {
+    return undefined;
+  }
+}

@@ -132,20 +132,18 @@ export function useOrderSafety(userId?: string | null) {
   );
 
   const unblockProvider = useCallback(
-    (providerId: string) => {
+    async (providerId: string): Promise<void> => {
       setBlockedProviderIds((prev) => prev.filter((id) => id !== providerId));
       if (!userId) return;
-      void supabase
+      const { error } = await supabase
         .from('blocks')
         .delete()
         .eq('blocker_id', userId)
-        .eq('blocked_id', providerId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('[safety] فشل إلغاء الحظر:', error.message);
-            setBlockedProviderIds((prev) => (prev.includes(providerId) ? prev : [...prev, providerId]));
-          }
-        });
+        .eq('blocked_id', providerId);
+      if (error) {
+        console.error('[safety] فشل إلغاء الحظر:', error.message);
+        setBlockedProviderIds((prev) => (prev.includes(providerId) ? prev : [...prev, providerId]));
+      }
     },
     [userId],
   );

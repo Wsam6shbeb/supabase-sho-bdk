@@ -9,10 +9,12 @@ import { api } from '@/services/api';
 import {
   createTypingChannel,
   fetchMessages,
+  getConversationWriteStatus,
   markMessagesRead,
   sendMessage,
   subscribeToMessages,
   type DbMessage,
+  type WriteStatus,
 } from '@/services/chat';
 import type { ChatMessage, MessageStatus } from '@/types/orders';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -33,11 +35,22 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [writeStatus, setWriteStatus] = useState<WriteStatus | null>(null);
 
   const myIdRef = useRef(myId);
   myIdRef.current = myId;
   const convRef = useRef(conversationId);
   convRef.current = conversationId;
+
+  // هل أستطيع الكتابة؟ (حظر من أحد الطرفين، أو محادثة مغلقة). السيرفر هو مصدر الحقيقة.
+  const refreshWriteStatus = useCallback(async (): Promise<WriteStatus | null> => {
+    const id = convRef.current;
+    if (!id) return null;
+    const status = await getConversationWriteStatus(id);
+    if (status === undefined) return null; // فشل الاتصال: نبقي الحالة السابقة
+    setWriteStatus(status);
+    return status;
+  }, []);
 
   // ---------- التحويل من صف قاعدة البيانات إلى رسالة للواجهة ----------
   const toChat = useCallback((m: DbMessage): ChatMessage => {
@@ -89,11 +102,13 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
     setMessages([]);
     setPartnerTyping(false);
     setLoadFailed(false);
+    setWriteStatus(null);
     if (!conversationId || !myId) return;
 
     let cancelled = false;
 
     const sync = async () => {
+      void refreshWriteStatus();
       const rows = await fetchMessages(conversationId);
       if (cancelled) return;
       if (rows === null) {
@@ -133,7 +148,7 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
       appSub.remove();
       if (readTimer.current) clearTimeout(readTimer.current);
     };
-  }, [conversationId, myId, upsert, flushRead]);
+  }, [conversationId, myId, upsert, flushRead, refreshWriteStatus]);
 
   // ---------- "يكتب الآن" ----------
   const typingRef = useRef<ReturnType<typeof createTypingChannel> | null>(null);
@@ -205,14 +220,21 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
 
       if (error && error !== 'DUPLICATE') {
         console.error('[chat] فشل إرسال الرسالة:', error);
-        setStatus(clientKey, 'failed');
+        // إن كان السبب أن المحادثة لم تعد قابلة للكتابة (حظر/إغلاق) فلا فائدة من إعادة المحاولة:
+        // نزيل الرسالة المؤقتة وتظهر واجهة المنع بدلاً منها
+        const status = await refreshWriteStatus();
+        if (status && !status.writable) {
+          setMessages((prev) => prev.filter((m) => m.id !== clientKey));
+        } else {
+          setStatus(clientKey, 'failed');
+        }
         return;
       }
       if (message) upsert([message]);
       // DUPLICATE: الرسالة وصلت سابقاً وستأتي عبر الريال تايم/المزامنة التالية
       else void fetchMessages(convId).then((rows) => rows && upsert(rows));
     },
-    [ensureConversationId, setStatus, upsert],
+    [ensureConversationId, setStatus, upsert, refreshWriteStatus],
   );
 
   const send = useCallback(
@@ -252,5 +274,5 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
     [messages, deliver, setStatus],
   );
 
-  return { messages, send, retry, partnerTyping, notifyTyping, loadFailed };
+  return { messages, send, retry, partnerTyping, notifyTyping, loadFailed, writeStatus, refreshWriteStatus };
 }

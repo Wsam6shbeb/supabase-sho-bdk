@@ -11,6 +11,7 @@
 
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { ChatBubble } from '@/components/orders/ChatBubble';
+import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
 import { ChatStatusBar } from '@/components/orders/ChatStatusBar';
@@ -57,6 +58,8 @@ export default function ChatScreen() {
     estimateCommission,
     completeOrder,
     closeChat,
+    isProviderBlocked,
+    unblockProvider,
   } = useOrder();
 
   const initialProviderId = params.provider_id as string;
@@ -95,6 +98,8 @@ export default function ChatScreen() {
     retry: retryMessage,
     partnerTyping,
     notifyTyping,
+    writeStatus,
+    refreshWriteStatus,
   } = useConversation({ conversationId, myId, ensureConversationId });
 
   // الرسالة الترحيبية وفقاعة الاتفاق تأتيان من حالة التطبيق (وليستا من السيرفر)
@@ -187,6 +192,18 @@ export default function ChatScreen() {
   const canCustomerComplete = thread.status === ChatStatus.ACTIVE;
   const canSendMessage =
     thread.status === ChatStatus.NEGOTIATING || thread.status === ChatStatus.ACTIVE;
+  // الحظر: من حظرتُه (فوري من الحالة المحلية) أو من حظرني (من السيرفر، بلا كشف أنه حظر)
+  const blockReason: 'blocked_by_me' | 'unavailable' | null = isProviderBlocked(provider.id)
+    ? 'blocked_by_me'
+    : writeStatus?.reason === 'unavailable'
+      ? 'unavailable'
+      : null;
+
+  const handleUnblock = async () => {
+    await unblockProvider(provider.id);
+    await refreshWriteStatus();
+  };
+
   const isLocked = thread.status === ChatStatus.LOCKED_NOT_CHOSEN;
   const isActive = thread.status === ChatStatus.ACTIVE;
 
@@ -330,7 +347,7 @@ export default function ChatScreen() {
           </View>
         )}
 
-        {canCustomerAgree && !showCustomerConfirm && (
+        {canCustomerAgree && !showCustomerConfirm && !blockReason && (
           <View style={styles.actionWrap}>
             <AppButton
               title={t('orders.chat.agreeBtn')}
@@ -444,17 +461,25 @@ export default function ChatScreen() {
           </View>
         )}
 
-        {!showCustomerConfirm && (
-          <ChatInput
-            onSend={handleSend}
-            onChangeText={notifyTyping}
-            disabled={!canSendMessage}
-            placeholder={
-              canSendMessage
-                ? t('orders.chat.inputPlaceholder')
-                : t('orders.chat.inputDisabled')
-            }
+        {blockReason ? (
+          // محظور: لا حقل كتابة أصلاً، بل شرح + (للحاظر) زر إلغاء الحظر
+          <ChatBlockedNotice
+            reason={blockReason}
+            onUnblock={blockReason === 'blocked_by_me' ? handleUnblock : undefined}
           />
+        ) : (
+          !showCustomerConfirm && (
+            <ChatInput
+              onSend={handleSend}
+              onChangeText={notifyTyping}
+              disabled={!canSendMessage}
+              placeholder={
+                canSendMessage
+                  ? t('orders.chat.inputPlaceholder')
+                  : t('orders.chat.inputDisabled')
+              }
+            />
+          )
         )}
 
         {/* مساحة لأزرار النظام السفلية حتى لا يختفي حقل الكتابة خلفها */}
