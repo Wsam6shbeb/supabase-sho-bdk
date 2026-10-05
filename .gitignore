@@ -3,6 +3,8 @@
 # === Dependencies ===
 node_modules/
 
+
+
 # === Expo ===
 .expo/
 dist/
@@ -82,3 +84,4 @@ supabase/.temp/
 # === Cursor IDE ===
 .cursor/
 mcp.json
+google-services.json 

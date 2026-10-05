@@ -11,6 +11,8 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.wsam955221595.shobdk",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,11 +42,27 @@
         {
           "color": "#208AEF"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            
+             "usesCleartextTraffic": true
+          }
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "895d0a0b-928d-43bb-bbc8-c57b4ed76399"
+      }
+    },
+    "owner": "wsam955221595"
   }
 }
