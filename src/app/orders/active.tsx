@@ -64,7 +64,7 @@ export default function ActiveOrderScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
       <View style={[styles.header, { borderBottomColor: scheme.border }]}>
         <AppButton title={t('common.back')} variant="ghost" size="sm" onPress={() => router.back()} />
         <Text style={[styles.headerTitle, { color: scheme.text }]}>{t('orders.active.title')}</Text>

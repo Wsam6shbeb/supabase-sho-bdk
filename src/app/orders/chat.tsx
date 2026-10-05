@@ -11,6 +11,7 @@
 
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
+import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
 import { ChatStatusBar } from '@/components/orders/ChatStatusBar';
 import { ProviderSwitcher } from '@/components/orders/ProviderSwitcher';
 import { AppButton } from '@/components/ui/AppButton';
@@ -29,7 +30,6 @@ import {
     Alert,
     FlatList,
     KeyboardAvoidingView,
-    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -196,8 +196,8 @@ export default function ChatScreen() {
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        // Android يعمل بنمط edge-to-edge: النافذة لا تتقلّص مع لوحة المفاتيح، فنحتاج padding هنا أيضاً
+        behavior="padding"
       >
         {/* Header */}
         <View
@@ -456,6 +456,9 @@ export default function ChatScreen() {
             }
           />
         )}
+
+        {/* مساحة لأزرار النظام السفلية حتى لا يختفي حقل الكتابة خلفها */}
+        <BottomInsetSpacer color={scheme.backgroundElevated} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
