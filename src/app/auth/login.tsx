@@ -9,6 +9,7 @@
 // شاشة تسجيل الدخول
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppTextInput } from '@/components/ui/AppTextInput';
@@ -25,7 +26,6 @@ import {
     ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface FormErrors {
   email?: string | null;
@@ -101,7 +101,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={KEYBOARD_AVOIDING_BEHAVIOR}
@@ -200,7 +200,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

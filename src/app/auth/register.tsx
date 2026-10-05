@@ -9,6 +9,7 @@
 // شاشة إنشاء حساب جديد
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -40,7 +41,7 @@ import {
     ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FormErrors {
   name?: string | null;
@@ -182,7 +183,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={KEYBOARD_AVOIDING_BEHAVIOR}
@@ -493,7 +494,7 @@ export default function RegisterScreen() {
           </View>
         </Modal>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

@@ -5,6 +5,7 @@
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -15,7 +16,6 @@ import type { AppNotification, NotificationType } from '@/types/notifications';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ViewStyle } from 'react-native';
 
 // ═══════════════════════════════════════════════════════════
@@ -68,9 +68,8 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -124,7 +123,7 @@ export default function NotificationsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

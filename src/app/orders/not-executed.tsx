@@ -5,6 +5,7 @@
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
@@ -17,7 +18,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: NotExecutedScreen] يعرض خيارات التعامل مع الخدمة التي لم يتم تنفيذها.
 export default function NotExecutedScreen() {
@@ -53,7 +53,7 @@ export default function NotExecutedScreen() {
 
   if (submitted) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
         <View style={styles.successWrap}>
           <Ionicons name="checkmark-circle" size={76} color={scheme.success} />
           <Text style={[styles.title, { color: scheme.text }]}>{t('notExecuted.successTitle')}</Text>
@@ -62,12 +62,12 @@ export default function NotExecutedScreen() {
           </Text>
           <AppButton title={t('notExecuted.backToOrders')} variant="primary" size="lg" onPress={() => router.replace('/(drawer)/(tabs)/orders')} />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
       <View style={styles.header}>
         <AppButton title={t('common.back')} variant="ghost" size="sm" onPress={() => router.back()} />
         <Text style={[styles.headerTitle, { color: scheme.text }]}>{t('notExecuted.title')}</Text>
@@ -119,7 +119,7 @@ export default function NotExecutedScreen() {
         </AppCard>
         <AppButton title={t('notExecuted.submitBtn')} variant="danger" size="lg" onPress={() => void submit()} loading={submitting} disabled={submitting} leadingIcon={<Ionicons name="flag-outline" size={20} color={scheme.dangerContrast} />} />
       </ScrollView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

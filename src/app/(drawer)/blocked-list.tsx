@@ -9,6 +9,7 @@
 // شاشة القائمة المحجوبة
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -20,7 +21,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: BlockedListScreen] يعرض قائمة المستخدمين المحظورين وإجراءات التعامل معها.
 export default function BlockedListScreen() {
@@ -52,9 +52,8 @@ export default function BlockedListScreen() {
     }));
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -120,7 +119,7 @@ export default function BlockedListScreen() {
           contentContainerStyle={styles.listContent}
         />
       )}
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

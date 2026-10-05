@@ -9,6 +9,7 @@
 // شاشة البروفايل من القائمة الجانبية
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -19,7 +20,6 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: ProfileScreen] يعرض ملف المستخدم وإجراءات الحساب وبيانات مقدم الخدمة إن وجدت.
 export default function ProfileScreen() {
@@ -99,9 +99,8 @@ export default function ProfileScreen() {
   const verificationBadge = getVerificationBadge();
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <ScrollView
         contentContainerStyle={styles.content}
@@ -350,7 +349,7 @@ export default function ProfileScreen() {
           />
         </AppCard>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

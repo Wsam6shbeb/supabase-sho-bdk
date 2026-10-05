@@ -9,6 +9,7 @@
 // شاشة عرض المرشحين
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { AppButton } from '@/components/ui/AppButton';
 import { supabase } from '@/services/supabase';
 import { AppCard } from '@/components/ui/AppCard';
@@ -36,7 +37,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: CandidatesScreen] يعرض مقدمي الخدمة المرشحين لطلب المستخدم.
 export default function CandidatesScreen() {
@@ -444,9 +444,8 @@ export default function CandidatesScreen() {
   // ═══════════════════════════════════════════════════════════
   if (providers.length === 0) {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.emptyContainer}>
           <Ionicons name="search" size={64} color={scheme.textTertiary} />
@@ -461,7 +460,7 @@ export default function CandidatesScreen() {
             style={{ marginTop: Spacing.six }}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -469,9 +468,8 @@ export default function CandidatesScreen() {
   // Render
   // ═══════════════════════════════════════════════════════════
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -521,7 +519,7 @@ export default function CandidatesScreen() {
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={{ height: Spacing.three }} />}
       />
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

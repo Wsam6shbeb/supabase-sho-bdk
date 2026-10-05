@@ -9,6 +9,7 @@
 // شاشة تقييم الخدمة
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { RatingStars } from '@/components/orders/RatingStars';
 import { AppButton } from '@/components/ui/AppButton';
@@ -30,7 +31,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ⭐ الصفات الجاهزة
 const RATING_TAGS: { id: string; label: string }[] = [
@@ -64,9 +64,8 @@ export default function RateOrderScreen() {
   // ═══════════════════════════════════════════════════════════
   if (!order) {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
@@ -80,7 +79,7 @@ export default function RateOrderScreen() {
             onPress={() => router.back()}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -135,9 +134,8 @@ export default function RateOrderScreen() {
   // ═══════════════════════════════════════════════════════════
   if (submitted) {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.successWrap}>
           <View
@@ -165,7 +163,7 @@ export default function RateOrderScreen() {
             }
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -175,9 +173,8 @@ export default function RateOrderScreen() {
   const isReadonly = readonly || !!order.customer_rating;
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -324,7 +321,7 @@ export default function RateOrderScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

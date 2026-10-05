@@ -9,6 +9,7 @@
 // شاشة طلب الخدمة مرة أخرى
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -29,7 +30,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: RequestAgainScreen] يعرض واجهة إعادة إرسال/تكرار طلب خدمة سابق.
 export default function RequestAgainScreen() {
@@ -47,7 +47,7 @@ export default function RequestAgainScreen() {
   // Guard
   if (!provider) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
@@ -60,7 +60,7 @@ export default function RequestAgainScreen() {
             onPress={() => router.back()}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -96,9 +96,8 @@ export default function RequestAgainScreen() {
   };
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -181,7 +180,7 @@ export default function RequestAgainScreen() {
           />
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

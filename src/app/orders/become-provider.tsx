@@ -9,6 +9,7 @@
 // شاشة صير مقدم خدمة
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -28,7 +29,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: BecomeProviderScreen] يعرض نموذج إضافة ملف مقدم خدمة والمهارة التي يقدمها المستخدم.
 export default function BecomeProviderScreen() {
@@ -82,9 +82,8 @@ export default function BecomeProviderScreen() {
   };
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -183,7 +182,7 @@ export default function BecomeProviderScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

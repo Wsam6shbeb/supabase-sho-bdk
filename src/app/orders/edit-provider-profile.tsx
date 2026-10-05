@@ -9,6 +9,7 @@
 // شاشة تعديل بروفايل مقدم الخدمة
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -28,7 +29,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: EditProviderProfileScreen] يعرض نموذج تعديل مهارات وبيانات ملف مقدم الخدمة.
 export default function EditProviderProfileScreen() {
@@ -45,9 +45,8 @@ export default function EditProviderProfileScreen() {
   // Guard
   if (!profile) {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
@@ -61,7 +60,7 @@ export default function EditProviderProfileScreen() {
             onPress={() => router.replace('/orders/become-provider')}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -100,9 +99,8 @@ export default function EditProviderProfileScreen() {
   };
 
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -233,7 +231,7 @@ export default function EditProviderProfileScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

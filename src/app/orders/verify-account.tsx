@@ -9,6 +9,7 @@
 // شاشة توثيق الحساب
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -28,7 +29,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: VerifyAccountScreen] يعرض خطوات التحقق من الحساب ورفع المستند/الصورة المطلوبة.
 export default function VerifyAccountScreen() {
@@ -96,9 +96,8 @@ export default function VerifyAccountScreen() {
   // ═══════════════════════════════════════════════════════════
   if (verificationStatus === 'verified') {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.centerWrap}>
           <View
@@ -120,7 +119,7 @@ export default function VerifyAccountScreen() {
             style={{ marginTop: Spacing.six, width: '100%' }}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -129,9 +128,8 @@ export default function VerifyAccountScreen() {
   // ═══════════════════════════════════════════════════════════
   if (verificationStatus === 'under_review') {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.centerWrap}>
           <View
@@ -161,7 +159,7 @@ export default function VerifyAccountScreen() {
             style={{ marginTop: Spacing.six, width: '100%' }}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -170,9 +168,8 @@ export default function VerifyAccountScreen() {
   // ═══════════════════════════════════════════════════════════
   if (verificationStatus === 'rejected') {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.centerWrap}>
           <View
@@ -194,7 +191,7 @@ export default function VerifyAccountScreen() {
             style={{ marginTop: Spacing.six, width: '100%' }}
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -202,9 +199,8 @@ export default function VerifyAccountScreen() {
   // شاشة: غير موثّق (النموذج)
   // ═══════════════════════════════════════════════════════════
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <ScrollView
         contentContainerStyle={styles.content}
@@ -365,7 +361,7 @@ export default function VerifyAccountScreen() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 

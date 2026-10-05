@@ -9,6 +9,7 @@
 // شاشة الإبلاغ عن مشكلة
 // ═══════════════════════════════════════════════════════════
 
+import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -28,7 +29,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: ReportScreen] يعرض نموذج الإبلاغ عن مشكلة مرتبطة بالطلب أو مقدم الخدمة.
 export default function ReportScreen() {
@@ -78,9 +78,8 @@ export default function ReportScreen() {
   // ═══════════════════════════════════════════════════════════
   if (submitted) {
     return (
-      <SafeAreaView
+      <ScreenSafeArea
         style={[styles.safe, { backgroundColor: scheme.background }]}
-        edges={['top']}
       >
         <View style={styles.successWrap}>
           <View
@@ -105,7 +104,7 @@ export default function ReportScreen() {
             }
           />
         </View>
-      </SafeAreaView>
+      </ScreenSafeArea>
     );
   }
 
@@ -113,9 +112,8 @@ export default function ReportScreen() {
   // النموذج
   // ═══════════════════════════════════════════════════════════
   return (
-    <SafeAreaView
+    <ScreenSafeArea
       style={[styles.safe, { backgroundColor: scheme.background }]}
-      edges={['top']}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -191,7 +189,7 @@ export default function ReportScreen() {
           />
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenSafeArea>
   );
 }
 
