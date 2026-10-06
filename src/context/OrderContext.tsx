@@ -89,6 +89,8 @@ export interface ProviderSkill {
   name: string;
   years_of_experience?: number;
   description?: string;
+  city?: string;
+  area?: string;
   service_area?: string;
   additional_info?: string;
 }
@@ -468,8 +470,39 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           name: service.description,
           years_of_experience: service.experience_years,
           description: service.description,
-          service_area: service.structured_data?.service_area ?? '',
-          additional_info: service.structured_data?.additional_info ?? undefined,
+
+
+        city:
+  typeof service.structured_data === 'object' &&
+  service.structured_data !== null &&
+  !Array.isArray(service.structured_data) &&
+  typeof service.structured_data.city === 'string'
+    ? service.structured_data.city
+    : 'اللاذقية',
+area:
+  typeof service.structured_data === 'object' &&
+  service.structured_data !== null &&
+  !Array.isArray(service.structured_data) &&
+  typeof service.structured_data.area === 'string'
+    ? service.structured_data.area
+    : '',
+service_area:
+  typeof service.structured_data === 'object' &&
+  service.structured_data !== null &&
+  !Array.isArray(service.structured_data) &&
+  typeof service.structured_data.service_area === 'string'
+    ? service.structured_data.service_area
+    : '',
+additional_info:
+  typeof service.structured_data === 'object' &&
+  service.structured_data !== null &&
+  !Array.isArray(service.structured_data) &&
+  typeof service.structured_data.additional_info === 'string'
+    ? service.structured_data.additional_info
+    : undefined,
+
+
+
         })),
         bio: profileResult.data?.bio ?? undefined,
         is_available: profileResult.data?.is_available ?? true,
@@ -1290,8 +1323,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         experience_years: skill.years_of_experience ?? 0,
         price_min: skill.price_min ?? 0,
         price_max: skill.price_max ?? 0,
-        service_area: skill.service_area?.trim() ?? '',
-                additional_info: skill.additional_info?.trim() || '',
+city: skill.city?.trim() || 'اللاذقية',
+area: skill.area?.trim() || '',
+service_area: skill.service_area?.trim() || '',
+additional_info: skill.additional_info?.trim() || '',
       });
 
       if (!response.success) {
@@ -1305,14 +1340,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       }
 
       const row = response.data;
-      const savedSkill: ProviderSkill = {
-        id: row.id,
-        name: skill.name,
-        years_of_experience: row.experience_years,
-        description: row.description,
-        service_area: skill.service_area ?? '',
-                additional_info: skill.additional_info,
-      };
+     const savedSkill: ProviderSkill = {
+  id: row.id,
+  name: skill.name,
+  years_of_experience: row.experience_years,
+  description: row.description,
+  city: skill.city ?? 'اللاذقية',
+  area: skill.area ?? '',
+  service_area: skill.service_area ?? '',
+  additional_info: skill.additional_info,
+};
 
       setMyProviderProfile((prev) => ({
         skills: [...(prev?.skills ?? []), savedSkill],
@@ -1353,8 +1390,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           if (!skill.id || skill.id.startsWith('skill_')) continue;
           if (skill.service_area === undefined && skill.additional_info === undefined) continue;
           void api.providerServices.update(skill.id, {
-            service_area: skill.service_area ?? '',
-            additional_info: skill.additional_info,
+  city: skill.city?.trim() || 'اللاذقية',
+  area: skill.area?.trim() || '',
+  service_area: skill.service_area?.trim() || '',
+  additional_info: skill.additional_info,
           }).then((result) => {
             if (!result.success) {
               console.error('[Supabase][providerServices] فشل حفظ موقع الخدمة:', result.error.message);

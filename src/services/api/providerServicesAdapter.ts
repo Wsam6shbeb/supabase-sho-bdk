@@ -103,11 +103,12 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد المدينة ومكان تقديم الخدمة.' } };
   }
 
-  const structuredData = await analyzeProviderService({
-    service: description,
-    service_area: serviceArea,
-    additional_info: input.additional_info?.trim() ?? '',
-  });
+ const structuredData = {
+  city,
+  area: area || null,
+  service_area: serviceArea,
+  additional_info: input.additional_info?.trim() || null,
+};
   if (!structuredData) {
     return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إضافة الخدمة حالياً، يبدو أن الخدمة مشغولة. حاول مرة ثانية بعد قليل.' } };
   }
@@ -219,13 +220,20 @@ async function update(
     };
   }
 
-  const structuredData = {
-    ...(existing.structured_data ?? {}),
-    city,
-    area: area || null,
-    service_area: serviceArea,
-    additional_info: input.additional_info?.trim() || null,
-  };
+ const existingStructuredData =
+  typeof existing.structured_data === 'object' &&
+  existing.structured_data !== null &&
+  !Array.isArray(existing.structured_data)
+    ? existing.structured_data
+    : {};
+
+const structuredData = {
+  ...existingStructuredData,
+  city,
+  area: area || null,
+  service_area: serviceArea,
+  additional_info: input.additional_info?.trim() || null,
+};
 
   const { data, error } = await supabase
     .from('provider_services')

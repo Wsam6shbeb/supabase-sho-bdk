@@ -41,16 +41,22 @@ export default function EditProviderProfileScreen() {
   const [newSkillArea, setNewSkillArea] = useState('');
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
+ const [skillCities, setSkillCities] = useState<Record<string, string>>({});
+const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   const [skillNames, setSkillNames] = useState<Record<string, string>>({});
 
   const profile = myProviderProfile;
 
   useEffect(() => {
     if (!profile) return;
-    setSkillAreas(
-      Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.service_area ?? ''])),
-    );
+   setSkillCities(
+  Object.fromEntries(
+    profile.skills.map((skill) => [skill.id, skill.city ?? 'اللاذقية']),
+  ),
+);
+setSkillAreas(
+  Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.area ?? ''])),
+);
     setSkillNames(
       Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.name])),
     );
@@ -116,7 +122,14 @@ export default function EditProviderProfileScreen() {
       skills: profile.skills.map((skill) => ({
         ...skill,
         name: skillNames[skill.id] ?? skill.name,
-        service_area: skillAreas[skill.id] ?? skill.service_area ?? '',
+      city: skillCities[skill.id] ?? skill.city ?? 'اللاذقية',
+area: skillAreas[skill.id] ?? skill.area ?? '',
+service_area: [
+  skillCities[skill.id] ?? skill.city ?? 'اللاذقية',
+  skillAreas[skill.id] ?? skill.area ?? '',
+]
+  .filter(Boolean)
+  .join(' '),
       })),
     });
     setSaved(true);
@@ -180,18 +193,28 @@ export default function EditProviderProfileScreen() {
                     onChangeText={(value) =>
                       setSkillNames((prev) => ({ ...prev, [skill.id]: value }))
                     }
-                    containerStyle={styles.skillNameInput}
-                  />
-                  <AppTextInput
-                    label="المدينة والمنطقة"
-                    placeholder="مثال: اللاذقية، المشروع السابع"
-                    value={skillAreas[skill.id] ?? ''}
-                    onChangeText={(value) =>
-                      setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
-                    }
                     containerStyle={styles.serviceAreaInput}
                   />
-                  {skill.years_of_experience > 0 && (
+                 <AppTextInput
+  label="المدينة"
+  placeholder="مثال: اللاذقية"
+  value={skillCities[skill.id] ?? 'اللاذقية'}
+  onChangeText={(value) =>
+    setSkillCities((prev) => ({ ...prev, [skill.id]: value }))
+  }
+  containerStyle={styles.serviceAreaInput}
+/>
+
+<AppTextInput
+  label="المنطقة (اختياري)"
+  placeholder="مثال: المشروع السابع"
+  value={skillAreas[skill.id] ?? ''}
+  onChangeText={(value) =>
+    setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
+  }
+  containerStyle={styles.serviceAreaInput}
+/>
+                  {(skill.years_of_experience ?? 0) > 0 && (
                     <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
                       {skill.years_of_experience} سنوات خبرة
                     </Text>

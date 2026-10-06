@@ -63,7 +63,7 @@ export default function NotificationsScreen() {
   const handlePress = (notif: AppNotification) => {
     markNotificationRead(notif.id);
     if (notif.route) {
-      router.push(notif.route);
+      router.push(notif.route as any);
     }
   };
 
