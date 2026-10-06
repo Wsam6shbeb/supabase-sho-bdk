@@ -42,6 +42,7 @@ export default function EditProviderProfileScreen() {
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
   const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
+  const [skillNames, setSkillNames] = useState<Record<string, string>>({});
 
   const profile = myProviderProfile;
 
@@ -49,6 +50,9 @@ export default function EditProviderProfileScreen() {
     if (!profile) return;
     setSkillAreas(
       Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.service_area ?? ''])),
+    );
+    setSkillNames(
+      Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.name])),
     );
   }, [profile?.skills]);
 
@@ -111,6 +115,7 @@ export default function EditProviderProfileScreen() {
     updateProviderProfile({
       skills: profile.skills.map((skill) => ({
         ...skill,
+        name: skillNames[skill.id] ?? skill.name,
         service_area: skillAreas[skill.id] ?? skill.service_area ?? '',
       })),
     });
@@ -168,9 +173,15 @@ export default function EditProviderProfileScreen() {
                 ]}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.skillName, { color: scheme.text }]}>
-                    {skill.name}
-                  </Text>
+                  <AppTextInput
+                    label="المهارة"
+                    placeholder="مثال: مدرس لغة ألمانية"
+                    value={skillNames[skill.id] ?? skill.name}
+                    onChangeText={(value) =>
+                      setSkillNames((prev) => ({ ...prev, [skill.id]: value }))
+                    }
+                    containerStyle={styles.skillNameInput}
+                  />
                   <AppTextInput
                     label="المدينة والمنطقة"
                     placeholder="مثال: اللاذقية، المشروع السابع"
@@ -180,7 +191,7 @@ export default function EditProviderProfileScreen() {
                     }
                     containerStyle={styles.serviceAreaInput}
                   />
-                  {skill.years_of_experience && (
+                  {skill.years_of_experience > 0 && (
                     <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
                       {skill.years_of_experience} سنوات خبرة
                     </Text>
