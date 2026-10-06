@@ -37,6 +37,8 @@ export default function EditProviderProfileScreen() {
   const { myProviderProfile, updateProviderProfile } = useOrder();
 
   const [newSkillName, setNewSkillName] = useState('');
+  const [newSkillCity, setNewSkillCity] = useState('');
+  const [newSkillArea, setNewSkillArea] = useState('');
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
   const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
@@ -77,9 +79,14 @@ export default function EditProviderProfileScreen() {
     const trimmed = newSkillName.trim();
     if (!trimmed) return;
 
+    const city = newSkillCity.trim();
+    const area = newSkillArea.trim();
+    if (!city) return;
+
     const newSkill: ProviderSkill = {
       id: `skill_${Date.now()}`,
       name: trimmed,
+      service_area: [city, area].filter(Boolean).join(' '),
     };
 
     updateProviderProfile({
@@ -87,6 +94,8 @@ export default function EditProviderProfileScreen() {
     });
 
     setNewSkillName('');
+    setNewSkillCity('');
+    setNewSkillArea('');
     setShowAddSkill(false);
   };
 
@@ -191,6 +200,20 @@ export default function EditProviderProfileScreen() {
                   value={newSkillName}
                   onChangeText={setNewSkillName}
                 />
+                <AppTextInput
+                  label="المدينة"
+                  placeholder="مثال: اللاذقية"
+                  value={newSkillCity}
+                  onChangeText={setNewSkillCity}
+                  containerStyle={styles.addSkillInput}
+                />
+                <AppTextInput
+                  label="المنطقة (اختياري)"
+                  placeholder="مثال: المشروع السابع"
+                  value={newSkillArea}
+                  onChangeText={setNewSkillArea}
+                  containerStyle={styles.addSkillInput}
+                />
                 <View style={styles.addSkillActions}>
                   <AppButton
                     title="إضافة"
@@ -207,6 +230,8 @@ export default function EditProviderProfileScreen() {
                     onPress={() => {
                       setShowAddSkill(false);
                       setNewSkillName('');
+                      setNewSkillCity('');
+                      setNewSkillArea('');
                     }}
                     fullWidth={false}
                     style={{ flex: 1, marginStart: Spacing.two }}
@@ -318,6 +343,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addSkillForm: {
+    marginTop: Spacing.two,
+  },
+  addSkillInput: {
     marginTop: Spacing.two,
   },
   addSkillActions: {
