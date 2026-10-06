@@ -56,6 +56,7 @@ export default function CreateOrderScreen() {
   const { startOrder, hasAcceptedDisclaimer } = useOrder();
 
   const [description, setDescription] = useState('');
+  const [city, setCity] = useState(user?.region?.id ?? '');
   const [serviceArea, setServiceArea] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
@@ -69,13 +70,14 @@ export default function CreateOrderScreen() {
     setError(null);
 
     const trimmed = description.trim();
+    const trimmedCity = city.trim();
     const trimmedServiceArea = serviceArea.trim();
     if (!trimmed) {
       setError(t('orders.create.required'));
       return;
     }
-    if (!trimmedServiceArea) {
-      setError('يرجى كتابة مكان تقديم الخدمة.');
+    if (!trimmedCity) {
+      setError('يرجى كتابة المدينة.');
       return;
     }
 
@@ -86,7 +88,7 @@ export default function CreateOrderScreen() {
         params: {
           description: trimmed,
           is_urgent: isUrgent.toString(),
-          region_id: user?.region?.id ?? 'r-damascus',
+          region_id: trimmedCity,
           service_area: trimmedServiceArea,
           additional_info: additionalInfo.trim(),
         },
@@ -113,7 +115,7 @@ export default function CreateOrderScreen() {
       const order = await startOrder({
         description: trimmed,
         is_urgent: isUrgent,
-        region_id: user?.region?.id ?? 'r-damascus',
+        region_id: city.trim(),
         service_area: serviceArea.trim(),
         additional_info: additionalInfo.trim(),
       });
@@ -187,9 +189,20 @@ export default function CreateOrderScreen() {
               containerStyle={styles.textInput}
             />
 
-            <Text style={[styles.fieldLabel, { color: scheme.text }]}>وين بدك الخدمة؟</Text>
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>بأي مدينة بدك الخدمة؟</Text>
             <AppTextInput
-              placeholder="مثال: اللاذقية، أو اللاذقية المشروع السابع"
+              placeholder="مثال: اللاذقية"
+              value={city}
+              onChangeText={(val) => {
+                setCity(val);
+                setError(null);
+              }}
+              containerStyle={styles.areaInput}
+            />
+
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>بأي منطقة؟ (اختياري)</Text>
+            <AppTextInput
+              placeholder="مثال: المشروع السابع"
               value={serviceArea}
               onChangeText={(val) => {
                 setServiceArea(val);
