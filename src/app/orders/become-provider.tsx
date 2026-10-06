@@ -37,6 +37,7 @@ export default function BecomeProviderScreen() {
   const { addFirstSkill } = useOrder();
 
   const [skillName, setSkillName] = useState('');
+  const [city, setCity] = useState('');
   const [serviceArea, setServiceArea] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +47,7 @@ export default function BecomeProviderScreen() {
   const handleSubmit = async () => {
     setError(null);
     const trimmed = skillName.trim();
+    const trimmedCity = city.trim();
     const trimmedArea = serviceArea.trim();
 
     if (!trimmed) {
@@ -53,8 +55,8 @@ export default function BecomeProviderScreen() {
       return;
     }
 
-    if (!trimmedArea) {
-      setError('اكتب مكان تقديم الخدمة. مثال: المشروع السابع، أو اللاذقية مدينة وريف.');
+    if (!trimmedCity) {
+      setError('اكتب المدينة التي تقدم فيها الخدمة.');
       return;
     }
 
@@ -63,7 +65,7 @@ export default function BecomeProviderScreen() {
     const result = await addFirstSkill({
       id: `skill_${Date.now()}`,
       name: trimmed,
-      service_area: trimmedArea,
+      service_area: [trimmedCity, trimmedArea].filter(Boolean).join(' '),
       additional_info: additionalInfo.trim(),
     });
 
@@ -138,14 +140,26 @@ export default function BecomeProviderScreen() {
             />
 
             <AppTextInput
-              label="أين تقدم هذه الخدمة؟"
-              placeholder="مثال: المشروع السابع، أو اللاذقية مدينة وريف"
+              label="بأي مدينة تقدم هذه الخدمة؟"
+              placeholder="مثال: اللاذقية"
+              value={city}
+              onChangeText={(v) => {
+                setCity(v);
+                setError(null);
+              }}
+              error={error}
+              required
+              containerStyle={styles.serviceInput}
+            />
+
+            <AppTextInput
+              label="بأي منطقة؟ (اختياري)"
+              placeholder="مثال: المشروع السابع"
               value={serviceArea}
               onChangeText={(v) => {
                 setServiceArea(v);
                 setError(null);
               }}
-              required
               containerStyle={styles.serviceInput}
             />
 
