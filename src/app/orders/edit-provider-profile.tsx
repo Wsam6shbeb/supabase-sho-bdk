@@ -44,6 +44,7 @@ export default function EditProviderProfileScreen() {
  const [skillCities, setSkillCities] = useState<Record<string, string>>({});
 const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   const [skillNames, setSkillNames] = useState<Record<string, string>>({});
+  const [expandedSkillId, setExpandedSkillId] = useState<string | null>(null);
 
   const profile = myProviderProfile;
 
@@ -177,54 +178,79 @@ service_area: [
             </View>
 
             {/* Skills List */}
-            {profile.skills.map((skill) => (
-              <View
-                key={skill.id}
-                style={[
-                  styles.skillRow,
-                  { backgroundColor: scheme.backgroundElement },
-                ]}
-              >
-                <View style={{ flex: 1 }}>
-                  <AppTextInput
-                    label="المهارة"
-                    placeholder="مثال: مدرس لغة ألمانية"
-                    value={skillNames[skill.id] ?? skill.name}
-                    onChangeText={(value) =>
-                      setSkillNames((prev) => ({ ...prev, [skill.id]: value }))
-                    }
-                    containerStyle={styles.serviceAreaInput}
-                  />
-                 <AppTextInput
-  label="المدينة"
-  placeholder="مثال: اللاذقية"
-  value={skillCities[skill.id] ?? 'اللاذقية'}
-  onChangeText={(value) =>
-    setSkillCities((prev) => ({ ...prev, [skill.id]: value }))
-  }
-  containerStyle={styles.serviceAreaInput}
-/>
+            {profile.skills.map((skill) => {
+              const isExpanded = expandedSkillId === skill.id;
+              const city = skillCities[skill.id] ?? skill.city ?? 'اللاذقية';
+              const area = skillAreas[skill.id] ?? skill.area ?? '';
 
-<AppTextInput
-  label="المنطقة (اختياري)"
-  placeholder="مثال: المشروع السابع"
-  value={skillAreas[skill.id] ?? ''}
-  onChangeText={(value) =>
-    setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
-  }
-  containerStyle={styles.serviceAreaInput}
-/>
-                  {(skill.years_of_experience ?? 0) > 0 && (
-                    <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
-                      {skill.years_of_experience} سنوات خبرة
-                    </Text>
-                  )}
-                </View>
-                <Pressable onPress={() => handleRemoveSkill(skill.id)} hitSlop={6}>
-                  <Ionicons name="trash-outline" size={20} color={scheme.danger} />
+              return (
+                <Pressable
+                  key={skill.id}
+                  onPress={() =>
+                    setExpandedSkillId(isExpanded ? null : skill.id)
+                  }
+                  style={[
+                    styles.skillRow,
+                    { backgroundColor: scheme.backgroundElement },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    {!isExpanded ? (
+                      <>
+                        <Text style={[styles.skillName, { color: scheme.text }]}>
+                          {skillNames[skill.id] ?? skill.name}
+                        </Text>
+                        <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
+                          {'📍 ' + city + (area ? ' — ' + area : '')}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <AppTextInput
+                          label="المهارة"
+                          placeholder="مثال: مدرس لغة ألمانية"
+                          value={skillNames[skill.id] ?? skill.name}
+                          onChangeText={(value) =>
+                            setSkillNames((prev) => ({ ...prev, [skill.id]: value }))
+                          }
+                          containerStyle={styles.serviceAreaInput}
+                        />
+                        <AppTextInput
+                          label="المدينة"
+                          placeholder="مثال: اللاذقية"
+                          value={city}
+                          onChangeText={(value) =>
+                            setSkillCities((prev) => ({ ...prev, [skill.id]: value }))
+                          }
+                          containerStyle={styles.serviceAreaInput}
+                        />
+                        <AppTextInput
+                          label="المنطقة (اختياري)"
+                          placeholder="مثال: المشروع السابع"
+                          value={area}
+                          onChangeText={(value) =>
+                            setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
+                          }
+                          containerStyle={styles.serviceAreaInput}
+                        />
+                        {(skill.years_of_experience ?? 0) > 0 && (
+                          <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
+                            {skill.years_of_experience} سنوات خبرة
+                          </Text>
+                        )}
+                      </>
+                    )}
+                  </View>
+
+                  <Pressable
+                    onPress={() => handleRemoveSkill(skill.id)}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={scheme.danger} />
+                  </Pressable>
                 </Pressable>
-              </View>
-            ))}
+              );
+            })}
 
             {/* Add Skill Form */}
             {showAddSkill && (
