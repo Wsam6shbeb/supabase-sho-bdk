@@ -172,4 +172,55 @@ async function mine(): Promise<ApiResponse<ProviderServiceRow[]>> {
   return { success: true, data: (data ?? []) as ProviderServiceRow[] };
 }
 
-export const providerServices = { create, mine };
+
+// [شرح الدالة: update] يحدّث موقع الخدمة والمعلومات الإضافية للخدمة الحالية.
+async function update(
+  id: string,
+  input: { service_area: string; additional_info?: string },
+): Promise<ApiResponse<ProviderServiceRow>> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return { success: false, error: { code: 'UNAUTHENTICATED', message: 'يجب تسجيل الدخول لتعديل الخدمة.' } };
+  }
+
+  const serviceArea = input.service_area.trim();
+  if (!serviceArea) {
+    return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد مكان تقديم الخدمة.' } };
+  }
+
+  const { data: existing, error: readError } = await supabase
+    .from('provider_services')
+    .select('*')
+    .eq('id', id)
+    .eq('provider_id', userId)
+    .maybeSingle();
+
+  if (readError || !existing) {
+    return {
+      success: false,
+      error: { code: readError?.code || 'NOT_FOUND', message: readError?.message || 'الخدمة غير موجودة.' },
+    };
+  }
+
+  const structuredData = {
+    ...(existing.structured_data ?? {}),
+    service_area: serviceArea,
+    additional_info: input.additional_info?.trim() || null,
+  };
+
+  const { data, error } = await supabase
+    .from('provider_services')
+    .update({ structured_data: structuredData })
+    .eq('id', id)
+    .eq('provider_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+  }
+
+  return { success: true, data: data as ProviderServiceRow };
+}
+
+export const providerServices = { create, mine, update };
