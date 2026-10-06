@@ -26,6 +26,8 @@ export interface ProviderServiceRow {
     region?: string | null;
     location?: string | null;
     synonyms?: string[];
+    city?: string | null;
+    area?: string | null;
     service_area?: string | null;
     additional_info?: string | null;
   } | null;
@@ -39,6 +41,8 @@ export interface CreateProviderServiceInput {
   experience_years: number;
   price_min: number;
   price_max: number;
+  city: string;
+  area?: string;
   service_area: string;
   additional_info?: string;
 }
@@ -58,7 +62,11 @@ async function analyzeProviderService(input: {
 }): Promise<ProviderServiceRow['structured_data']> {
   try {
     const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
-      body: { service_text: input.service, service_area: input.service_area, additional_info: input.additional_info ?? '' },
+      body: {
+        service_text: input.service,
+        service_area: input.service_area,
+        additional_info: input.additional_info ?? '',
+      },
     });
 
     if (error) {
@@ -87,10 +95,14 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
   }
 
   const description = input.description.trim();
-  const serviceArea = input.service_area.trim();
-  if (!serviceArea) {
-    return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد مكان تقديم الخدمة.' } };
+  const city = input.city.trim();
+  const area = input.area?.trim() ?? '';
+  const serviceArea = input.service_area.trim() || [city, area].filter(Boolean).join(' ').trim();
+
+  if (!serviceArea || !city) {
+    return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد المدينة ومكان تقديم الخدمة.' } };
   }
+
   const structuredData = await analyzeProviderService({
     service: description,
     service_area: serviceArea,
@@ -129,6 +141,8 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
 
   const structuredDataWithOriginalInput = {
     ...structuredData,
+    city,
+    area: area || null,
     service_area: serviceArea,
     additional_info: input.additional_info?.trim() || null,
   };
@@ -172,20 +186,23 @@ async function mine(): Promise<ApiResponse<ProviderServiceRow[]>> {
   return { success: true, data: (data ?? []) as ProviderServiceRow[] };
 }
 
-
-// [شرح الدالة: update] يحدّث موقع الخدمة والمعلومات الإضافية للخدمة الحالية.
+// [شرح الدالة: update] يحدّث المدينة والمنطقة والمعلومات الإضافية للخدمة الحالية.
+// service_area يبقى محفوظاً مؤقتاً للتوافق مع المطابقة والبيانات القديمة.
 async function update(
   id: string,
-  input: { service_area: string; additional_info?: string },
+  input: { city: string; area?: string; service_area: string; additional_info?: string },
 ): Promise<ApiResponse<ProviderServiceRow>> {
   const userId = await getCurrentUserId();
   if (!userId) {
     return { success: false, error: { code: 'UNAUTHENTICATED', message: 'يجب تسجيل الدخول لتعديل الخدمة.' } };
   }
 
-  const serviceArea = input.service_area.trim();
-  if (!serviceArea) {
-    return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد مكان تقديم الخدمة.' } };
+  const city = input.city.trim();
+  const area = input.area?.trim() ?? '';
+  const serviceArea = input.service_area.trim() || [city, area].filter(Boolean).join(' ').trim();
+
+  if (!city || !serviceArea) {
+    return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد المدينة ومكان تقديم الخدمة.' } };
   }
 
   const { data: existing, error: readError } = await supabase
@@ -204,6 +221,8 @@ async function update(
 
   const structuredData = {
     ...(existing.structured_data ?? {}),
+    city,
+    area: area || null,
     service_area: serviceArea,
     additional_info: input.additional_info?.trim() || null,
   };
