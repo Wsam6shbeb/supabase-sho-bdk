@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Drawer } from 'expo-router/drawer';
+import { Drawer, DrawerToggleButton } from 'expo-router/drawer';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
@@ -188,8 +188,21 @@ export default function DrawerLayout() {
           fontWeight: FontWeights.bold,
           writingDirection: 'rtl',
         },
-        headerLeft: () => <BackButton />,
+        headerLeft: () => (
+          <Text
+            style={{
+              color: scheme.text,
+              fontSize: FontSizes.base,
+              fontWeight: FontWeights.bold,
+              writingDirection: 'rtl',
+              marginStart: 16,
+            }}
+          >
+            {t('home.appName')}
+          </Text>
+        ),
         headerLeftContainerStyle: { paddingStart: 8 },
+        headerRight: () => <DrawerToggleButton tintColor={scheme.text} />,
         drawerStyle: {
           backgroundColor: scheme.backgroundElevated,
           width: 280,
@@ -197,7 +210,19 @@ export default function DrawerLayout() {
         drawerPosition: 'right',
       }}
     >
-      <Drawer.Screen name="(tabs)" options={{ title: t('home.appName'), drawerLabel: t('home.appName'), headerLeft: () => false }} />
+      <Drawer.Screen name="(tabs)" options={{ title: '', drawerLabel: t('home.appName'), headerLeft: () => (
+        <Text
+          style={{
+            color: scheme.text,
+            fontSize: FontSizes.base,
+            fontWeight: FontWeights.bold,
+            writingDirection: 'rtl',
+            marginStart: 16,
+          }}
+        >
+          {t('home.appName')}
+        </Text>
+      ), headerRight: () => <DrawerToggleButton tintColor={scheme.text} /> }} />
       <Drawer.Screen name="profile" options={{ title: t('tabs.profile'), drawerLabel: t('tabs.profile') }} />
       <Drawer.Screen name="my-jobs" options={{ title: 'أعمالي', drawerLabel: 'أعمالي' }} />
       <Drawer.Screen name="notifications" options={{ title: 'الإشعارات', drawerLabel: 'الإشعارات' }} />
