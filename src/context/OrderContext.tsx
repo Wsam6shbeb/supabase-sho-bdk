@@ -442,7 +442,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           .maybeSingle(),
         supabase
           .from('provider_services')
-          .select('id, description, experience_years')
+          .select('id, description, experience_years, structured_data')
           .eq('provider_id', userId)
           .order('created_at', { ascending: true }),
       ]);
@@ -468,6 +468,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           name: service.description,
           years_of_experience: service.experience_years,
           description: service.description,
+          service_area: service.structured_data?.service_area ?? '',
+          additional_info: service.structured_data?.additional_info ?? undefined,
         })),
         bio: profileResult.data?.bio ?? undefined,
         is_available: profileResult.data?.is_available ?? true,
@@ -1345,6 +1347,21 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
     setMyProviderProfile((prev) => {
       if (!prev) return null;
+
+      if (user?.id && patch.skills !== undefined) {
+        for (const skill of patch.skills) {
+          if (!skill.id || skill.id.startsWith('skill_')) continue;
+          if (skill.service_area === undefined && skill.additional_info === undefined) continue;
+          void api.providerServices.update(skill.id, {
+            service_area: skill.service_area ?? '',
+            additional_info: skill.additional_info,
+          }).then((result) => {
+            if (!result.success) {
+              console.error('[Supabase][providerServices] فشل حفظ موقع الخدمة:', result.error.message);
+            }
+          });
+        }
+      }
 
       if (user?.id && (patch.bio !== undefined || patch.is_available !== undefined)) {
         void supabase
