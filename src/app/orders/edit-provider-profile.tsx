@@ -20,7 +20,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Pressable,
@@ -39,8 +39,16 @@ export default function EditProviderProfileScreen() {
   const [newSkillName, setNewSkillName] = useState('');
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
 
   const profile = myProviderProfile;
+
+  useEffect(() => {
+    if (!profile) return;
+    setSkillAreas(
+      Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.service_area ?? ''])),
+    );
+  }, [profile?.skills]);
 
   // Guard
   if (!profile) {
@@ -91,6 +99,12 @@ export default function EditProviderProfileScreen() {
 
 // [شرح الدالة: handleSave] يحفظ التعديلات الحالية ويرسلها إلى طبقة البيانات.
   const handleSave = () => {
+    updateProviderProfile({
+      skills: profile.skills.map((skill) => ({
+        ...skill,
+        service_area: skillAreas[skill.id] ?? skill.service_area ?? '',
+      })),
+    });
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -148,6 +162,15 @@ export default function EditProviderProfileScreen() {
                   <Text style={[styles.skillName, { color: scheme.text }]}>
                     {skill.name}
                   </Text>
+                  <AppTextInput
+                    label="المدينة والمنطقة"
+                    placeholder="مثال: اللاذقية، المشروع السابع"
+                    value={skillAreas[skill.id] ?? ''}
+                    onChangeText={(value) =>
+                      setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
+                    }
+                    containerStyle={styles.serviceAreaInput}
+                  />
                   {skill.years_of_experience && (
                     <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
                       {skill.years_of_experience} سنوات خبرة
@@ -284,6 +307,10 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.base,
     fontWeight: FontWeights.medium,
     writingDirection: 'rtl',
+  },
+  serviceAreaInput: {
+    marginTop: Spacing.two,
+    marginBottom: Spacing.one,
   },
   skillMeta: {
     fontSize: FontSizes.xs,
