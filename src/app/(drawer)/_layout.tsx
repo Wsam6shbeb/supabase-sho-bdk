@@ -188,21 +188,20 @@ export default function DrawerLayout() {
           fontWeight: FontWeights.bold,
           writingDirection: 'rtl',
         },
-        headerLeft: () => (
+        headerLeft: () => <DrawerToggleButton tintColor={scheme.text} />,
+        headerRight: () => (
           <Text
             style={{
               color: scheme.text,
               fontSize: FontSizes.base,
               fontWeight: FontWeights.bold,
               writingDirection: 'rtl',
-              marginStart: 16,
+              marginEnd: 16,
             }}
           >
             {t('home.appName')}
           </Text>
         ),
-        headerLeftContainerStyle: { paddingStart: 8 },
-        headerRight: () => <DrawerToggleButton tintColor={scheme.text} />,
         drawerStyle: {
           backgroundColor: scheme.backgroundElevated,
           width: 280,
@@ -210,19 +209,19 @@ export default function DrawerLayout() {
         drawerPosition: 'right',
       }}
     >
-      <Drawer.Screen name="(tabs)" options={{ title: '', drawerLabel: t('home.appName'), headerLeft: () => (
+      <Drawer.Screen name="(tabs)" options={{ title: '', drawerLabel: t('home.appName'), headerLeft: () => <DrawerToggleButton tintColor={scheme.text} />, headerRight: () => (
         <Text
           style={{
             color: scheme.text,
             fontSize: FontSizes.base,
             fontWeight: FontWeights.bold,
             writingDirection: 'rtl',
-            marginStart: 16,
+            marginEnd: 16,
           }}
         >
           {t('home.appName')}
         </Text>
-      ), headerRight: () => <DrawerToggleButton tintColor={scheme.text} /> }} />
+      ) }} />
       <Drawer.Screen name="profile" options={{ title: t('tabs.profile'), drawerLabel: t('tabs.profile') }} />
       <Drawer.Screen name="my-jobs" options={{ title: 'أعمالي', drawerLabel: 'أعمالي' }} />
       <Drawer.Screen name="notifications" options={{ title: 'الإشعارات', drawerLabel: 'الإشعارات' }} />
