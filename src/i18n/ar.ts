@@ -27,8 +27,8 @@ export const ar = {
   },
   auth: {
     login: {
-      title: 'أهلاً بعودتك 👋',
-      subtitle: 'سجّل دخول لتكمل معنا',
+      title: 'أهلاً بك 👋',
+      subtitle: 'خلّي خبرتك مصدر دخل إضافي\nودوّر على ناس عندهم خبرة بشي إنت محتاجه',
       emailLabel: 'البريد الإلكتروني',
       emailPlaceholder: 'example@email.com',
       passwordLabel: 'كلمة المرور',
