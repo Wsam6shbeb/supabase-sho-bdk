@@ -24,7 +24,7 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
     KeyboardAvoidingView,
-    ScrollView, StyleSheet, Text,
+    Image, ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
 
@@ -113,7 +113,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={[styles.appName, { color: scheme.primary }]}>شو بدك؟</Text>
+            <Image source={require('../../../assets/images/icon.png')} style={styles.logo} resizeMode="contain" />
             <Text style={[styles.title, { color: scheme.text }]}>
               {t('auth.login.title')}
             </Text>
@@ -224,20 +224,22 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: Spacing.seven,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  appName: {
-    fontSize: FontSizes['3xl'],
-    fontWeight: FontWeights.extrabold,
+  logo: {
+    width: 150,
+    height: 150,
     marginBottom: Spacing.five,
   },
   title: {
     fontSize: FontSizes['2xl'],
     fontWeight: FontWeights.bold,
     marginBottom: Spacing.two,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: FontSizes.base,
+    textAlign: 'center',
   },
   form: {
     marginBottom: Spacing.six,
