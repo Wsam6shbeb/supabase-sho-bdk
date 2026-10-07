@@ -84,4 +84,4 @@ supabase/.temp/
 # === Cursor IDE ===
 .cursor/
 mcp.json
-google-services.json 
+# google-services.json 

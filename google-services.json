@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "756898523065",
+    "project_id": "sho-bdk-a3761",
+    "storage_bucket": "sho-bdk-a3761.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:756898523065:android:8df0d4aa95164499cf7868",
+        "android_client_info": {
+          "package_name": "com.wsam955221595.shobdk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDleLyT8FsCU9WPVvs2q5rMRQeO7Z2ADpk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
