@@ -8,7 +8,7 @@
     "scheme": "shobdk",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "package": "com.wsam955221595.shobdk",
