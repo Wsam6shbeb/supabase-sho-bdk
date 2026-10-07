@@ -14,6 +14,7 @@ import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { GoogleButton } from '@/components/ui/GoogleButton';
+import { ENABLE_EMAIL_AUTH } from '@/config/auth';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -122,6 +123,8 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.form}>
+            {ENABLE_EMAIL_AUTH ? (
+              <>
             <AppTextInput
               label={t('auth.login.emailLabel')}
               placeholder={t('auth.login.emailPlaceholder')}
@@ -154,6 +157,8 @@ export default function LoginScreen() {
                 </Text>
               </Link>
             </View>
+              </>
+            ) : null}
 
             {formLevelError ? (
               <View style={[styles.errorBox, { backgroundColor: `${scheme.danger}15` }]}>
@@ -163,6 +168,8 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
+            {ENABLE_EMAIL_AUTH ? (
+              <>
             <View style={{ marginTop: Spacing.four }}>
               <AppButton
                 title={t('auth.login.loginBtn')}
@@ -179,6 +186,8 @@ export default function LoginScreen() {
               <Text style={[styles.orText, { color: scheme.textTertiary }]}>أو</Text>
               <View style={[styles.orLine, { backgroundColor: scheme.border }]} />
             </View>
+              </>
+            ) : null}
 
             <GoogleButton
               onPress={handleGoogle}
@@ -188,6 +197,7 @@ export default function LoginScreen() {
 
           </View>
 
+          {ENABLE_EMAIL_AUTH ? (
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: scheme.textSecondary }]}>
               {t('auth.login.noAccount')}{' '}
@@ -198,6 +208,7 @@ export default function LoginScreen() {
               </Text>
             </Link>
           </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenSafeArea>
