@@ -195,46 +195,23 @@ export default function SearchingScreen() {
         aiMatches.map((match) => [match.provider_id, match]),
       );
 
-      // نعرض أولاً المطابقات القوية (20+). وإذا لم نصل إلى 3،
-      // نسمح فقط بالمطابقات التي تتجاوز 15 لأن محرك AI يعتبر 0-15
-      // غير مناسبة للخدمة؛ وهكذا نحاول الوصول إلى 3 دون إدخال مقدم غير متعلق.
+      // نعرض كل مقدمي الخدمة المناسبين، وليس 3 فقط.
+      // حد 3 يخص المحادثات لاحقاً، وليس عدد نتائج البحث.
+      // نستبعد فقط الدرجات التي يعتبرها محرك AI غير مناسبة (0-15)،
+      // ثم نرتب المطابقين حسب درجة المطابقة ثم القرب/الأولوية الأولية.
       const rankedMatches = (providersData ?? [])
         .map((p: any) => {
           const match = scoreByProvider.get(p.user_id);
           return { provider: p, match };
         })
-        .filter(({ match }) => match && match.score >= 20)
+        .filter(({ match }) => match && match.score > 15)
         .sort(
           (a, b) =>
             (b.match?.score ?? 0) - (a.match?.score ?? 0) ||
             (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
         );
 
-      const strongResults = rankedMatches.slice(0, 3);
-
-      if (strongResults.length < 3) {
-        const additionalRelevant = (providersData ?? [])
-          .map((p: any) => {
-            const match = scoreByProvider.get(p.user_id);
-            return { provider: p, match };
-          })
-          .filter(
-            ({ match }) =>
-              match &&
-              match.score > 15 &&
-              match.score < 20 &&
-              !strongResults.some(({ provider }) => provider.user_id === match.provider_id),
-          )
-          .sort(
-            (a, b) =>
-              (b.match?.score ?? 0) - (a.match?.score ?? 0) ||
-              (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
-          );
-
-        strongResults.push(...additionalRelevant.slice(0, 3 - strongResults.length));
-      }
-
-      const results: ServiceProvider[] = strongResults
+      const results: ServiceProvider[] = rankedMatches
         .map(({ provider: p, match }, index) => ({
           id: p.user_id,
           name: p.users?.full_name ?? 'مقدم خدمة',
