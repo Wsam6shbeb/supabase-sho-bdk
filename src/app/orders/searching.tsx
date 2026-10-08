@@ -98,6 +98,7 @@ export default function SearchingScreen() {
             user_id: row.provider_id,
             rating_avg: row.rating_avg,
             completed_services_count: row.completed_services_count,
+            preliminary_score: Number(row.preliminary_score) || 0,
             services: Array.isArray(row.services) ? row.services : [],
             users: {
               id: row.provider_id,
@@ -200,7 +201,11 @@ export default function SearchingScreen() {
           return { provider: p, match };
         })
         .filter(({ match }) => match && match.score >= 20)
-        .sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0))
+        .sort(
+          (a, b) =>
+            (b.match?.score ?? 0) - (a.match?.score ?? 0) ||
+            (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
+        )
         .map(({ provider: p, match }, index) => ({
           id: p.user_id,
           name: p.users?.full_name ?? 'مقدم خدمة',
