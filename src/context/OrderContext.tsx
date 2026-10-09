@@ -20,7 +20,7 @@ import {
   requestAgreement,
   subscribeToAgreementChanges,
 } from '@/services/agreements';
-import { loadRequesterConversations, type HydratedChats } from '@/services/hydrateChats';
+import { loadMyConversations, type HydratedChats } from '@/services/hydrateChats';
 import { claimWelcomeBonus, requestTestTopUp, walletErrorMessage } from '@/services/wallet';
 import {
   completeRequest,
@@ -791,7 +791,7 @@ additional_info:
     }
     let cancelled = false;
 
-    void loadRequesterConversations(user.id).then((result) => {
+    void loadMyConversations(user.id).then((result) => {
       if (cancelled || !result) return;
       // إذا بدأ المستخدم طلباً جديداً قبل انتهاء الاستعادة فلا نستبدله
       const existing = currentOrderRef.current;
@@ -814,7 +814,7 @@ additional_info:
     const refresh = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        void loadRequesterConversations(userId).then((result) => {
+        void loadMyConversations(userId).then((result) => {
           if (cancelled || !result) return;
           const existing = currentOrderRef.current;
           // نحدّث فقط الطلب الحالي (أو نستعيده إذا لم يكن هناك طلب)
