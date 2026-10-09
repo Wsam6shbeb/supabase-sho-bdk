@@ -83,7 +83,7 @@ function mapStatus(state: string): OrderStatus {
 }
 
 /** سجل طلباتي المنتهية (مع مقدم الخدمة وتقييمي). null عند الفشل. */
-export async function fetchOrderHistory(userId: string): Promise<Order[] | null> {
+export async function fetchOrderHistory(): Promise<Order[] | null> {
   const { data, error } = await supabase.rpc('get_my_order_history_v2');
   if (error) {
     console.error('[orders] فشل جلب سجل الطلبات:', error.message);
