@@ -130,7 +130,11 @@ export default function CreateOrderScreen() {
       });
       return;
     }
-    void analyzeAndContinue(clarificationAnswer);
+    if (showClarification) {
+      handleClarificationConfirm();
+      return;
+    }
+    void analyzeAndContinue();
   };
 
   const proceed = async (trimmed: string, analysis: ServiceRequestAnalysis) => {
