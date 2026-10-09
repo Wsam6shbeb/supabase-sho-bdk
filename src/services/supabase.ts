@@ -9,11 +9,15 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 
 // ✅ سطر جديد: نتحقق إذا إحنا داخل المتصفح
-const isBrowser = typeof window !== 'undefined'
+// في React Native يكون window معرّفاً لكن window.localStorage غير موجود، فكان الكود
+// يختار تخزيناً غير موجود (= جلسة بالذاكرة فقط وتضيع عند كل إغلاق للتطبيق).
+// لذلك نستخدم localStorage فقط على الويب الحقيقي، وAsyncStorage على الموبايل.
+const isBrowser =
+  Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
-    storage: isBrowser ? window.localStorage : AsyncStorage, // ✅ تعديل هنا
+    storage: isBrowser ? window.localStorage : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
