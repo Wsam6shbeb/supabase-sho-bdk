@@ -323,10 +323,12 @@ export default function CreateOrderScreen() {
                   style={{ flex: 1 }}
                 />
                 <AppButton
-                  title="متابعة على أي حال"
+                  title="إرسال التوضيح"
                   variant="primary"
                   size="md"
                   onPress={handleClarificationConfirm}
+                  loading={submitting}
+                  disabled={submitting}
                   fullWidth={false}
                   style={{ flex: 1, marginStart: Spacing.two }}
                 />
