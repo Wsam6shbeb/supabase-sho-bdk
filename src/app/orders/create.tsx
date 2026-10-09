@@ -302,6 +302,17 @@ export default function CreateOrderScreen() {
               >
                 {clarificationQuestion}
               </Text>
+              <AppTextInput
+                placeholder="اكتب التوضيح هون..."
+                value={clarificationAnswer}
+                onChangeText={(value) => {
+                  setClarificationAnswer(value);
+                  setError(null);
+                }}
+                multiline
+                numberOfLines={2}
+                containerStyle={{ marginBottom: Spacing.three }}
+              />
               <View style={styles.clarificationActions}>
                 <AppButton
                   title="تعديل الطلب"
