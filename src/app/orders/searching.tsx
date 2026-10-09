@@ -118,7 +118,7 @@ export default function SearchingScreen() {
 
       // احتياط فقط: إذا فشل RPC أو لم يوجد request_id، نحافظ على المسار السابق
       // بدل أن تتعطل شاشة البحث بالكامل.
-      if (providersData.length === 0) {
+      if (providersData.length === 0 && !requestId) {
         const { data: fallbackProviders, error: fallbackError } = await supabase
           .from('provider_profiles')
           .select(
@@ -211,7 +211,27 @@ export default function SearchingScreen() {
             (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
         );
 
-      const results: ServiceProvider[] = rankedMatches
+      const isFallbackResults = rankedMatches.length === 0;
+      const displayedMatches = isFallbackResults
+        ? [...(providersData ?? [])]
+            .sort(
+              (a: any, b: any) =>
+                (Number(b.preliminary_score) || 0) - (Number(a.preliminary_score) || 0) ||
+                (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) ||
+                (Number(b.completed_services_count) || 0) - (Number(a.completed_services_count) || 0),
+            )
+            .slice(0, 3)
+            .map((provider: any) => ({
+              provider,
+              match: {
+                provider_id: provider.user_id,
+                score: 0,
+                reason: 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.',
+              },
+            }))
+        : rankedMatches;
+
+      const results: ServiceProvider[] = displayedMatches
         .map(({ provider: p, match }, index) => ({
           id: p.user_id,
           name: p.users?.full_name ?? 'مقدم خدمة',
@@ -229,7 +249,11 @@ export default function SearchingScreen() {
           verification_status: 'not_verified',
           card_color: '#3B82F6',
           service_request_id: requestId || undefined,
-          match_score: match?.score ?? 0,
+          match_score: isFallbackResults ? 0 : match?.score ?? 0,
+          is_fallback_match: isFallbackResults,
+          match_reason: isFallbackResults
+            ? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.'
+            : match?.reason,
         }));
 
       setProviders(results);
