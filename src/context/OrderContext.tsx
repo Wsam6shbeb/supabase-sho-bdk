@@ -1024,11 +1024,17 @@ additional_info:
         return { ok: false, error: agreementErrorMessage(null) };
       }
 
-      // السعر من المحادثة (تقدير)، أما العمولة فيحسبها السيرفر
-      const { agreement, error } = await requestAgreement(
-        conversationId,
-        extractPriceFromChat(chatHistory),
-      );
+      // لا نرسل اتفاقاً بسعر تخميني: يجب أن يظهر سعر صريح وواضح في رسائل التفاوض.
+      const agreedPriceCandidate = extractPriceFromChat(chatHistory);
+      if (agreedPriceCandidate == null) {
+        return {
+          ok: false,
+          error: 'لم أستطع تحديد السعر النهائي بثقة. اكتبوا رسالة واضحة مثل «السعر النهائي 50000 ليرة» ثم اضغط «تم الاتفاق» مجدداً.',
+        };
+      }
+
+      // العمولة النهائية تُحسب في الخادم؛ السعر يُستخرج فقط من عبارات سعر صريحة.
+      const { agreement, error } = await requestAgreement(conversationId, agreedPriceCandidate);
       if (error || !agreement) {
         console.error('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
         return { ok: false, error: agreementErrorMessage(error) };
