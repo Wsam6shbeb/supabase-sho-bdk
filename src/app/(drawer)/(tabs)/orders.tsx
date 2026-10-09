@@ -49,7 +49,8 @@ export default function OrdersTab() {
   // بانتظار التقييم
   const awaitingRatingOrders = useMemo<Order[]>(() => {
     return orderHistory.filter(
-      (o) => o.status === OrderStatus.COMPLETION_PENDING_RATING && !o.customer_rating && o.provider_id,
+      // أبقِ الطلب ضمن انتظار التقييم حتى لو قيّم المستخدم الطرف الآخر؛ قد يبقى تقييم الطرف المقابل مطلوباً.
+      (o) => o.status === OrderStatus.COMPLETION_PENDING_RATING && !!o.provider_id,
     );
   }, [orderHistory]);
 
