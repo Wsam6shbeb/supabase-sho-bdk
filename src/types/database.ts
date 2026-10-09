@@ -1006,6 +1006,30 @@ export type Database = {
           my_tags: string[] | null
         }[]
       }
+      get_my_order_history_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          request_id: string
+          description: string
+          state: string
+          region: string | null
+          is_urgent: boolean
+          created_at: string
+          updated_at: string
+          completed_at: string | null
+          rating_deadline: string | null
+          provider_id: string | null
+          provider_name: string | null
+          agreed_price: number | null
+          commission_amount: number | null
+          my_rating: number | null
+          my_comment: string | null
+          my_tags: string[] | null
+          customer_id: string
+          customer_name: string | null
+          my_role: string
+        }[]
+      }
       request_agreement: {
         Args: { p_conversation_id: string; p_price?: number }
         Returns: Database["public"]["Tables"]["agreements"]["Row"]
