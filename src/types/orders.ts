@@ -61,6 +61,8 @@ export interface Order {
   customer_name?: string | null;
   /** الطرف الحالي بالنسبة للطلب. */
   my_role?: 'customer' | 'provider';
+  other_user_id?: string | null;
+  other_user_name?: string | null;
   description: string;
   is_urgent: boolean;
   status: OrderStatus;
