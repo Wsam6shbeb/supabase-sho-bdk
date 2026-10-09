@@ -58,6 +58,9 @@ export interface CreateOrderDto {
 export interface Order {
   id: string;
   customer_id: string;
+  customer_name?: string | null;
+  /** الطرف الحالي بالنسبة للطلب. */
+  my_role?: 'customer' | 'provider';
   description: string;
   is_urgent: boolean;
   status: OrderStatus;
