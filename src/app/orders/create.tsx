@@ -300,7 +300,7 @@ export default function CreateOrderScreen() {
               <Text
                 style={[styles.clarificationBody, { color: scheme.textSecondary }]}
               >
-                {t('orders.create.clarificationBody')}
+                {clarificationQuestion}
               </Text>
               <View style={styles.clarificationActions}>
                 <AppButton
