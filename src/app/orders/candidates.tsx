@@ -512,7 +512,7 @@ export default function CandidatesScreen() {
       )}
 
       <FlatList
-        data={providers}
+        data={Array.from(new Map(providers.map((provider) => [provider.id, provider])).values())}
         renderItem={renderProviderCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
