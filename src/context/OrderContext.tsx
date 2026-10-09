@@ -1153,9 +1153,8 @@ additional_info:
 
     const now = new Date().toISOString();
     const isProviderReport = dto.reporter_role === 'provider';
-    const nextStatus = isProviderReport
-      ? OrderStatus.CANCELLED
-      : OrderStatus.NOT_EXECUTED_REVIEW;
+    // كلا الطرفين يجب أن يريا حالة مراجعة عدم التنفيذ كي يتمكنا من تقييم الطرف الآخر.
+    const nextStatus = OrderStatus.NOT_EXECUTED_REVIEW;
     const workflowStatus = isProviderReport ? 'cancelled_no_refund' : 'pending_review';
 
     setCurrentOrder((prev) => {
