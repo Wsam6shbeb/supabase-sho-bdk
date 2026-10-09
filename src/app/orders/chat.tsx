@@ -23,7 +23,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { openConversation } from '@/services/chat';
-import { extractPriceFromChat } from '@/domain/commission';
 import { useConversation } from '@/hooks/use-conversation';
 import { ChatStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
