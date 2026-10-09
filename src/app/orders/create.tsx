@@ -53,7 +53,7 @@ export default function CreateOrderScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const { user } = useAuth();
-  const { startOrder, hasAcceptedDisclaimer } = useOrder();
+  const { startOrder, analyzeOrderRequest, hasAcceptedDisclaimer } = useOrder();
 
   const [description, setDescription] = useState('');
   const [city, setCity] = useState(user?.region?.id ?? '');
