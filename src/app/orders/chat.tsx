@@ -55,6 +55,7 @@ export default function ChatScreen() {
     openChat,
     customerAgrees,
     customerCancelsAgreement,
+    providerRespondsToAgreement,
     approvalRemainingSeconds,
     estimateCommission,
     completeOrder,
@@ -202,8 +203,10 @@ export default function ChatScreen() {
     setActiveProviderId(providerId);
   };
 
-  const canCustomerAgree = thread.status === ChatStatus.NEGOTIATING;
-  const canCustomerCancel = thread.status === ChatStatus.AWAITING_APPROVAL;
+  const isProviderSide = currentOrder?.my_role === 'provider';
+  const canCustomerAgree = !isProviderSide && thread.status === ChatStatus.NEGOTIATING;
+  const canCustomerCancel = !isProviderSide && thread.status === ChatStatus.AWAITING_APPROVAL;
+  const canProviderRespond = isProviderSide && thread.status === ChatStatus.AWAITING_APPROVAL;
   const canCustomerComplete = thread.status === ChatStatus.ACTIVE;
   const canSendMessage =
     thread.status === ChatStatus.NEGOTIATING || thread.status === ChatStatus.ACTIVE;
