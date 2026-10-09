@@ -28,6 +28,7 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import type { ServiceRequestAnalysis } from '@/context/OrderContext';
 import {
     KeyboardAvoidingView,
     Pressable,
@@ -62,6 +63,9 @@ export default function CreateOrderScreen() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showClarification, setShowClarification] = useState(false);
+  const [clarificationQuestion, setClarificationQuestion] = useState('');
+  const [clarificationAnswer, setClarificationAnswer] = useState('');
+  const [clarificationAttempts, setClarificationAttempts] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
 // [شرح الدالة: handleSubmit] يعالج إرسال النموذج الحالي بعد التحقق من البيانات وتنفيذ العملية المطلوبة.
