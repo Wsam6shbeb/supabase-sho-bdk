@@ -111,7 +111,8 @@ export default function ConversationScreen() {
 
   const orderFinished =
     ratingStatus?.request_state === 'completion_pending_rating' ||
-    ratingStatus?.request_state === 'completed';
+    ratingStatus?.request_state === 'completed' ||
+    Boolean(ratingStatus?.has_non_execution_report && ratingStatus?.request_state === 'cancelled');
   const iAmProvider = agreement?.provider_id === myId;
   const canRateCustomer = !!ratingStatus && orderFinished && !ratingStatus.i_rated && iAmProvider;
 
