@@ -42,6 +42,10 @@ export interface ServiceProvider {
   service_request_id?: string;
   /** درجة المطابقة المبدئية المحسوبة من structured_data. */
   match_score?: number;
+  /** صحيح عندما تكون النتيجة بديلاً محلياً لأن المطابقة القوية لم تُنتج نتائج. */
+  is_fallback_match?: boolean;
+  /** سبب مختصر لاقتراح مقدم الخدمة أو كونه بديلاً. */
+  match_reason?: string;
 }
 
 /** بيانات إنشاء طلب جديد */
