@@ -170,6 +170,7 @@ export default function RateOrderScreen() {
   // ═══════════════════════════════════════════════════════════
   // شاشة العرض (readonly)
   // ═══════════════════════════════════════════════════════════
+  const otherPartyName = order.other_user_name ?? order.provider_name ?? (order.my_role === 'provider' ? 'الزبون' : 'مقدم الخدمة');
   const isReadonly = readonly || !!order.customer_rating;
 
   return (
@@ -203,14 +204,14 @@ export default function RateOrderScreen() {
               style={[styles.providerAvatar, { backgroundColor: `${scheme.primary}20` }]}
             >
               <Text style={[styles.providerAvatarText, { color: scheme.primary }]}>
-                {order.provider_name?.charAt(0) ?? '؟'}
+                {otherPartyName.charAt(0) ?? '؟'}
               </Text>
             </View>
             <Text style={[styles.introTitle, { color: scheme.text }]}>
               {isReadonly
-                ? `تقييمك لـ ${order.provider_name ?? 'مقدم الخدمة'}`
+                ? `تقييمك لـ ${otherPartyName}`
                 : t('orders.myOrders.rating.subtitle', {
-                    name: order.provider_name ?? 'مقدم الخدمة',
+                    name: otherPartyName,
                   })}
             </Text>
             <Text style={[styles.introDescription, { color: scheme.textSecondary }]}>
