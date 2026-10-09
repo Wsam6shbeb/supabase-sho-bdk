@@ -97,7 +97,8 @@ export function OrderCard({
 
   const badge = getStatusBadge();
   const canRate =
-    order.status === OrderStatus.COMPLETION_PENDING_RATING &&
+    (order.status === OrderStatus.COMPLETION_PENDING_RATING ||
+      order.status === OrderStatus.NOT_EXECUTED_REVIEW) &&
     !order.customer_rating &&
     !!order.provider_id;
   const canChat = order.status === OrderStatus.ACTIVE && !!order.provider_id;
