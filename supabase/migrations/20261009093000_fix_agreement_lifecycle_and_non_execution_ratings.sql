@@ -203,7 +203,13 @@ as $$
   select
     sr.id,
     sr.raw_text,
-    sr.state::text,
+    case
+      when sr.state = 'cancelled' and exists (
+        select 1 from public.reports rep
+         where rep.request_id = sr.id and rep.reason = 'non_execution'
+      ) then 'not_executed_review'
+      else sr.state::text
+    end,
     sr.region,
     sr.urgency::text = 'urgent',
     sr.created_at,
