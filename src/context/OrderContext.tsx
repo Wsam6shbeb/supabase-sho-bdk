@@ -138,12 +138,18 @@ export interface OrderContextValue {
   hasAcceptedDisclaimer: boolean;
   acceptDisclaimer: () => void;
 
+  analyzeOrderRequest: (params: {
+    description: string;
+    service_area: string;
+    additional_info?: string;
+  }) => Promise<ServiceRequestAnalysis | null>;
   startOrder: (params: {
     description: string;
     service_area: string;
     additional_info?: string;
     is_urgent: boolean;
     region_id: string;
+    analysis?: ServiceRequestAnalysis;
   }) => Promise<Order>;
   setCandidates: (providers: ServiceProvider[]) => void;
   resetOrder: () => void;
@@ -221,16 +227,18 @@ const WELCOME_TEXT =
 // Supabase sync (best-effort)
 // ═══════════════════════════════════════════════════════════
 
-async function analyzeServiceRequest(input: {
-  description: string;
-  serviceArea: string;
-  additionalInfo?: string;
-}): Promise<{
+export interface ServiceRequestAnalysis {
   structured_data: Json;
   ai_confidence: number | null;
   needs_clarification: boolean;
   clarification_question: string | null;
-} | null> {
+}
+
+async function analyzeServiceRequest(input: {
+  description: string;
+  serviceArea: string;
+  additionalInfo?: string;
+}): Promise<ServiceRequestAnalysis | null> {
   try {
     const { data, error } = await supabase.functions.invoke('analyze-service-request', {
       body: {
@@ -272,6 +280,7 @@ async function createServiceRequestInSupabase(params: {
   additionalInfo?: string;
   isUrgent: boolean;
   regionId: string;
+  analysis?: ServiceRequestAnalysis;
 }): Promise<{ id: string; ai_failed: boolean }> {
   try {
     const { data, error } = await supabase
@@ -299,7 +308,7 @@ async function createServiceRequestInSupabase(params: {
 
     console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
 
-    const analysis = await analyzeServiceRequest({
+    const analysis = params.analysis ?? await analyzeServiceRequest({
       description: params.description,
       serviceArea: params.serviceArea,
       additionalInfo: params.additionalInfo,
@@ -826,8 +835,18 @@ additional_info:
   // ═══════════════════════════════════════════════════════════
   // Order
   // ═══════════════════════════════════════════════════════════
+  const analyzeOrderRequest = useCallback(
+    (params: { description: string; service_area: string; additional_info?: string }) =>
+      analyzeServiceRequest({
+        description: params.description,
+        serviceArea: params.service_area,
+        additionalInfo: params.additional_info,
+      }),
+    [],
+  );
+
   const startOrder = useCallback(
-    async (params: { description: string; service_area: string; additional_info?: string; is_urgent: boolean; region_id: string }): Promise<Order> => {
+    async (params: { description: string; service_area: string; additional_info?: string; is_urgent: boolean; region_id: string; analysis?: ServiceRequestAnalysis }): Promise<Order> => {
       clearTimer();
       const requesterId = user?.id;
 
@@ -842,6 +861,7 @@ additional_info:
         additionalInfo: params.additional_info,
         isUrgent: params.is_urgent,
         regionId: params.region_id,
+        analysis: params.analysis,
       });
 
       // ⭐ إذا فشل AI: نضيف إشعار (يظهر كـ banner بالجرس)
@@ -1492,6 +1512,7 @@ additional_info: skill.additional_info?.trim() || '',
       clearAllNotifications,
       hasAcceptedDisclaimer,
       acceptDisclaimer,
+      analyzeOrderRequest,
       startOrder,
       setCandidates,
       resetOrder,
@@ -1545,6 +1566,7 @@ additional_info: skill.additional_info?.trim() || '',
       clearAllNotifications,
       hasAcceptedDisclaimer,
       acceptDisclaimer,
+      analyzeOrderRequest,
       startOrder,
       setCandidates,
       resetOrder,
