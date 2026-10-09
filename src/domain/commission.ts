@@ -23,9 +23,8 @@ export function extractPriceFromChat(messages: ChatMessage[]): number | null {
     );
 
   const candidates: number[] = [];
-  const amountPattern = '(\\d[\\d,. ]{0,14})\\s*(ألف|الف|مليون)?';
-  const priceCue = new RegExp('(?:السعر(?:\\\\s+النهائي)?|اتفقنا\\\\s+على|المبلغ|التكلفة|بسعر|بمبلغ|قيمته|قيمتها|يكلف|بيكلف)\\\\s*[:：-]?\\\\s*' + amountPattern, 'g');
-  const currencyCue = new RegExp(amountPattern + '\\\\s*(?:ل\\\\.?\\\\s*س|ليرة(?:\\\\s+سورية)?|ليرات)', 'g');
+  const priceCue = /(?:السعر(?:\s+النهائي)?|اتفقنا\s+على|المبلغ|التكلفة|بسعر|بمبلغ|قيمته|قيمتها|يكلف|بيكلف)\s*[:：-]?\s*(\d[\d,. ]{0,14})\s*(ألف|الف|مليون)?/g;
+  const currencyCue = /(\d[\d,. ]{0,14})\s*(ألف|الف|مليون)?\s*(?:ل\.?\s*س|ليرة(?:\s+سورية)?|ليرات)/g;
 
   for (const message of messages) {
     if (message.is_system) continue;
@@ -35,7 +34,9 @@ export function extractPriceFromChat(messages: ChatMessage[]): number | null {
       let match: RegExpExecArray | null;
       while ((match = pattern.exec(text)) !== null) {
         const raw = match[1].replace(/[,.\s]/g, '');
-        const price = Number.parseInt(raw, 10);
+        const basePrice = Number.parseInt(raw, 10);
+        const multiplier = match[2] === 'مليون' ? 1_000_000 : match[2] === 'ألف' || match[2] === 'الف' ? 1_000 : 1;
+        const price = basePrice * multiplier;
         if (Number.isSafeInteger(price) && price > 0) candidates.push(price);
       }
     }
