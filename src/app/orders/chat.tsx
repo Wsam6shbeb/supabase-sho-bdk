@@ -293,6 +293,7 @@ export default function ChatScreen() {
         />
 
         <FlatList
+          removeClippedSubviews={false}
           data={currentMessages}
           renderItem={({ item }) => {
             return (
