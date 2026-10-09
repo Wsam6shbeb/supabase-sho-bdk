@@ -158,18 +158,32 @@ export default function ChatScreen() {
     setSharePhone(false);
   };
 
-// [شرح الدالة: handleCompleteOrder] ينفذ خطوة إكمال الطلب بعد انتهاء الخدمة.
-  const handleCompleteOrder = async () => {
-    const orderId = thread.order_id;
-    const result = await completeOrder();
-    if (!result.ok) {
-      Alert.alert('', result.error ?? 'تعذر إنهاء الخدمة. حاول مرة أخرى.');
-      return;
-    }
-    router.replace({
-      pathname: '/orders/rate',
-      params: { order_id: orderId },
-    });
+// [شرح الدالة: handleCompleteOrder] يطلب تأكيد إتمام الخدمة قبل الانتقال إلى التقييم.
+  const handleCompleteOrder = () => {
+    Alert.alert(
+      'تأكيد إكمال الخدمة',
+      'هل أُنجزت الخدمة بالفعل؟ إذا أكدت إكمالها، ستتمكن من تقييم مقدم الخدمة. ويمكنك العودة إلى هذه المحادثة في أي وقت لاحق لإضافة تقييمك.',
+      [
+        { text: 'ليس بعد', style: 'cancel' },
+        {
+          text: 'نعم، أُنجزت الخدمة',
+          onPress: () => {
+            void (async () => {
+              const orderId = thread.order_id;
+              const result = await completeOrder();
+              if (!result.ok) {
+                Alert.alert('', result.error ?? 'تعذر إنهاء الخدمة. حاول مرة أخرى.');
+                return;
+              }
+              router.replace({
+                pathname: '/orders/rate',
+                params: { order_id: orderId },
+              });
+            })();
+          },
+        },
+      ],
+    );
   };
 
 // [شرح الدالة: handleCloseNegotiation] يغلق مسار التفاوض/المحادثة وفق قواعد الطلب.
@@ -338,13 +352,20 @@ export default function ChatScreen() {
         )}
 
         {isActive && (
-          <View
-            style={[styles.activeNotice, { backgroundColor: `${scheme.success}15` }]}
-          >
-            <Ionicons name="checkmark-circle" size={18} color={scheme.success} />
-            <Text style={[styles.activeText, { color: scheme.success }]}>
-              المحادثة نشطة — تم قبول الاتفاق
-            </Text>
+          <View style={{ gap: Spacing.two }}>
+            <View
+              style={[styles.activeNotice, { backgroundColor: `${scheme.success}15` }]}
+            >
+              <Ionicons name="checkmark-circle" size={18} color={scheme.success} />
+              <Text style={[styles.activeText, { color: scheme.success }]}>
+                المحادثة نشطة — تم قبول الاتفاق
+              </Text>
+            </View>
+            {canCustomerComplete && (
+              <Text style={[styles.activeText, { color: scheme.textSecondary, textAlign: 'center' }]}>
+                بعد إتمام الخدمة، اضغط «تم إكمال الخدمة» لتأكيد إنجازها. يمكنك العودة إلى هذه المحادثة في أي وقت لاحق لتقييم مقدم الخدمة.
+              </Text>
+            )}
           </View>
         )}
 
@@ -392,6 +413,19 @@ export default function ChatScreen() {
                   name="checkmark-done-circle"
                   size={20}
                   color={scheme.primaryContrast}
+                />
+              }
+            />
+            <AppButton
+              title="العودة إلى الرئيسية"
+              variant="secondary"
+              size="lg"
+              onPress={() => router.replace('/(drawer)/(tabs)')}
+              leadingIcon={
+                <Ionicons
+                  name="home-outline"
+                  size={20}
+                  color={scheme.primary}
                 />
               }
             />
