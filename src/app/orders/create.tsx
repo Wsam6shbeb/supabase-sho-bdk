@@ -54,6 +54,7 @@ export default function CreateOrderScreen() {
   const [showClarification, setShowClarification] = useState(false);
   const [clarificationQuestion, setClarificationQuestion] = useState('');
   const [clarificationAnswer, setClarificationAnswer] = useState('');
+  const [clarificationContext, setClarificationContext] = useState('');
   const [clarificationAttempts, setClarificationAttempts] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
@@ -61,9 +62,11 @@ export default function CreateOrderScreen() {
   const analyzeAndContinue = async (answer = '') => {
     if (submitting) return;
     const original = description.trim();
-    const finalDescription = answer.trim()
-      ? `${original}\nتوضيح المستخدم: ${answer.trim()}`
-      : original;
+    const finalDescription = [
+      original,
+      clarificationContext,
+      answer.trim() ? `توضيح المستخدم: ${answer.trim()}` : '',
+    ].filter(Boolean).join('\n');
     const area = [city.trim(), serviceArea.trim()].filter(Boolean).join(' - ');
     setSubmitting(true);
     setError(null);
@@ -84,6 +87,11 @@ export default function CreateOrderScreen() {
           return;
         }
         setClarificationAttempts((count) => count + 1);
+        if (answer.trim()) {
+          setClarificationContext((previous) =>
+            [previous, `توضيح المستخدم: ${answer.trim()}`].filter(Boolean).join('\n'),
+          );
+        }
         setClarificationQuestion(analysis.clarification_question || 'ممكن توضح أكثر شو الخدمة التي تحتاجها تحديداً؟');
         setClarificationAnswer('');
         setShowClarification(true);
@@ -161,6 +169,8 @@ export default function CreateOrderScreen() {
   const handleClarificationCancel = () => {
     setShowClarification(false);
     setClarificationAnswer('');
+    setClarificationContext('');
+    setClarificationAttempts(0);
   };
 
   return (
