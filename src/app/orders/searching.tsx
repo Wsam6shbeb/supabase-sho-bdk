@@ -116,9 +116,9 @@ export default function SearchingScreen() {
         }
       }
 
-      // احتياط فقط: إذا فشل RPC أو لم يوجد request_id، نحافظ على المسار السابق
-      // بدل أن تتعطل شاشة البحث بالكامل.
-      if (providersData.length === 0) {
+      // احتياط قديم فقط عند غياب request_id. عند وجود طلب حقيقي لا نعرض مقدمي خدمة من مدن أخرى
+      // إذا أعاد RPC صفر نتائج؛ فـ RPC الجديد هو المسؤول عن بدائل نفس المدينة.
+      if (providersData.length === 0 && !requestId) {
         const { data: fallbackProviders, error: fallbackError } = await supabase
           .from('provider_profiles')
           .select(
