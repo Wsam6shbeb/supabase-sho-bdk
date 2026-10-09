@@ -72,6 +72,8 @@ function mapStatus(state: string): OrderStatus {
       return OrderStatus.COMPLETION_PENDING_RATING;
     case 'completed':
       return OrderStatus.COMPLETED;
+    case 'not_executed_review':
+      return OrderStatus.NOT_EXECUTED_REVIEW;
     case 'cancelled':
     case 'expired':
       return OrderStatus.CANCELLED;
