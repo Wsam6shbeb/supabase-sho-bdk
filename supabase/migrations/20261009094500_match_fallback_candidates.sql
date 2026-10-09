@@ -75,17 +75,16 @@ provider_scored as (
     case when (select public.norm_ar(data->>'category') from request_row)<>'' 
       and bool_or(pd.category=(select public.norm_ar(data->>'category') from request_row))
       then 1 else 0 end category_match,
-    case
+    max(case
       when exists(select 1 from unnest(pd.places) pp_place, unnest((select places from request_row)) rp_place where public.region_matches(pp_place,rp_place)) then 2
       when exists(select 1 from unnest(pd.cities) pc, unnest((select cities from request_row)) rc where public.region_matches(pc,rc)) then 1
       else 0
-    end location_tier
+    end)::integer location_tier
   from provider_docs pd
   join public.provider_profiles pp on pp.user_id=pd.provider_id
   left join request_terms rt on pd.doc like '%'||rt.term||'%'
   where pp.is_available=true and pd.provider_id<>(select requester_id from request_row)
-  group by pd.provider_id,pd.places,pd.cities
-),
+  group by pd.provider_id,
 eligible as (
   select s.provider_id,s.word_matches,
     (s.category_match*60+s.word_matches*10+
