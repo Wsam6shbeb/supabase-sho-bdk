@@ -18,6 +18,7 @@ import {
   cancelAgreement,
   getConversationAgreement,
   requestAgreement,
+  respondToAgreement,
   subscribeToAgreementChanges,
 } from '@/services/agreements';
 import { loadMyConversations, type HydratedChats } from '@/services/hydrateChats';
@@ -170,6 +171,7 @@ export interface OrderContextValue {
     chatHistory: ChatMessage[],
   ) => Promise<{ ok: boolean; error?: string }>;
   customerCancelsAgreement: () => Promise<void>;
+  providerRespondsToAgreement: (approve: boolean) => Promise<{ ok: boolean; error?: string }>;
 
   /** ينهي الخدمة في السيرفر. يرجع ok=false مع رسالة مفهومة عند الفشل. */
   completeOrder: () => Promise<{ ok: boolean; error?: string }>;
@@ -1106,6 +1108,30 @@ additional_info:
       return { ok: true };
     },
     [activeChats, clearTimer, getProviderById, pushNotification],
+  );
+
+  const providerRespondsToAgreement = useCallback(
+    async (approve: boolean): Promise<{ ok: boolean; error?: string }> => {
+      if (!pendingAgreementId) {
+        return { ok: false, error: agreementErrorMessage('AGREEMENT_UNAVAILABLE') };
+      }
+      const { agreement, error } = await respondToAgreement({
+        agreementId: pendingAgreementId,
+        approve,
+        reason: approve ? undefined : 'مقدم الخدمة رفض الاتفاق',
+      });
+      if (error || !agreement) {
+        return { ok: false, error: agreementErrorMessage(error) };
+      }
+      clearTimer();
+      await refreshWallet();
+      if (user?.id) {
+        const refreshed = await loadMyConversations(user.id);
+        if (refreshed) applyServerState(refreshed);
+      }
+      return { ok: true };
+    },
+    [pendingAgreementId, clearTimer, refreshWallet, user?.id, applyServerState],
   );
 
   const customerCancelsAgreement = useCallback(async () => {
