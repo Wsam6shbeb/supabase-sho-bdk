@@ -38,3 +38,28 @@ create trigger reject_phone_numbers_in_chat_message
 before insert or update of body on public.messages
 for each row
 execute function public.reject_phone_numbers_in_chat_message();
+
+
+-- Agreements must not be created without a confirmed price.
+-- The client now refuses ambiguous prices; this database guard also prevents bypassing that check.
+create or replace function public.reject_agreement_without_price()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.price is null then
+    raise exception 'AGREED_PRICE_REQUIRED'
+      using errcode = '23514',
+            detail = 'A confirmed service price is required before creating an agreement.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists agreements_require_confirmed_price on public.agreements;
+
+create trigger agreements_require_confirmed_price
+before insert or update of price on public.agreements
+for each row
+execute function public.reject_agreement_without_price();
