@@ -154,6 +154,15 @@ export default function SearchingScreen() {
         location: null,
       };
 
+      // دفاع إضافي: مقدم الخدمة قد يملك أكثر من خدمة، لكن يجب أن يظهر مرة واحدة فقط.
+      providersData = Array.from(
+        new Map(
+          (providersData ?? [])
+            .filter((provider: any) => typeof provider.user_id === 'string' && provider.user_id.length > 0)
+            .map((provider: any) => [provider.user_id, provider]),
+        ).values(),
+      );
+
       const providerCandidates = (providersData ?? []).map((p: any) => ({
         provider: p,
         services: Array.isArray(p.services) ? p.services : [],
