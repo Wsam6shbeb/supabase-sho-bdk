@@ -88,13 +88,13 @@ export default function OrdersTab() {
 // [شرح الدالة: handleReport] يفتح إجراء الإبلاغ المرتبط بالطلب.
   const handleReport = (orderId: string) => {
     const order = orderHistory.find((o) => o.id === orderId);
-    if (!order?.provider_id) return;
+    if (!order?.other_user_id) return;
 
     router.push({
       pathname: '/orders/report',
       params: {
-        reported_user_id: order.provider_id,
-        reported_user_name: order.provider_name ?? 'مقدم الخدمة',
+        reported_user_id: order.other_user_id,
+        reported_user_name: order.other_user_name ?? 'المستخدم الآخر',
         order_id: orderId,
       },
     });
