@@ -416,7 +416,7 @@ export default function ChatScreen() {
             </Text>
             <View style={[styles.confirmPriceRow, { backgroundColor: `${scheme.primary}10`, borderColor: `${scheme.primary}30` }]}>
               <Text style={[styles.confirmPriceLabel, { color: scheme.textSecondary }]}>قيمة الخدمة المتفق عليها</Text>
-              <Text style={[styles.confirmPriceValue, { color: scheme.text }]}>{currentOrder?.agreed_price != null ? `${currentOrder.agreed_price} ل.س` : 'غير محددة — يجب تأكيد السعر في المحادثة'}</Text>
+              <Text style={[styles.confirmPriceValue, { color: scheme.text }]}>{extractPriceFromChat(currentMessages) != null ? `${extractPriceFromChat(currentMessages)} ل.س` : 'غير محددة — اكتبوا السعر النهائي بوضوح في المحادثة'}</Text>
             </View>
 
             <Pressable
