@@ -23,8 +23,9 @@ export function extractPriceFromChat(messages: ChatMessage[]): number | null {
     );
 
   const candidates: number[] = [];
-  const priceCue = /(?:السعر(?:\s+النهائي)?|اتفقنا\s+على|المبلغ|التكلفة|بسعر|بمبلغ|قيمته|قيمتها|يكلف|بيكلف)\s*[:：-]?\s*(\d[\d,. ]{0,14})/g;
-  const currencyCue = /(\d[\d,. ]{0,14})\s*(?:ل\.?\s*س|ليرة(?:\s+سورية)?|ليرات|ألف\s+ليرة|الف\s+ليرة)/g;
+  const amountPattern = '(\\d[\\d,. ]{0,14})\\s*(ألف|الف|مليون)?';
+  const priceCue = new RegExp('(?:السعر(?:\\\\s+النهائي)?|اتفقنا\\\\s+على|المبلغ|التكلفة|بسعر|بمبلغ|قيمته|قيمتها|يكلف|بيكلف)\\\\s*[:：-]?\\\\s*' + amountPattern, 'g');
+  const currencyCue = new RegExp(amountPattern + '\\\\s*(?:ل\\\\.?\\\\s*س|ليرة(?:\\\\s+سورية)?|ليرات)', 'g');
 
   for (const message of messages) {
     if (message.is_system) continue;
