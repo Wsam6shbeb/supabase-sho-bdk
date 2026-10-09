@@ -249,7 +249,11 @@ export default function SearchingScreen() {
           verification_status: 'not_verified',
           card_color: '#3B82F6',
           service_request_id: requestId || undefined,
-          match_score: match?.score ?? 0,
+          match_score: isFallbackResults ? 0 : match?.score ?? 0,
+          is_fallback_match: isFallbackResults,
+          match_reason: isFallbackResults
+            ? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.'
+            : match?.reason,
         }));
 
       setProviders(results);
