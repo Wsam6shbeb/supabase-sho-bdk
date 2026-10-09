@@ -9,7 +9,13 @@ declare
   v_body text;
 begin
   if coalesce(new.message_type, 'text') <> 'text' then
-    return new;
+    -- Only trusted server-side functions may create system messages; clients cannot bypass phone checks.
+    if current_user in ('postgres', 'service_role', 'supabase_admin') then
+      return new;
+    end if;
+    raise exception 'INVALID_MESSAGE_TYPE'
+      using errcode = '23514',
+            detail = 'Clients may only send text chat messages.';
   end if;
 
   v_body := translate(
