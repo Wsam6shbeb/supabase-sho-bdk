@@ -220,28 +220,10 @@ export default function SearchingScreen() {
             (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
         );
 
-      const isFallbackResults = rankedMatches.length === 0;
-      const displayedMatches = isFallbackResults
-        ? [...(providersData ?? [])]
-            .sort(
-              (a: any, b: any) =>
-                (Number(b.preliminary_score) || 0) - (Number(a.preliminary_score) || 0) ||
-                (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) ||
-                (Number(b.completed_services_count) || 0) - (Number(a.completed_services_count) || 0),
-            )
-            .slice(0, 3)
-            .map((provider: any) => ({
-              provider,
-              match: {
-                provider_id: provider.user_id,
-                score: 0,
-                reason: 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.',
-              },
-            }))
-        : rankedMatches;
-
-      const results: ServiceProvider[] = displayedMatches
-        .map(({ provider: p, match }, index) => ({
+      // المبدأ الأساسي: لا نعرض بديلاً غير مطابق، حتى لو كان من المدينة نفسها.
+      // إذا لم يؤكد محرك الذكاء الاصطناعي وجود تطابق مناسب، تبقى النتائج فارغة.
+      const results: ServiceProvider[] = rankedMatches
+        .map(({ provider: p, match }) => ({
           id: p.user_id,
           name: p.users?.full_name ?? 'مقدم خدمة',
           avatar_url: p.users?.avatar_url ?? null,
@@ -258,11 +240,9 @@ export default function SearchingScreen() {
           verification_status: 'not_verified',
           card_color: '#3B82F6',
           service_request_id: requestId || undefined,
-          match_score: isFallbackResults ? 0 : match?.score ?? 0,
-          is_fallback_match: isFallbackResults,
-          match_reason: isFallbackResults
-            ? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.'
-            : match?.reason,
+          match_score: match?.score ?? 0,
+          is_fallback_match: false,
+          match_reason: match?.reason,
         }));
 
       setProviders(results);
