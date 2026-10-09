@@ -211,7 +211,27 @@ export default function SearchingScreen() {
             (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
         );
 
-      const results: ServiceProvider[] = rankedMatches
+      const isFallbackResults = rankedMatches.length === 0;
+      const displayedMatches = isFallbackResults
+        ? [...(providersData ?? [])]
+            .sort(
+              (a: any, b: any) =>
+                (Number(b.preliminary_score) || 0) - (Number(a.preliminary_score) || 0) ||
+                (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) ||
+                (Number(b.completed_services_count) || 0) - (Number(a.completed_services_count) || 0),
+            )
+            .slice(0, 3)
+            .map((provider: any) => ({
+              provider,
+              match: {
+                provider_id: provider.user_id,
+                score: 0,
+                reason: 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.',
+              },
+            }))
+        : rankedMatches;
+
+      const results: ServiceProvider[] = displayedMatches
         .map(({ provider: p, match }, index) => ({
           id: p.user_id,
           name: p.users?.full_name ?? 'مقدم خدمة',
