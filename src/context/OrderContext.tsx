@@ -1275,7 +1275,7 @@ additional_info:
   const refreshOrderHistory = useCallback(async () => {
     if (!user?.id) return;
     await finalizeOverdueRequests();
-    const history = await fetchOrderHistory(user.id);
+    const history = await fetchOrderHistory();
     if (!history) return;
     setOrderHistory((prev) => {
       // نحتفظ بأعلام التذكير المحلية فقط
