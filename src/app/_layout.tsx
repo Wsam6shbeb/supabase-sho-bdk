@@ -21,12 +21,9 @@ import { useEffect } from 'react';
 import { I18nManager, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { guardRouter } from '@/utils/safe-navigation';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// يمنع فتح نفس الصفحة مرتين عند الضغط السريع (يغطي كل التطبيق).
-guardRouter(router);
 
 if (!I18nManager.isRTL) {
   I18nManager.forceRTL(true);
