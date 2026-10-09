@@ -38,17 +38,6 @@ import {
     View,
 } from 'react-native';
 
-const VAGUE_KEYWORDS = ['شي', 'شيء', 'مشكلة', 'خدمة', 'مساعده', 'مساعدة', 'بدي'];
-
-// [شرح الدالة: needsClarification] يتحقق مما إذا كان وصف الطلب يحتاج إلى توضيح قبل المتابعة.
-function needsClarification(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.length < 15) return true;
-  const lower = trimmed.toLowerCase();
-  if (VAGUE_KEYWORDS.some((kw) => lower === kw)) return true;
-  return false;
-}
-
 // [شرح الدالة: CreateOrderScreen] يعرض نموذج إنشاء طلب خدمة جديد.
 export default function CreateOrderScreen() {
   const theme = useTheme();
