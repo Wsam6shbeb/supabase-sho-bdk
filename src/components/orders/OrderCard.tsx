@@ -144,7 +144,7 @@ export function OrderCard({
           <View style={styles.providerRow}>
             <Ionicons name="person" size={14} color={scheme.textSecondary} />
             <Text style={[styles.providerText, { color: scheme.textSecondary }]}>
-              {t('orders.myOrders.withProvider')} {order.provider_name}
+              {order.my_role === 'provider' ? 'مع الزبون' : t('orders.myOrders.withProvider')} {order.other_user_name ?? order.provider_name}
             </Text>
           </View>
         )}
