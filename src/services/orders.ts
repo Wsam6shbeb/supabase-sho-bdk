@@ -117,6 +117,7 @@ export interface ConversationRatingStatus {
   request_state: string;
   i_rated: boolean;
   my_score: number | null;
+  has_non_execution_report: boolean;
 }
 
 /** حالة الطلب في هذه المحادثة وهل قيّمتُ الطرف الآخر (لبطاقة تقييم مقدم الخدمة). */
