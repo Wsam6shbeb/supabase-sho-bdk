@@ -1254,10 +1254,8 @@ additional_info:
                 customer_rating: dto.stars,
                 customer_comment: dto.comment ?? null,
                 customer_tags: dto.tags ?? [],
-                status:
-                  o.status === OrderStatus.NOT_EXECUTED_REVIEW
-                    ? OrderStatus.NOT_EXECUTED_REVIEW
-                    : OrderStatus.COMPLETED,
+                // إرسال التقييم لا يعني أن الخدمة اكتملت؛ السيرفر وحده يغيّر الحالة عند اكتمال المسار.
+                status: o.status,
                 rating_deadline: null,
                 rating_auto_approved: false,
                 updated_at: new Date().toISOString(),
