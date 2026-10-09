@@ -362,11 +362,6 @@ export default function ChatScreen() {
                 المحادثة نشطة — تم قبول الاتفاق
               </Text>
             </View>
-            {canCustomerComplete && (
-              <Text style={[styles.activeText, { color: scheme.textSecondary, textAlign: 'center' }]}>
-                بعد إتمام الخدمة، اضغط «تم إكمال الخدمة» لتأكيد إنجازها. يمكنك العودة إلى هذه المحادثة في أي وقت لاحق لتقييم مقدم الخدمة.
-              </Text>
-            )}
           </View>
         )}
 
@@ -414,19 +409,6 @@ export default function ChatScreen() {
                   name="checkmark-done-circle"
                   size={20}
                   color={scheme.primaryContrast}
-                />
-              }
-            />
-            <AppButton
-              title="العودة إلى الرئيسية"
-              variant="secondary"
-              size="lg"
-              onPress={() => router.replace('/(drawer)/(tabs)')}
-              leadingIcon={
-                <Ionicons
-                  name="home-outline"
-                  size={20}
-                  color={scheme.primary}
                 />
               }
             />
