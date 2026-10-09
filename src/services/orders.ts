@@ -68,6 +68,8 @@ export async function finalizeOverdueRequests(): Promise<void> {
 
 function mapStatus(state: string): OrderStatus {
   switch (state) {
+    case 'active':
+      return OrderStatus.ACTIVE;
     case 'completion_pending_rating':
       return OrderStatus.COMPLETION_PENDING_RATING;
     case 'completed':
