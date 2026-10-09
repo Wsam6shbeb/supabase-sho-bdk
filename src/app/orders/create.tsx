@@ -69,13 +69,49 @@ export default function CreateOrderScreen() {
   const [submitting, setSubmitting] = useState(false);
 
 // [شرح الدالة: handleSubmit] يعالج إرسال النموذج الحالي بعد التحقق من البيانات وتنفيذ العملية المطلوبة.
+  const analyzeAndContinue = async (answer = '') => {
+    if (submitting) return;
+    const original = description.trim();
+    const finalDescription = answer.trim()
+      ? `${original}\nتوضيح المستخدم: ${answer.trim()}`
+      : original;
+    const area = [city.trim(), serviceArea.trim()].filter(Boolean).join(' - ');
+    setSubmitting(true);
+    setError(null);
+    try {
+      const analysis = await analyzeOrderRequest({
+        description: finalDescription,
+        service_area: area,
+        additional_info: additionalInfo.trim(),
+      });
+      if (!analysis) {
+        setError('تعذّر تحليل الطلب حالياً. لم ننشئ الطلب بعد؛ حاول مرة أخرى.');
+        return;
+      }
+      if (analysis.needs_clarification) {
+        if (clarificationAttempts >= 2) {
+          setShowClarification(false);
+          setError('ما زال الطلب غير واضح. عدّل الوصف وأضف نوع الخدمة أو المطلوب الأساسي.');
+          return;
+        }
+        setClarificationAttempts((count) => count + 1);
+        setClarificationQuestion(analysis.clarification_question || 'ممكن توضح أكثر شو الخدمة التي تحتاجها تحديداً؟');
+        setClarificationAnswer('');
+        setShowClarification(true);
+        return;
+      }
+      setShowClarification(false);
+      await proceed(finalDescription, analysis);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = () => {
     if (submitting) return;
     setError(null);
-
     const trimmed = description.trim();
     const trimmedCity = city.trim();
-    const trimmedServiceArea = serviceArea.trim();
     if (!trimmed) {
       setError(t('orders.create.required'));
       return;
@@ -84,8 +120,6 @@ export default function CreateOrderScreen() {
       setError('يرجى كتابة المدينة.');
       return;
     }
-
-    // ⭐ إخلاء المسؤولية أول مرة
     if (!hasAcceptedDisclaimer) {
       router.push({
         pathname: '/orders/disclaimer',
@@ -93,39 +127,27 @@ export default function CreateOrderScreen() {
           description: trimmed,
           is_urgent: isUrgent.toString(),
           region_id: trimmedCity,
-          service_area: trimmedServiceArea,
+          service_area: serviceArea.trim(),
           additional_info: additionalInfo.trim(),
         },
       });
       return;
     }
-
-    // 🤔 فحص الغموض
-    if (needsClarification(trimmed)) {
-      setShowClarification(true);
-      return;
-    }
-
-    proceed(trimmed);
+    void analyzeAndContinue(clarificationAnswer);
   };
 
-// [شرح الدالة: proceed] ينفذ الانتقال إلى الخطوة التالية بعد فحص بيانات الطلب.
-  const proceed = async (trimmed: string) => {
-    setSubmitting(true);
+  const proceed = async (trimmed: string, analysis: ServiceRequestAnalysis) => {
     setError(null);
-
+    const area = [city.trim(), serviceArea.trim()].filter(Boolean).join(' - ');
     try {
-      // قاعدة البيانات يجب أن تؤكد إنشاء الطلب قبل الانتقال إلى البحث.
       const order = await startOrder({
         description: trimmed,
         is_urgent: isUrgent,
         region_id: city.trim(),
-        service_area: serviceArea.trim(),
+        service_area: area,
         additional_info: additionalInfo.trim(),
+        analysis,
       });
-
-      setSubmitting(false);
-
       router.push({
         pathname: '/orders/searching',
         params: {
@@ -135,20 +157,21 @@ export default function CreateOrderScreen() {
         },
       });
     } catch (err) {
-      setSubmitting(false);
       setError(err instanceof Error ? err.message : 'تعذر إنشاء طلب الخدمة. حاول مرة أخرى.');
     }
   };
 
-// [شرح الدالة: handleClarificationConfirm] يعالج تأكيد المستخدم على طلب التوضيح ويكمل سير إنشاء الطلب.
   const handleClarificationConfirm = () => {
-    setShowClarification(false);
-    proceed(description.trim());
+    if (!clarificationAnswer.trim()) {
+      setError('جاوب على سؤال التوضيح قبل المتابعة.');
+      return;
+    }
+    void analyzeAndContinue(clarificationAnswer);
   };
 
-// [شرح الدالة: handleClarificationCancel] يلغي طلب التوضيح ويعود إلى مسار إنشاء الطلب.
   const handleClarificationCancel = () => {
     setShowClarification(false);
+    setClarificationAnswer('');
   };
 
   return (
