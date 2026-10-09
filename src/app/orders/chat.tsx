@@ -160,6 +160,35 @@ export default function ChatScreen() {
   };
 
 // [شرح الدالة: handleCompleteOrder] يطلب تأكيد إتمام الخدمة قبل الانتقال إلى التقييم.
+  const handleProviderApprove = () => {
+    Alert.alert('تأكيد الاتفاق', 'هل تريد الموافقة على الاتفاق وبدء الخدمة؟', [
+      { text: 'رجوع', style: 'cancel' },
+      {
+        text: 'موافقة',
+        onPress: () => {
+          void providerRespondsToAgreement(true).then((result) => {
+            if (!result.ok) Alert.alert('', result.error ?? 'تعذرت الموافقة.');
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleProviderReject = () => {
+    Alert.alert('رفض الاتفاق', 'هل تريد رفض هذا الاتفاق؟', [
+      { text: 'إلغاء', style: 'cancel' },
+      {
+        text: 'رفض الاتفاق',
+        style: 'destructive',
+        onPress: () => {
+          void providerRespondsToAgreement(false).then((result) => {
+            if (!result.ok) Alert.alert('', result.error ?? 'تعذر رفض الاتفاق.');
+          });
+        },
+      },
+    ]);
+  };
+
   const handleCompleteOrder = () => {
     Alert.alert(
       'تأكيد إكمال الخدمة',
