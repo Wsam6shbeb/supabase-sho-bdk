@@ -245,3 +245,54 @@ as $$
     and sr.state in ('completion_pending_rating', 'completed', 'cancelled', 'expired')
   order by coalesce(sr.completed_at, sr.updated_at) desc;
 $$;
+
+
+create or replace function public.get_conversation_rating_status(p_conversation_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_conv public.conversations;
+  v_state text;
+  v_score smallint;
+  v_has_non_execution_report boolean := false;
+begin
+  if v_uid is null then
+    return null;
+  end if;
+
+  select * into v_conv
+    from public.conversations
+   where id = p_conversation_id
+     and (requester_id = v_uid or provider_id = v_uid);
+  if not found then
+    return null;
+  end if;
+
+  select sr.state::text into v_state
+    from public.service_requests sr
+   where sr.id = v_conv.request_id;
+
+  select r.score into v_score
+    from public.ratings r
+   where r.request_id = v_conv.request_id
+     and r.from_user_id = v_uid;
+
+  select exists (
+    select 1 from public.reports rep
+     where rep.request_id = v_conv.request_id
+       and rep.reason = 'non_execution'
+  ) into v_has_non_execution_report;
+
+  return jsonb_build_object(
+    'request_id', v_conv.request_id,
+    'request_state', v_state,
+    'i_rated', v_score is not null,
+    'my_score', v_score,
+    'has_non_execution_report', v_has_non_execution_report
+  );
+end;
+$$;
