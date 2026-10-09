@@ -127,6 +127,7 @@ export default function MessagesTab() {
         </View>
       ) : (
         <FlatList
+          removeClippedSubviews={false}
           data={[
             ...incoming.map((conv) => ({ type: 'incoming' as const, conv })),
             ...allThreads.map((item) => ({ type: 'active' as const, ...item })),
