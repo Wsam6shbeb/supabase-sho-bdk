@@ -348,6 +348,22 @@ export default function ChatScreen() {
           </Text>
         )}
 
+        {canProviderRespond && (
+          <View style={styles.actionWrap}>
+            <View style={[styles.waitingNotice, { backgroundColor: `${scheme.warning}15`, borderColor: `${scheme.warning}40` }]}>
+              <Ionicons name="time" size={18} color={scheme.warning} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.waitingTitle, { color: scheme.warning }]}>طلب اتفاق بانتظار موافقتك</Text>
+                <Text style={[styles.waitingBody, { color: scheme.textSecondary }]}>راجع السعر والتفاصيل قبل قبول الاتفاق.</Text>
+              </View>
+            </View>
+            <View style={styles.confirmActions}>
+              <AppButton title="موافقة وبدء الخدمة" variant="primary" size="md" onPress={handleProviderApprove} fullWidth={false} style={{ flex: 1 }} />
+              <AppButton title="رفض الاتفاق" variant="danger" size="md" onPress={handleProviderReject} fullWidth={false} style={{ flex: 1, marginStart: Spacing.two }} />
+            </View>
+          </View>
+        )}
+
         {canCustomerCancel && (
           <View
             style={[
