@@ -154,7 +154,7 @@ export default function SearchingScreen() {
         location: null,
       };
 
-      const providerCandidates = (providersData ?? []).map((p: any) => ({
+      // دفاع إضافي: مقدم الخدمة قد يملك أكثر من خدمة، لكن يجب أن يظهر مرة واحدة فقط.\n      providersData = Array.from(\n        new Map(\n          (providersData ?? [])\n            .filter((provider: any) => typeof provider.user_id === 'string' && provider.user_id.length > 0)\n            .map((provider: any) => [provider.user_id, provider]),\n        ).values(),\n      );\n\n      const providerCandidates = (providersData ?? []).map((p: any) => ({
         provider: p,
         services: Array.isArray(p.services) ? p.services : [],
       }));
