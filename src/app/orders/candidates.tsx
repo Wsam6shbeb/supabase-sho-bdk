@@ -359,6 +359,33 @@ export default function CandidatesScreen() {
           </View>
         </View>
 
+        {item.is_fallback_match && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: Spacing.two,
+              backgroundColor: `${scheme.warning}15`,
+              borderRadius: Radii.md,
+              padding: Spacing.three,
+              marginTop: Spacing.three,
+            }}
+          >
+            <Ionicons name="information-circle-outline" size={16} color={scheme.warning} />
+            <Text
+              style={{
+                flex: 1,
+                fontSize: FontSizes.sm,
+                color: scheme.textSecondary,
+                writingDirection: 'rtl',
+                textAlign: 'right',
+              }}
+            >
+              {item.match_reason ?? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة. اسأل مقدم الخدمة قبل الاتفاق.'}
+            </Text>
+          </View>
+        )}
+
         {/* شارات الحالة */}
         {isAgreed && isAwaiting && (
           <View
