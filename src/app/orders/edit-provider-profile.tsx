@@ -241,7 +241,7 @@ service_area: [
                   />
                   <AppTextInput
                     label="المنطقة (اختياري)"
-                    placeholder="مثال: المشروع السابع"
+                    placeholder={newSkillCity.trim() === 'اللاذقية' ? 'المشروع السابع' : ''}
                     value={newSkillArea}
                     onChangeText={setNewSkillArea}
                     containerStyle={styles.rowField}
@@ -324,7 +324,7 @@ service_area: [
                         />
                         <AppTextInput
                           label="المنطقة (اختياري)"
-                          placeholder="مثال: المشروع السابع"
+                          placeholder={city.trim() === 'اللاذقية' ? 'المشروع السابع' : ''}
                           value={area}
                           onChangeText={(value) =>
                             setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
