@@ -298,6 +298,7 @@ export const ar = {
       withProvider: 'مع',
       actions: {
         openChat: 'فتح المحادثة',
+        openActive: 'فتح الطلب النشط',
         rateNow: 'قيّم الخدمة',
         rateProvider: 'قيّم مقدم الخدمة',
         rateCustomer: 'قيّم الزبون',
