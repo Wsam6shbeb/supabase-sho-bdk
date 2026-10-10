@@ -45,7 +45,7 @@ const containsPhoneNumber = (value: string) => {
 export default function EditProviderProfileScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const { myProviderProfile, updateProviderProfile, addFirstSkill } = useOrder();
+  const { myProviderProfile, updateProviderProfile, addFirstSkill, removeProviderSkill } = useOrder();
 
   const [newSkillName, setNewSkillName] = useState('');
   const { city: newSkillCity, setCity: setNewSkillCity, remember: rememberCity } = usePreferredCity();
@@ -149,10 +149,11 @@ setSkillAreas(
   };
 
 // [شرح الدالة: handleRemoveSkill] يحذف مهارة محددة من قائمة المهارات.
-  const handleRemoveSkill = (skillId: string) => {
-    updateProviderProfile({
-      skills: profile.skills.filter((s) => s.id !== skillId),
-    });
+  const handleRemoveSkill = async (skillId: string) => {
+    const result = await removeProviderSkill(skillId);
+    if (!result.ok) {
+      Alert.alert('تعذر حذف المهارة', result.error ?? 'لم يتم حذف المهارة. حاول مرة أخرى.');
+    }
   };
 
 // [شرح الدالة: handleSave] يحفظ التعديلات الحالية ويرسلها إلى طبقة البيانات.
