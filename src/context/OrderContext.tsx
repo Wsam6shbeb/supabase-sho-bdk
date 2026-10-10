@@ -180,6 +180,7 @@ export interface OrderContextValue {
   rateOrder: (dto: RatingDto) => Promise<{ ok: boolean; error?: string }>;
 
   addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
+  removeProviderSkill: (skillId: string) => Promise<{ ok: boolean; error?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
   toggleAvailability: () => void;
 
@@ -1432,6 +1433,18 @@ additional_info: skill.additional_info?.trim() || '',
     [myProviderProfile, refreshWallet, pushNotification, loadMyProviderProfile, user?.id],
   );
 
+  const removeProviderSkill = useCallback(async (skillId: string): Promise<{ ok: boolean; error?: string }> => {
+    const result = await api.providerServices.remove(skillId);
+    if (!result.success) {
+      return { ok: false, error: result.error.message };
+    }
+
+    setMyProviderProfile((prev) =>
+      prev ? { ...prev, skills: prev.skills.filter((skill) => skill.id !== skillId) } : prev,
+    );
+    return { ok: true };
+  }, []);
+
   const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
     setMyProviderProfile((prev) => {
       if (!prev) return null;
@@ -1553,6 +1566,7 @@ additional_info: skill.additional_info?.trim() || '',
       completeOrder,
       rateOrder,
       addFirstSkill,
+      removeProviderSkill,
       updateProviderProfile,
       toggleAvailability,
       topUp,
@@ -1608,6 +1622,7 @@ additional_info: skill.additional_info?.trim() || '',
       completeOrder,
       rateOrder,
       addFirstSkill,
+      removeProviderSkill,
       updateProviderProfile,
       toggleAvailability,
       topUp,
