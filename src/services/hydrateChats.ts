@@ -75,7 +75,11 @@ function mapVerification(status: string | null): ServiceProvider['verification_s
 /** يرجع null إذا لا توجد محادثات مفتوحة لاستعادتها (أو عند الفشل). */
 export async function loadMyConversations(userId: string): Promise<HydratedChats | null> {
   try {
-    const inbox = await fetchMyConversations();
+    // هذه الاستعادة تبني حالة الطلب المحلية القديمة، وهي مهيأة لطالب الخدمة فقط.
+    // محادثات المستخدم بصفته الطرف الآخر تُفتح من صندوق الوارد عبر conversation_id الحقيقي،
+    // ولا يجوز تحويل الطرف الآخر تلقائياً إلى مقدم خدمة داخل OrderContext.
+    const allInbox = await fetchMyConversations();
+    const inbox = allInbox.filter((conversation) => conversation.my_role === 'requester');
     if (inbox.length === 0) return null;
 
     const requestIds = Array.from(new Set(inbox.map((c) => c.request_id)));
