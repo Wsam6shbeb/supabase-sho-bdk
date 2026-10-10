@@ -178,7 +178,7 @@ export interface OrderContextValue {
   /** يحفظ التقييم في السيرفر (يغلق الطلب ويحدّث سمعة مقدم الخدمة). */
   rateOrder: (dto: RatingDto) => Promise<{ ok: boolean; error?: string }>;
 
-  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }>;
+  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
   toggleAvailability: () => void;
 
@@ -1373,7 +1373,7 @@ additional_info:
   }, [pushNotification, refreshOrderHistory]);
 
   const addFirstSkill = useCallback(
-    async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }> => {
+    async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }> => {
       const currentProfile = myProviderProfile;
       const isFirstSkill = !currentProfile || currentProfile.skills.length === 0;
 
@@ -1395,7 +1395,7 @@ additional_info: skill.additional_info?.trim() || '',
           body: response.error.message,
           route: '/orders/become-provider',
         });
-        return { welcomeBonus: false };
+        return { welcomeBonus: false, error: response.error.message };
       }
 
       // مصدر الحقيقة هو قاعدة البيانات: أعد تحميل الملف بعد نجاح الحفظ بدل إضافة مهارة محلية.
