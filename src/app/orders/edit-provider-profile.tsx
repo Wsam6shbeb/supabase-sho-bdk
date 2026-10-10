@@ -35,6 +35,13 @@ import {
 } from 'react-native';
 
 // [شرح الدالة: EditProviderProfileScreen] يعرض نموذج تعديل مهارات وبيانات ملف مقدم الخدمة.
+const containsPhoneNumber = (value: string) => {
+  const normalized = value
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+  return /[0-9](?:[\s()+\-./]*[0-9]){7,}/.test(normalized);
+};
+
 export default function EditProviderProfileScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
@@ -103,6 +110,11 @@ setSkillAreas(
       return false;
     }
 
+    if (containsPhoneNumber(city) || containsPhoneNumber(area)) {
+      Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في حقل المدينة أو المنطقة.');
+      return false;
+    }
+
     setAddingSkill(true);
     try {
       const result = await addFirstSkill({
@@ -145,6 +157,23 @@ setSkillAreas(
 
 // [شرح الدالة: handleSave] يحفظ التعديلات الحالية ويرسلها إلى طبقة البيانات.
   const handleSave = async () => {
+    const hasPhoneInBio = containsPhoneNumber(profile.bio ?? '');
+    const hasPhoneInSkillLocation = profile.skills.some((skill) =>
+      containsPhoneNumber(skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY) ||
+      containsPhoneNumber(skillAreas[skill.id] ?? skill.area ?? ''),
+    );
+    const hasPhoneInNewLocation =
+      showAddSkill &&
+      (containsPhoneNumber(newSkillCity) || containsPhoneNumber(newSkillArea));
+
+    if (hasPhoneInBio || hasPhoneInSkillLocation || hasPhoneInNewLocation) {
+      Alert.alert(
+        'رقم الهاتف غير مسموح',
+        'احذف رقم الهاتف من نبذة عنك أو من حقل المدينة أو المنطقة قبل الحفظ.',
+      );
+      return;
+    }
+
     updateProviderProfile({
       skills: profile.skills.map((skill) => ({
         ...skill,
