@@ -17,12 +17,13 @@ import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder, type ProviderSkill } from '@/context/OrderContext';
 import { DEFAULT_CITY } from '@/config/location';
+import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
     KeyboardAvoidingView,
@@ -45,6 +46,8 @@ export default function EditProviderProfileScreen() {
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
   const [addingSkill, setAddingSkill] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const keyboardVisible = useKeyboardVisible();
  const [skillCities, setSkillCities] = useState<Record<string, string>>({});
 const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   const [skillNames, setSkillNames] = useState<Record<string, string>>({});
@@ -90,14 +93,14 @@ setSkillAreas(
   }
 
 // [شرح الدالة: handleAddSkill] يضيف مهارة جديدة إلى قائمة مهارات مقدم الخدمة بعد التحقق منها.
-  const handleAddSkill = async () => {
+  const handleAddSkill = async (): Promise<boolean> => {
     const trimmed = newSkillName.trim();
     const city = newSkillCity.trim();
     const area = newSkillArea.trim();
 
     if (!trimmed || !city || addingSkill) {
       if (!city) Alert.alert('المدينة مطلوبة', 'اكتب المدينة التي تقدم فيها الخدمة.');
-      return;
+      return false;
     }
 
     setAddingSkill(true);
@@ -114,18 +117,20 @@ setSkillAreas(
 
       if (result.error) {
         Alert.alert('تعذر حفظ المهارة', result.error);
-        return;
+        return false;
       }
 
       rememberCity(city);
       setNewSkillName('');
       setNewSkillArea('');
       setShowAddSkill(false);
+      return true;
     } catch (error) {
       Alert.alert(
         'تعذر حفظ المهارة',
         error instanceof Error ? error.message : 'حدث خطأ غير متوقع. حاول مرة أخرى.',
       );
+      return false;
     } finally {
       setAddingSkill(false);
     }
@@ -139,7 +144,7 @@ setSkillAreas(
   };
 
 // [شرح الدالة: handleSave] يحفظ التعديلات الحالية ويرسلها إلى طبقة البيانات.
-  const handleSave = () => {
+  const handleSave = async () => {
     updateProviderProfile({
       skills: profile.skills.map((skill) => ({
         ...skill,
@@ -154,6 +159,14 @@ service_area: [
   .join(' '),
       })),
     });
+
+    // إذا كتب المستخدم مهارة جديدة ولم يضغط "إضافة"، نضيفها الآن بدل أن تضيع بصمت.
+    // (نحفظ تعديلات المهارات الحالية أولاً، ثم الإضافة تعيد تحميل القائمة من قاعدة البيانات.)
+    if (showAddSkill && newSkillName.trim()) {
+      const added = await handleAddSkill();
+      if (!added) return;
+    }
+
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -181,8 +194,10 @@ service_area: [
         </View>
 
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           {/* Skills */}
           <AppCard padding="four" elevation="sm" style={styles.card}>
@@ -191,112 +206,47 @@ service_area: [
                 {t('home.editProfile.skillsSection')}
               </Text>
               <Pressable
-                onPress={() => setShowAddSkill(true)}
+                onPress={() => {
+                  setShowAddSkill(true);
+                  scrollRef.current?.scrollTo({ y: 0, animated: true });
+                }}
                 hitSlop={6}
               >
                 <Ionicons name="add-circle" size={26} color={scheme.primary} />
               </Pressable>
             </View>
 
-            {/* Skills List */}
-            {profile.skills.map((skill) => {
-              const isExpanded = expandedSkillId === skill.id;
-              const city = skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY;
-              const area = skillAreas[skill.id] ?? skill.area ?? '';
-
-              return (
-                <Pressable
-                  key={skill.id}
-                  onPress={() =>
-                    setExpandedSkillId(isExpanded ? null : skill.id)
-                  }
-                  style={[
-                    styles.skillRow,
-                    { backgroundColor: scheme.backgroundElement },
-                  ]}
-                >
-                  <View style={{ flex: 1 }}>
-                    {!isExpanded ? (
-                      <>
-                        <Text style={[styles.skillName, { color: scheme.text }]}>
-                          {skillNames[skill.id] ?? skill.name}
-                        </Text>
-                        <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
-                          {'📍 ' + city + (area ? ' — ' + area : '')}
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <AppTextInput
-                          label="المهارة"
-                          placeholder="مثال: مدرس لغة ألمانية"
-                          value={skillNames[skill.id] ?? skill.name}
-                          onChangeText={(value) =>
-                            setSkillNames((prev) => ({ ...prev, [skill.id]: value }))
-                          }
-                          containerStyle={styles.serviceAreaInput}
-                        />
-                        <AppTextInput
-                          label="المدينة"
-                          placeholder="مثال: اللاذقية"
-                          value={city}
-                          onChangeText={(value) =>
-                            setSkillCities((prev) => ({ ...prev, [skill.id]: value }))
-                          }
-                          onBlur={() => rememberCity(city)}
-                          containerStyle={styles.serviceAreaInput}
-                        />
-                        <AppTextInput
-                          label="المنطقة (اختياري)"
-                          placeholder="مثال: المشروع السابع"
-                          value={area}
-                          onChangeText={(value) =>
-                            setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
-                          }
-                          containerStyle={styles.serviceAreaInput}
-                        />
-                        {(skill.years_of_experience ?? 0) > 0 && (
-                          <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
-                            {skill.years_of_experience} سنوات خبرة
-                          </Text>
-                        )}
-                      </>
-                    )}
-                  </View>
-
-                  <Pressable
-                    onPress={() => handleRemoveSkill(skill.id)}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="trash-outline" size={20} color={scheme.danger} />
-                  </Pressable>
-                </Pressable>
-              );
-            })}
-
-            {/* Add Skill Form */}
+            {/* Add Skill Form: فوق قائمة المهارات حتى يظهر زر "إضافة" أول شي ولا تغطيه لوحة المفاتيح */}
             {showAddSkill && (
-              <View style={styles.addSkillForm}>
+              <View
+                style={[
+                  styles.addSkillForm,
+                  { borderColor: scheme.primary, backgroundColor: scheme.backgroundElement },
+                ]}
+              >
                 <AppTextInput
                   placeholder="اسم المهارة الجديدة"
                   value={newSkillName}
                   onChangeText={setNewSkillName}
+                  autoFocus
                 />
-                <AppTextInput
-                  label="المدينة"
-                  placeholder="مثال: اللاذقية"
-                  value={newSkillCity}
-                  onChangeText={setNewSkillCity}
-                  onBlur={() => rememberCity()}
-                  containerStyle={styles.addSkillInput}
-                />
-                <AppTextInput
-                  label="المنطقة (اختياري)"
-                  placeholder="مثال: المشروع السابع"
-                  value={newSkillArea}
-                  onChangeText={setNewSkillArea}
-                  containerStyle={styles.addSkillInput}
-                />
+                <View style={styles.fieldsRow}>
+                  <AppTextInput
+                    label="المدينة"
+                    placeholder="مثال: اللاذقية"
+                    value={newSkillCity}
+                    onChangeText={setNewSkillCity}
+                    onBlur={() => rememberCity()}
+                    containerStyle={styles.rowField}
+                  />
+                  <AppTextInput
+                    label="المنطقة (اختياري)"
+                    placeholder="مثال: المشروع السابع"
+                    value={newSkillArea}
+                    onChangeText={setNewSkillArea}
+                    containerStyle={styles.rowField}
+                  />
+                </View>
                 <View style={styles.addSkillActions}>
                   <AppButton
                     title={addingSkill ? "جارٍ الحفظ..." : "إضافة"}
@@ -322,6 +272,84 @@ service_area: [
                 </View>
               </View>
             )}
+
+            {/* Skills List */}
+            {profile.skills.map((skill) => {
+              const isExpanded = expandedSkillId === skill.id;
+              const city = skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY;
+              const area = skillAreas[skill.id] ?? skill.area ?? '';
+
+              return (
+                <Pressable
+                  key={skill.id}
+                  onPress={() =>
+                    setExpandedSkillId(isExpanded ? null : skill.id)
+                  }
+                  style={[
+                    styles.skillRow,
+                    { backgroundColor: scheme.backgroundElement, borderColor: scheme.border },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    {!isExpanded ? (
+                      <>
+                        <Text style={[styles.skillName, { color: scheme.text }]}>
+                          {skillNames[skill.id] ?? skill.name}
+                        </Text>
+                        <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
+                          {'📍 ' + city + (area ? ' — ' + area : '')}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <AppTextInput
+                          label="المهارة"
+                          placeholder="مثال: مدرس لغة ألمانية"
+                          value={skillNames[skill.id] ?? skill.name}
+                          onChangeText={(value) =>
+                            setSkillNames((prev) => ({ ...prev, [skill.id]: value }))
+                          }
+                          containerStyle={styles.serviceAreaInput}
+                        />
+                        <View style={styles.fieldsRow}>
+                        <AppTextInput
+                          label="المدينة"
+                          placeholder="مثال: اللاذقية"
+                          value={city}
+                          onChangeText={(value) =>
+                            setSkillCities((prev) => ({ ...prev, [skill.id]: value }))
+                          }
+                          onBlur={() => rememberCity(city)}
+                          containerStyle={styles.rowField}
+                        />
+                        <AppTextInput
+                          label="المنطقة (اختياري)"
+                          placeholder="مثال: المشروع السابع"
+                          value={area}
+                          onChangeText={(value) =>
+                            setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))
+                          }
+                          containerStyle={styles.rowField}
+                        />
+                        </View>
+                        {(skill.years_of_experience ?? 0) > 0 && (
+                          <Text style={[styles.skillMeta, { color: scheme.textSecondary }]}>
+                            {skill.years_of_experience} سنوات خبرة
+                          </Text>
+                        )}
+                      </>
+                    )}
+                  </View>
+
+                  <Pressable
+                    onPress={() => handleRemoveSkill(skill.id)}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={scheme.danger} />
+                  </Pressable>
+                </Pressable>
+              );
+            })}
           </AppCard>
 
           {/* Bio */}
@@ -340,7 +368,8 @@ service_area: [
           </AppCard>
         </ScrollView>
 
-        {/* Save */}
+        {/* Save: يُخفى أثناء ظهور لوحة المفاتيح حتى لا يطفو فوقها ويُضغط قبل "إضافة" */}
+        {!keyboardVisible && (
         <View style={styles.footer}>
           {saved ? (
             <View style={[styles.savedBadge, { backgroundColor: `${scheme.success}15` }]}>
@@ -361,6 +390,7 @@ service_area: [
             />
           )}
         </View>
+        )}
       </KeyboardAvoidingView>
     </ScreenSafeArea>
   );
@@ -408,7 +438,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.three,
     borderRadius: Radii.md,
-    marginBottom: Spacing.two,
+    borderWidth: 1,
+    marginBottom: Spacing.three,
     gap: Spacing.three,
   },
   skillName: {
@@ -417,8 +448,16 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   serviceAreaInput: {
-    marginTop: Spacing.two,
-    marginBottom: Spacing.one,
+    marginTop: Spacing.one,
+    marginBottom: 0,
+  },
+  fieldsRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  rowField: {
+    flex: 1,
   },
   skillMeta: {
     fontSize: FontSizes.xs,
@@ -426,10 +465,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addSkillForm: {
-    marginTop: Spacing.two,
-  },
-  addSkillInput: {
-    marginTop: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radii.md,
+    padding: Spacing.three,
+    marginBottom: Spacing.three,
+    gap: Spacing.one,
   },
   addSkillActions: {
     flexDirection: 'row',
