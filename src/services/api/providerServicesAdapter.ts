@@ -348,4 +348,29 @@ async function repairIncomplete(): Promise<boolean> {
   return changed;
 }
 
-export const providerServices = { create, mine, update, repairIncomplete };
+// [شرح الدالة: remove] يحذف مهارة مقدم الخدمة من قاعدة البيانات بعد التحقق من ملكيتها.
+async function remove(id: string): Promise<ApiResponse<{ id: string }>> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return { success: false, error: { code: 'UNAUTHENTICATED', message: 'يجب تسجيل الدخول لحذف الخدمة.' } };
+  }
+
+  const { data, error } = await supabase
+    .from('provider_services')
+    .delete()
+    .eq('id', id)
+    .eq('provider_id', userId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+  }
+  if (!data) {
+    return { success: false, error: { code: 'NOT_DELETED', message: 'لم تُحذف الخدمة من قاعدة البيانات.' } };
+  }
+
+  return { success: true, data: { id: data.id } };
+}
+
+export const providerServices = { create, mine, update, remove, repairIncomplete };
