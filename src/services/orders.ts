@@ -133,6 +133,26 @@ export interface ConversationRatingStatus {
 }
 
 /** حالة الطلب في هذه المحادثة وهل قيّمتُ الطرف الآخر (لبطاقة تقييم مقدم الخدمة). */
+/**
+ * هل المستخدم المسجَّل طرف في هذه المحادثة؟ (سياسة RLS تُرجع الصف للطرفين فقط)
+ * 'denied' = مسجّل بحساب آخر، 'unknown' = خطأ شبكة/خادم (لا نمنع بسببه).
+ */
+export async function checkConversationAccess(
+  conversationId: string,
+): Promise<'ok' | 'denied' | 'unknown'> {
+  try {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .maybeSingle();
+    if (error) return 'unknown';
+    return data ? 'ok' : 'denied';
+  } catch {
+    return 'unknown';
+  }
+}
+
 export async function getConversationRatingStatus(
   conversationId: string,
 ): Promise<ConversationRatingStatus | null> {

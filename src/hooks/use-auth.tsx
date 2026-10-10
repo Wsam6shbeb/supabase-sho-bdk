@@ -285,6 +285,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           redirectTo,
           skipBrowserRedirect: true,
+          // دائماً أظهر قائمة اختيار حساب Google: بدونها قد يُستعمل حساب الجهاز الافتراضي بصمت
+          // فيدخل المستخدم بحساب غير الذي يملك الطلب/المحادثة.
+          queryParams: { prompt: 'select_account' },
         },
       });
 

@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useConversation } from '@/hooks/use-conversation';
 import {
+  checkConversationAccess,
   getConversationRatingStatus,
   orderErrorMessage,
   submitRating,
@@ -47,7 +48,7 @@ export default function ConversationScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isProviderBlocked, unblockProvider, refreshOrderHistory } = useOrder();
 
   const conversationId = typeof params.conversation_id === 'string' ? params.conversation_id : '';
@@ -55,6 +56,19 @@ export default function ConversationScreen() {
   const myId = user?.id ?? null;
 
   const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  // إذا فُتحت المحادثة (مثلاً من إشعار) والمستخدم مسجّل بحساب غير أحد طرفيها، نشرح ذلك بدل عرض محادثة فارغة.
+  const [access, setAccess] = useState<'unknown' | 'ok' | 'denied'>('unknown');
+  useEffect(() => {
+    if (!conversationId || !myId) return;
+    let alive = true;
+    void checkConversationAccess(conversationId).then((result) => {
+      if (alive) setAccess(result === 'denied' ? 'denied' : 'ok');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [conversationId, myId]);
   const [sharePhone, setSharePhone] = useState(false);
 
   const { messages, send, retry, partnerTyping, notifyTyping, loadFailed, writeStatus, refreshWriteStatus } = useConversation({
@@ -182,6 +196,32 @@ export default function ConversationScreen() {
     return true;
   };
 
+  if (access === 'denied') {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
+        <View style={styles.deniedContainer}>
+          <Text style={[styles.deniedTitle, { color: scheme.text }]}>هذه المحادثة تخص حساباً آخر</Text>
+          <Text style={[styles.deniedText, { color: scheme.textSecondary }]}>
+            أنت مسجّل الدخول بحساب مختلف عن الحساب المرتبط بهذه المحادثة. سجّل الخروج ثم ادخل بحساب
+            Google الصحيح.
+          </Text>
+          <AppButton
+            title="تسجيل الخروج"
+            variant="primary"
+            size="md"
+            onPress={() => {
+              void (async () => {
+                await logout();
+                router.replace('/auth/login');
+              })();
+            }}
+          />
+          <AppButton title="رجوع" variant="secondary" size="md" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
       <KeyboardAvoidingView
@@ -286,6 +326,22 @@ export default function ConversationScreen() {
 }
 
 const styles = StyleSheet.create({
+  deniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  deniedTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+  },
+  deniedText: {
+    fontSize: FontSizes.base,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
   safe: { flex: 1 },
   flex: { flex: 1 },
   header: {
