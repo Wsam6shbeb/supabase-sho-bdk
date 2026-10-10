@@ -48,6 +48,8 @@ export default function SearchingScreen() {
 
     const searchTimeout = setTimeout(async () => {
       let providersData: any[] = [];
+      // يميّز "فشل البحث تقنياً" عن "لا يوجد مقدم مناسب" حتى لا نخدع المستخدم برسالة خاطئة.
+      let searchFailed = false;
 
       // ننتظر التحليل المنظم للطلب لفترة قصيرة لأن تحليل AI يعمل في الخلفية.
       // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
@@ -93,6 +95,7 @@ export default function SearchingScreen() {
 
         if (candidateError) {
           console.error('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
+          searchFailed = true;
         } else {
           providersData = (candidateRows ?? []).map((row: any) => ({
             user_id: row.provider_id,
@@ -171,33 +174,52 @@ export default function SearchingScreen() {
       let aiMatches: Array<{ provider_id: string; score: number; reason: string }> = [];
 
       if (providerCandidates.length > 0) {
-        const { data: matchData, error: matchError } = await supabase.functions.invoke(
-          'match-service-providers',
-          {
-            body: {
-              request: requestForMatching,
-              providers: providerCandidates.map(({ provider, services }) => ({
-                provider_id: provider.user_id,
-                service: services.length
-                  ? services
-                  : {
-                      service: '',
-                      skills: [],
-                      synonyms: [],
-                      region: null,
-                      location: null,
-                    },
-              })),
-            },
-          },
+        // الـ Edge Function تقبل 20 مقدم خدمة كحد أقصى لكل طلب؛ نقسّم القائمة (حتى 50) إلى دفعات
+        // بدل أن يُهمَل بصمت كل من بعد العشرين.
+        const MATCH_BATCH_SIZE = 20;
+        const batches: Array<typeof providerCandidates> = [];
+        for (let i = 0; i < providerCandidates.length; i += MATCH_BATCH_SIZE) {
+          batches.push(providerCandidates.slice(i, i + MATCH_BATCH_SIZE));
+        }
+
+        const batchResults = await Promise.all(
+          batches.map(async (batch) => {
+            const { data: matchData, error: matchError } = await supabase.functions.invoke(
+              'match-service-providers',
+              {
+                body: {
+                  request: requestForMatching,
+                  providers: batch.map(({ provider, services }) => ({
+                    provider_id: provider.user_id,
+                    service: services.length
+                      ? services
+                      : {
+                          service: '',
+                          skills: [],
+                          synonyms: [],
+                          region: null,
+                          location: null,
+                        },
+                  })),
+                },
+              },
+            );
+
+            if (matchError) {
+              console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
+              return null;
+            }
+            return Array.isArray(matchData?.matches)
+              ? (matchData.matches as Array<{ provider_id: string; score: number; reason: string }>)
+              : null;
+          }),
         );
 
-        if (matchError) {
-          console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
-        } else if (Array.isArray(matchData?.matches)) {
-          aiMatches = matchData.matches;
-          console.log('[Supabase][searching] نتائج المطابقة بالذكاء الاصطناعي:', aiMatches);
+        for (const matches of batchResults) {
+          if (matches) aiMatches = aiMatches.concat(matches);
+          else searchFailed = true;
         }
+        console.log('[Supabase][searching] نتائج المطابقة بالذكاء الاصطناعي:', aiMatches);
       }
 
       const scoreByProvider = new Map(
@@ -275,7 +297,13 @@ export default function SearchingScreen() {
       setTimeout(() => {
         router.replace({
           pathname: '/orders/candidates',
-          params: { description, is_urgent: isUrgent.toString(), request_id: requestId },
+          params: {
+            description,
+            is_urgent: isUrgent.toString(),
+            request_id: requestId,
+            // نمرر فشل البحث التقني فقط عندما لا توجد أي نتيجة لنعرض رسالة صادقة.
+            ...(searchFailed && results.length === 0 ? { search_failed: '1' } : {}),
+          },
         });
       }, 2000);
     }, 1500);

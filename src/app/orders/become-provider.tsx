@@ -65,6 +65,9 @@ export default function BecomeProviderScreen() {
     const result = await addFirstSkill({
       id: `skill_${Date.now()}`,
       name: trimmed,
+      description: trimmed,
+      city: trimmedCity,
+      area: trimmedArea,
       service_area: [trimmedCity, trimmedArea].filter(Boolean).join(' '),
       additional_info: additionalInfo.trim(),
     });

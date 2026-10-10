@@ -1,0 +1,140 @@
+-- Provider candidate matching fixes:
+-- 1) A provider whose service has no AI category (older rows / failed analysis) is no longer excluded:
+--    category is now only a ranking bonus (+60), not an eligibility filter.
+-- 2) Generic words (teacher, lessons, private...) are filtered BEFORE stemming too, so truncated stems such as
+--    "تدري"/"تعلي"/"خصوص" can no longer qualify an unrelated provider (e.g. a German teacher for a Chinese request).
+--    A candidate must share at least one specific term with the request.
+-- 3) The services JSON sent to the AI matcher always includes the service text (description) even when
+--    structured_data exists but lacks "service".
+-- 4) Backfill: rows saved without the service text get service/skills from their description.
+create or replace function public.get_provider_candidates(p_request_id uuid, p_limit integer default 50)
+returns table(
+  provider_id uuid,
+  rating_avg numeric,
+  completed_services_count integer,
+  full_name text,
+  avatar_url text,
+  region text,
+  verification_status text,
+  services jsonb,
+  preliminary_score integer
+)
+language sql
+security definer
+set search_path = public
+as $$
+with request_row as (
+  select sr.id, sr.requester_id, coalesce(sr.structured_data,'{}'::jsonb) data,
+    array_remove(array[
+      public.norm_region(u.region), public.norm_region(sr.region),
+      public.norm_region(sr.structured_data->>'region'),
+      public.norm_region(sr.structured_data->>'city'),
+      public.norm_region(sr.structured_data->'service_area'->>'city')
+    ],'') cities,
+    array_remove(array[
+      public.norm_region(sr.structured_data->>'area'),
+      public.norm_region(sr.structured_data->>'location'),
+      public.norm_region(sr.service_area),
+      public.norm_region(sr.structured_data->>'service_area')
+    ] || coalesce((select array_agg(public.norm_region(x)) from unnest(public.jsonb_place_texts(sr.structured_data->'service_area')) x),'{}'::text[]),'') places
+  from public.service_requests sr
+  join public.users u on u.id=sr.requester_id
+  where sr.id=p_request_id and sr.requester_id=auth.uid()
+  limit 1
+),
+request_terms as (
+  select distinct t.term from request_row r
+  cross join lateral (
+    select regexp_split_to_table(
+      public.norm_ar(concat_ws(' ',r.data->>'service',r.data->>'category',
+        public.jsonb_text_list(r.data->'skills'),public.jsonb_text_list(r.data->'synonyms'))),
+      ' +'
+    ) raw
+  ) w
+  cross join lateral (select regexp_replace(w.raw,'^ال','') base) b
+  cross join lateral (values (b.base),(case when length(b.base)>=5 then left(b.base,greatest(4,length(b.base)-1)) end)) t(term)
+  where t.term is not null and length(t.term)>=3
+    and b.base not in ('خدمه','خدمات','عام','عامه','اعمال','مهام','مهارات','مدرس','معلم','معلمه','استاذ','استاذه','مدرسه','تعليم','تدريس','تعلم','لغه','لغات','مطلوب','بدي','اريد','احتاج','خدماتي','خدمتي','دروس','درس','خصوصي','خصوصيه','خاص','خاصه','دورات','دوره','كورس','كورسات','تدريب','تعليمي','تعليميه','تدريسي','فني','عمل','شغل')
+    and t.term not in ('خدمه','خدمات','عام','عامه','اعمال','مهام','مهارات','مدرس','معلم','معلمه','استاذ','استاذه','مدرسه','تعليم','تدريس','تعلم','لغه','لغات','مطلوب','بدي','اريد','احتاج','خدماتي','خدمتي','دروس','درس','خصوصي','خصوصيه','خاص','خاصه','دورات','دوره','كورس','كورسات','تدريب','تعليمي','تعليميه','تدريسي','فني','عمل','شغل')
+),
+provider_docs as (
+  select ps.provider_id,
+    public.norm_ar(concat_ws(' ',ps.description,ps.structured_data->>'service',
+      ps.structured_data->>'category',public.jsonb_text_list(ps.structured_data->'skills'),
+      public.jsonb_text_list(ps.structured_data->'synonyms'))) doc,
+    public.norm_ar(ps.structured_data->>'category') category,
+    array_remove(array[
+      public.norm_region(u.region), public.norm_region(ps.structured_data->>'city'),
+      public.norm_region(ps.structured_data->>'region'),
+      public.norm_region(ps.structured_data->'service_area'->>'city')
+    ],'') cities,
+    array_remove(array[
+      public.norm_region(ps.structured_data->>'area'),
+      public.norm_region(ps.structured_data->>'location'),
+      public.norm_region(ps.structured_data->>'service_area')
+    ] || coalesce((select array_agg(public.norm_region(x)) from unnest(public.jsonb_place_texts(ps.structured_data->'service_area')) x),'{}'::text[]),'') places
+  from public.provider_services ps
+  join public.users u on u.id=ps.provider_id
+  where ps.is_active=true
+),
+provider_scored as (
+  select pd.provider_id,
+    count(distinct rt.term)::integer word_matches,
+    case when (select public.norm_ar(data->>'category') from request_row)<>'' 
+      and bool_or(pd.category=(select public.norm_ar(data->>'category') from request_row))
+      then 1 else 0 end category_match,
+    max(case
+      when exists(select 1 from unnest(pd.places) pp_place, unnest((select places from request_row)) rp_place where public.region_matches(pp_place,rp_place)) then 2
+      when exists(select 1 from unnest(pd.cities) pc, unnest((select cities from request_row)) rc where public.region_matches(pc,rc)) then 1
+      else 0
+    end)::integer location_tier
+  from provider_docs pd
+  join public.provider_profiles pp on pp.user_id=pd.provider_id
+  left join request_terms rt on pd.doc like '%'||rt.term||'%'
+  where pp.is_available=true and pd.provider_id<>(select requester_id from request_row)
+  group by pd.provider_id
+),
+eligible as (
+  select s.provider_id,s.word_matches,
+    (s.category_match*60+s.word_matches*10+
+      case when s.location_tier=2 then 40 when s.location_tier=1 then 20 else 0 end) preliminary_score
+  from provider_scored s
+  where s.word_matches > 0
+    and (cardinality((select cities from request_row))=0 or s.location_tier>0)
+),
+final_chosen as (
+  select e.provider_id,e.preliminary_score,e.word_matches
+  from eligible e
+  order by e.preliminary_score desc,e.word_matches desc,e.provider_id
+  limit greatest(1,least(coalesce(p_limit,50),100))
+),
+chosen as (
+  select * from final_chosen
+)
+select c.provider_id,pp.rating_avg,pp.completed_services_count,u.full_name,u.avatar_url,u.region,
+  u.verification_status::text,
+  coalesce((
+    select jsonb_agg(
+      jsonb_build_object('service',ps2.description,'skills','[]'::jsonb,'synonyms','[]'::jsonb)
+        || coalesce(ps2.structured_data,'{}'::jsonb)
+        || jsonb_build_object('service',coalesce(nullif(ps2.structured_data->>'service',''),ps2.description))
+      order by ps2.created_at desc
+    )
+    from public.provider_services ps2
+    where ps2.provider_id=c.provider_id and ps2.is_active=true
+  ),'[]'::jsonb) services,
+  c.preliminary_score
+from chosen c
+join public.provider_profiles pp on pp.user_id=c.provider_id
+join public.users u on u.id=c.provider_id
+order by c.preliminary_score desc,c.word_matches desc,c.provider_id;
+$$;
+
+-- Backfill rows that were saved without analysis output (no service text), so the matcher can read them.
+update public.provider_services ps
+set structured_data = jsonb_build_object(
+      'service', ps.description,
+      'skills', jsonb_build_array(ps.description),
+      'synonyms', '[]'::jsonb
+    ) || coalesce(ps.structured_data, '{}'::jsonb)
+where coalesce(ps.structured_data->>'service', '') = '';

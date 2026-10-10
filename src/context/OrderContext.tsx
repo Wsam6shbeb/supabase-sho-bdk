@@ -529,7 +529,12 @@ additional_info:
       setMyProviderProfile(null);
       return;
     }
-    void loadMyProviderProfile(user.id);
+    void (async () => {
+      await loadMyProviderProfile(user.id);
+      // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
+      const repaired = await api.providerServices.repairIncomplete();
+      if (repaired) await loadMyProviderProfile(user.id);
+    })();
   }, [user?.id, loadMyProviderProfile]);
 
   const [verificationStatus, setVerificationStatus] =
