@@ -21,6 +21,7 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import {
     KeyboardAvoidingView,
     Pressable,
@@ -34,13 +35,14 @@ import {
 export default function EditProviderProfileScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const { myProviderProfile, updateProviderProfile } = useOrder();
+  const { myProviderProfile, updateProviderProfile, addFirstSkill } = useOrder();
 
   const [newSkillName, setNewSkillName] = useState('');
   const [newSkillCity, setNewSkillCity] = useState('');
   const [newSkillArea, setNewSkillArea] = useState('');
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [addingSkill, setAddingSkill] = useState(false);
  const [skillCities, setSkillCities] = useState<Record<string, string>>({});
 const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   const [skillNames, setSkillNames] = useState<Record<string, string>>({});
@@ -86,28 +88,45 @@ setSkillAreas(
   }
 
 // [شرح الدالة: handleAddSkill] يضيف مهارة جديدة إلى قائمة مهارات مقدم الخدمة بعد التحقق منها.
-  const handleAddSkill = () => {
+  const handleAddSkill = async () => {
     const trimmed = newSkillName.trim();
-    if (!trimmed) return;
-
     const city = newSkillCity.trim();
     const area = newSkillArea.trim();
-    if (!city) return;
 
-    const newSkill: ProviderSkill = {
-      id: `skill_${Date.now()}`,
-      name: trimmed,
-      service_area: [city, area].filter(Boolean).join(' '),
-    };
+    if (!trimmed || !city || addingSkill) {
+      if (!city) Alert.alert('المدينة مطلوبة', 'اكتب المدينة التي تقدم فيها الخدمة.');
+      return;
+    }
 
-    updateProviderProfile({
-      skills: [...profile.skills, newSkill],
-    });
+    setAddingSkill(true);
+    try {
+      const result = await addFirstSkill({
+        id: `skill_${Date.now()}`,
+        name: trimmed,
+        description: trimmed,
+        city,
+        area,
+        service_area: [city, area].filter(Boolean).join(' '),
+        additional_info: '',
+      });
 
-    setNewSkillName('');
-    setNewSkillCity('');
-    setNewSkillArea('');
-    setShowAddSkill(false);
+      if (result.error) {
+        Alert.alert('تعذر حفظ المهارة', result.error);
+        return;
+      }
+
+      setNewSkillName('');
+      setNewSkillCity('');
+      setNewSkillArea('');
+      setShowAddSkill(false);
+    } catch (error) {
+      Alert.alert(
+        'تعذر حفظ المهارة',
+        error instanceof Error ? error.message : 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+      );
+    } finally {
+      setAddingSkill(false);
+    }
   };
 
 // [شرح الدالة: handleRemoveSkill] يحذف مهارة محددة من قائمة المهارات.
@@ -276,10 +295,11 @@ service_area: [
                 />
                 <View style={styles.addSkillActions}>
                   <AppButton
-                    title="إضافة"
+                    title={addingSkill ? "جارٍ الحفظ..." : "إضافة"}
                     variant="primary"
                     size="sm"
                     onPress={handleAddSkill}
+                    disabled={addingSkill}
                     fullWidth={false}
                     style={{ flex: 1 }}
                   />
