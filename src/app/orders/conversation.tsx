@@ -229,10 +229,6 @@ export default function ConversationScreen() {
                   loading={ratingBusy}
                 />
               </View>
-            ) : ratingStatus?.i_rated && orderFinished && iAmProvider ? (
-              <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
-                قيّمت الزبون بـ {ratingStatus.my_score} من 5 نجوم.
-              </Text>
             ) : pendingForMe ? (
               <AgreementBubble
                 customerName={otherName}
