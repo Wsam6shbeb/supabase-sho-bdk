@@ -16,7 +16,6 @@ import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { fetchMyConversations, subscribeToInbox, type InboxConversation } from '@/services/chat';
-import { getConversationRatingStatus } from '@/services/orders';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
@@ -38,26 +37,9 @@ export default function MessagesTab() {
   // المحادثات الواردة: التي أنا فيها مقدم الخدمة (من Supabase مع تحديث لحظي)
   const [incoming, setIncoming] = useState<InboxConversation[]>([]);
   const loadInbox = useCallback(() => {
-    void fetchMyConversations().then(async (rows) => {
-      const providerRows = rows.filter((r) => r.my_role === 'provider');
-      const updatedRows = await Promise.all(
-        providerRows.map(async (row) => {
-          const preview = row.last_message_body ?? '';
-          const isRatingPrompt =
-            preview.includes('تقيمو بعض') ||
-            preview.includes('تقيموا بعض') ||
-            preview.includes('تقيّموا بعض') ||
-            preview.includes('تقيّموا بعض');
-          if (!isRatingPrompt) return row;
-
-          const ratingStatus = await getConversationRatingStatus(row.conversation_id);
-          return ratingStatus?.i_rated
-            ? { ...row, last_message_body: '' }
-            : row;
-        }),
-      );
-      setIncoming(updatedRows);
-    });
+    void fetchMyConversations().then((rows) =>
+      setIncoming(rows.filter((r) => r.my_role === 'provider')),
+    );
   }, []);
   useEffect(() => {
     loadInbox();
