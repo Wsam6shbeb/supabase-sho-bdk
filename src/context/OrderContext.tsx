@@ -9,6 +9,7 @@
 // Context لإدارة الطلبات، المحادثات، الرصيد، والإشعارات
 // ═══════════════════════════════════════════════════════════
 
+import { DEFAULT_CITY } from '@/config/location';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
@@ -489,7 +490,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   !Array.isArray(service.structured_data) &&
   typeof service.structured_data.city === 'string'
     ? service.structured_data.city
-    : 'اللاذقية',
+    : DEFAULT_CITY,
 area:
   typeof service.structured_data === 'object' &&
   service.structured_data !== null &&
@@ -1387,7 +1388,7 @@ additional_info:
         experience_years: skill.years_of_experience ?? 0,
         price_min: skill.price_min ?? 0,
         price_max: skill.price_max ?? 0,
-city: skill.city?.trim() || 'اللاذقية',
+city: skill.city?.trim() || DEFAULT_CITY,
 area: skill.area?.trim() || '',
 service_area: skill.service_area?.trim() || '',
 additional_info: skill.additional_info?.trim() || '',
@@ -1440,7 +1441,7 @@ additional_info: skill.additional_info?.trim() || '',
           if (!skill.id || skill.id.startsWith('skill_')) continue;
           if (skill.service_area === undefined && skill.additional_info === undefined) continue;
           void api.providerServices.update(skill.id, {
-  city: skill.city?.trim() || 'اللاذقية',
+  city: skill.city?.trim() || DEFAULT_CITY,
   area: skill.area?.trim() || '',
   service_area: skill.service_area?.trim() || '',
   additional_info: skill.additional_info,

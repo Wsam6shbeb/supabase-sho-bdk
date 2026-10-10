@@ -15,6 +15,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
+import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -37,7 +38,7 @@ export default function BecomeProviderScreen() {
   const { addFirstSkill } = useOrder();
 
   const [skillName, setSkillName] = useState('');
-  const [city, setCity] = useState('');
+  const { city, setCity, remember: rememberCity } = usePreferredCity();
   const [serviceArea, setServiceArea] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -62,6 +63,7 @@ export default function BecomeProviderScreen() {
 
     if (submitting) return;
     setSubmitting(true);
+    rememberCity(trimmedCity);
     const result = await addFirstSkill({
       id: `skill_${Date.now()}`,
       name: trimmed,
@@ -150,6 +152,7 @@ export default function BecomeProviderScreen() {
                 setCity(v);
                 setError(null);
               }}
+              onBlur={() => rememberCity()}
               error={error}
               required
               containerStyle={styles.serviceInput}

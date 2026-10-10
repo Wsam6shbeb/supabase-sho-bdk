@@ -27,6 +27,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useState } from 'react';
 import type { ServiceRequestAnalysis } from '@/context/OrderContext';
 import {
@@ -46,7 +47,7 @@ export default function CreateOrderScreen() {
   const { startOrder, analyzeOrderRequest, hasAcceptedDisclaimer } = useOrder();
 
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState(user?.region?.id ?? '');
+  const { city, setCity, remember: rememberCity } = usePreferredCity(user?.region?.id);
   const [serviceArea, setServiceArea] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
@@ -117,6 +118,7 @@ export default function CreateOrderScreen() {
       setError('يرجى كتابة المدينة.');
       return;
     }
+    rememberCity(trimmedCity);
     if (!hasAcceptedDisclaimer) {
       router.push({
         pathname: '/orders/disclaimer',
@@ -227,6 +229,7 @@ export default function CreateOrderScreen() {
                 setCity(val);
                 setError(null);
               }}
+              onBlur={() => rememberCity()}
               containerStyle={styles.areaInput}
             />
 

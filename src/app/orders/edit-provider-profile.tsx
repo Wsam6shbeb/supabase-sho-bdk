@@ -16,6 +16,8 @@ import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder, type ProviderSkill } from '@/context/OrderContext';
+import { DEFAULT_CITY } from '@/config/location';
+import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -38,7 +40,7 @@ export default function EditProviderProfileScreen() {
   const { myProviderProfile, updateProviderProfile, addFirstSkill } = useOrder();
 
   const [newSkillName, setNewSkillName] = useState('');
-  const [newSkillCity, setNewSkillCity] = useState('');
+  const { city: newSkillCity, setCity: setNewSkillCity, remember: rememberCity } = usePreferredCity();
   const [newSkillArea, setNewSkillArea] = useState('');
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -54,7 +56,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     if (!profile) return;
    setSkillCities(
   Object.fromEntries(
-    profile.skills.map((skill) => [skill.id, skill.city ?? 'اللاذقية']),
+    profile.skills.map((skill) => [skill.id, skill.city ?? DEFAULT_CITY]),
   ),
 );
 setSkillAreas(
@@ -115,8 +117,8 @@ setSkillAreas(
         return;
       }
 
+      rememberCity(city);
       setNewSkillName('');
-      setNewSkillCity('');
       setNewSkillArea('');
       setShowAddSkill(false);
     } catch (error) {
@@ -142,10 +144,10 @@ setSkillAreas(
       skills: profile.skills.map((skill) => ({
         ...skill,
         name: skillNames[skill.id] ?? skill.name,
-      city: skillCities[skill.id] ?? skill.city ?? 'اللاذقية',
+      city: skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY,
 area: skillAreas[skill.id] ?? skill.area ?? '',
 service_area: [
-  skillCities[skill.id] ?? skill.city ?? 'اللاذقية',
+  skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY,
   skillAreas[skill.id] ?? skill.area ?? '',
 ]
   .filter(Boolean)
@@ -199,7 +201,7 @@ service_area: [
             {/* Skills List */}
             {profile.skills.map((skill) => {
               const isExpanded = expandedSkillId === skill.id;
-              const city = skillCities[skill.id] ?? skill.city ?? 'اللاذقية';
+              const city = skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY;
               const area = skillAreas[skill.id] ?? skill.area ?? '';
 
               return (
@@ -241,6 +243,7 @@ service_area: [
                           onChangeText={(value) =>
                             setSkillCities((prev) => ({ ...prev, [skill.id]: value }))
                           }
+                          onBlur={() => rememberCity(city)}
                           containerStyle={styles.serviceAreaInput}
                         />
                         <AppTextInput
@@ -284,6 +287,7 @@ service_area: [
                   placeholder="مثال: اللاذقية"
                   value={newSkillCity}
                   onChangeText={setNewSkillCity}
+                  onBlur={() => rememberCity()}
                   containerStyle={styles.addSkillInput}
                 />
                 <AppTextInput
@@ -310,7 +314,6 @@ service_area: [
                     onPress={() => {
                       setShowAddSkill(false);
                       setNewSkillName('');
-                      setNewSkillCity('');
                       setNewSkillArea('');
                     }}
                     fullWidth={false}
