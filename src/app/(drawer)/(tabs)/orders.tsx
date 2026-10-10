@@ -18,8 +18,8 @@ import { t } from '@/i18n/ar';
 import { OrderStatus } from '@/types/common';
 import type { Order } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
     Pressable,
@@ -35,7 +35,14 @@ type TabKey = 'active' | 'awaitingRating' | 'previous';
 export default function OrdersTab() {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const { currentOrder, orderHistory } = useOrder();
+  const { currentOrder, orderHistory, refreshOrderHistory } = useOrder();
+
+  // كل مرة يفتح المستخدم هذا التبويب نحدّث السجل من السيرفر، حتى يظهر كل طلب بمكانه الصحيح.
+  useFocusEffect(
+    useCallback(() => {
+      void refreshOrderHistory();
+    }, [refreshOrderHistory]),
+  );
   const [activeTab, setActiveTab] = useState<TabKey>('active');
 
   // النشطة

@@ -178,6 +178,8 @@ export interface OrderContextValue {
   completeOrder: () => Promise<{ ok: boolean; error?: string }>;
   /** يحفظ التقييم في السيرفر (يغلق الطلب ويحدّث سمعة مقدم الخدمة). */
   rateOrder: (dto: RatingDto) => Promise<{ ok: boolean; error?: string }>;
+  /** يعيد تحميل سجل الطلبات من السيرفر (يُستعمل بعد التقييم وعند فتح تبويب الطلبات). */
+  refreshOrderHistory: () => Promise<void>;
 
   addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
   removeProviderSkill: (skillId: string) => Promise<{ ok: boolean; error?: string }>;
@@ -1235,6 +1237,22 @@ additional_info:
   // ═══════════════════════════════════════════════════════════
   // Complete + Rate
   // ═══════════════════════════════════════════════════════════
+  // سجل الطلبات من السيرفر: عند الدخول، وبعد اعتماد المتأخر منها (مهلة التقييم)
+  const refreshOrderHistory = useCallback(async () => {
+    if (!user?.id) return;
+    await finalizeOverdueRequests();
+    const history = await fetchOrderHistory();
+    if (!history) return;
+    setOrderHistory((prev) => {
+      // نحتفظ بأعلام التذكير المحلية فقط
+      const reminders = new Map(prev.map((o) => [o.id, o.rating_reminder_sent]));
+      const merged = history.map((o) => ({ ...o, rating_reminder_sent: reminders.get(o.id) ?? false }));
+      // طلب أنهيته للتو ولم يظهر بعد في الرد يبقى ظاهراً
+      const extras = prev.filter((o) => !merged.some((m) => m.id === o.id));
+      return [...merged, ...extras];
+    });
+  }, [user?.id]);
+
   const completeOrder = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     if (!currentOrder) return { ok: false, error: orderErrorMessage('REQUEST_NOT_FOUND') };
 
@@ -1303,26 +1321,12 @@ additional_info:
             : o,
         ),
       );
+      // السيرفر هو من يحدد الحالة النهائية (completed عند تقييم الزبون): نزامن السجل حتى ينتقل الطلب لمكانه الصحيح.
+      void refreshOrderHistory();
       return { ok: true };
     },
-    [],
+    [refreshOrderHistory],
   );
-
-  // سجل الطلبات من السيرفر: عند الدخول، وبعد اعتماد المتأخر منها (مهلة التقييم)
-  const refreshOrderHistory = useCallback(async () => {
-    if (!user?.id) return;
-    await finalizeOverdueRequests();
-    const history = await fetchOrderHistory();
-    if (!history) return;
-    setOrderHistory((prev) => {
-      // نحتفظ بأعلام التذكير المحلية فقط
-      const reminders = new Map(prev.map((o) => [o.id, o.rating_reminder_sent]));
-      const merged = history.map((o) => ({ ...o, rating_reminder_sent: reminders.get(o.id) ?? false }));
-      // طلب أنهيته للتو ولم يظهر بعد في الرد يبقى ظاهراً
-      const extras = prev.filter((o) => !merged.some((m) => m.id === o.id));
-      return [...merged, ...extras];
-    });
-  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -1330,6 +1334,25 @@ additional_info:
       return;
     }
     void refreshOrderHistory();
+  }, [user?.id, refreshOrderHistory]);
+
+  // رسائل النظام (إنهاء الخدمة / تقييم الطرفين / اعتماد الطلب) تعني أن حالة طلب تغيّرت عند الطرف الآخر:
+  // نحدّث السجل ليظهر الطلب بمكانه الصحيح (بانتظار التقييم / السابقة) بدون إعادة تشغيل التطبيق.
+  useEffect(() => {
+    if (!user?.id) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`order-state:${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        if ((payload.new as { message_type?: string } | undefined)?.message_type !== 'system') return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => void refreshOrderHistory(), 500);
+      })
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
   }, [user?.id, refreshOrderHistory]);
 
   // تذكير قبل 24 ساعة من انتهاء مهلة التقييم؛ وعند الانتهاء نترك السيرفر يعتمد الطلب
@@ -1564,6 +1587,7 @@ additional_info: skill.additional_info?.trim() || '',
       customerCancelsAgreement,
       providerRespondsToAgreement,
       completeOrder,
+      refreshOrderHistory,
       rateOrder,
       addFirstSkill,
       removeProviderSkill,
@@ -1620,6 +1644,7 @@ additional_info: skill.additional_info?.trim() || '',
       customerCancelsAgreement,
       providerRespondsToAgreement,
       completeOrder,
+      refreshOrderHistory,
       rateOrder,
       addFirstSkill,
       removeProviderSkill,

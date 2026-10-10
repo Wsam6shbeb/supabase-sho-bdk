@@ -125,6 +125,10 @@ export interface ConversationRatingStatus {
   request_state: string;
   i_rated: boolean;
   my_score: number | null;
+  /** هل قيّم الطرف الآخر؟ */
+  other_rated: boolean;
+  /** هل قيّم الطرفان؟ (عندها تنتهي دعوات التقييم وتظهر رسالة اكتمال الخدمة) */
+  both_rated: boolean;
   has_non_execution_report: boolean;
 }
 
