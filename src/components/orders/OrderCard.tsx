@@ -97,7 +97,9 @@ export function OrderCard({
 
   const badge = getStatusBadge();
   const canRate =
-    order.status === OrderStatus.COMPLETION_PENDING_RATING &&
+    (order.status === OrderStatus.COMPLETION_PENDING_RATING ||
+      order.status === OrderStatus.COMPLETED ||
+      order.status === OrderStatus.NOT_EXECUTED_REVIEW) &&
     !order.customer_rating &&
     !!order.provider_id;
   const canChat = order.status === OrderStatus.ACTIVE && !!order.provider_id;
@@ -143,7 +145,7 @@ export function OrderCard({
           <View style={styles.providerRow}>
             <Ionicons name="person" size={14} color={scheme.textSecondary} />
             <Text style={[styles.providerText, { color: scheme.textSecondary }]}>
-              {t('orders.myOrders.withProvider')} {order.provider_name}
+              {order.my_role === 'provider' ? 'مع الزبون' : t('orders.myOrders.withProvider')} {order.other_user_name ?? order.provider_name}
             </Text>
           </View>
         )}

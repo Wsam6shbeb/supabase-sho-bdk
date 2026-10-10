@@ -9,6 +9,7 @@
 // Context لإدارة الطلبات، المحادثات، الرصيد، والإشعارات
 // ═══════════════════════════════════════════════════════════
 
+import { DEFAULT_CITY } from '@/config/location';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
@@ -18,9 +19,10 @@ import {
   cancelAgreement,
   getConversationAgreement,
   requestAgreement,
+  respondToAgreement,
   subscribeToAgreementChanges,
 } from '@/services/agreements';
-import { loadRequesterConversations, type HydratedChats } from '@/services/hydrateChats';
+import { loadMyConversations, type HydratedChats } from '@/services/hydrateChats';
 import { claimWelcomeBonus, requestTestTopUp, walletErrorMessage } from '@/services/wallet';
 import {
   completeRequest,
@@ -138,12 +140,18 @@ export interface OrderContextValue {
   hasAcceptedDisclaimer: boolean;
   acceptDisclaimer: () => void;
 
+  analyzeOrderRequest: (params: {
+    description: string;
+    service_area: string;
+    additional_info?: string;
+  }) => Promise<ServiceRequestAnalysis | null>;
   startOrder: (params: {
     description: string;
     service_area: string;
     additional_info?: string;
     is_urgent: boolean;
     region_id: string;
+    analysis?: ServiceRequestAnalysis;
   }) => Promise<Order>;
   setCandidates: (providers: ServiceProvider[]) => void;
   resetOrder: () => void;
@@ -164,13 +172,17 @@ export interface OrderContextValue {
     chatHistory: ChatMessage[],
   ) => Promise<{ ok: boolean; error?: string }>;
   customerCancelsAgreement: () => Promise<void>;
+  providerRespondsToAgreement: (approve: boolean) => Promise<{ ok: boolean; error?: string }>;
 
   /** ينهي الخدمة في السيرفر. يرجع ok=false مع رسالة مفهومة عند الفشل. */
   completeOrder: () => Promise<{ ok: boolean; error?: string }>;
   /** يحفظ التقييم في السيرفر (يغلق الطلب ويحدّث سمعة مقدم الخدمة). */
   rateOrder: (dto: RatingDto) => Promise<{ ok: boolean; error?: string }>;
+  /** يعيد تحميل سجل الطلبات من السيرفر (يُستعمل بعد التقييم وعند فتح تبويب الطلبات). */
+  refreshOrderHistory: () => Promise<void>;
 
-  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }>;
+  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
+  removeProviderSkill: (skillId: string) => Promise<{ ok: boolean; error?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
   toggleAvailability: () => void;
 
@@ -221,16 +233,18 @@ const WELCOME_TEXT =
 // Supabase sync (best-effort)
 // ═══════════════════════════════════════════════════════════
 
-async function analyzeServiceRequest(input: {
-  description: string;
-  serviceArea: string;
-  additionalInfo?: string;
-}): Promise<{
+export interface ServiceRequestAnalysis {
   structured_data: Json;
   ai_confidence: number | null;
   needs_clarification: boolean;
   clarification_question: string | null;
-} | null> {
+}
+
+async function analyzeServiceRequest(input: {
+  description: string;
+  serviceArea: string;
+  additionalInfo?: string;
+}): Promise<ServiceRequestAnalysis | null> {
   try {
     const { data, error } = await supabase.functions.invoke('analyze-service-request', {
       body: {
@@ -272,6 +286,7 @@ async function createServiceRequestInSupabase(params: {
   additionalInfo?: string;
   isUrgent: boolean;
   regionId: string;
+  analysis?: ServiceRequestAnalysis;
 }): Promise<{ id: string; ai_failed: boolean }> {
   try {
     const { data, error } = await supabase
@@ -299,7 +314,7 @@ async function createServiceRequestInSupabase(params: {
 
     console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
 
-    const analysis = await analyzeServiceRequest({
+    const analysis = params.analysis ?? await analyzeServiceRequest({
       description: params.description,
       serviceArea: params.serviceArea,
       additionalInfo: params.additionalInfo,
@@ -478,7 +493,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   !Array.isArray(service.structured_data) &&
   typeof service.structured_data.city === 'string'
     ? service.structured_data.city
-    : 'اللاذقية',
+    : DEFAULT_CITY,
 area:
   typeof service.structured_data === 'object' &&
   service.structured_data !== null &&
@@ -518,7 +533,12 @@ additional_info:
       setMyProviderProfile(null);
       return;
     }
-    void loadMyProviderProfile(user.id);
+    void (async () => {
+      await loadMyProviderProfile(user.id);
+      // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
+      const repaired = await api.providerServices.repairIncomplete();
+      if (repaired) await loadMyProviderProfile(user.id);
+    })();
   }, [user?.id, loadMyProviderProfile]);
 
   const [verificationStatus, setVerificationStatus] =
@@ -733,6 +753,9 @@ additional_info:
           status: result.order.status,
           provider_id: result.order.provider_id,
           provider_name: result.order.provider_name,
+          my_role: result.order.my_role,
+          other_user_id: result.order.other_user_id,
+          other_user_name: result.order.other_user_name,
           commission_amount: result.order.commission_amount,
           agreed_price: result.order.agreed_price,
           updated_at: result.order.updated_at,
@@ -782,7 +805,7 @@ additional_info:
     }
     let cancelled = false;
 
-    void loadRequesterConversations(user.id).then((result) => {
+    void loadMyConversations(user.id).then((result) => {
       if (cancelled || !result) return;
       // إذا بدأ المستخدم طلباً جديداً قبل انتهاء الاستعادة فلا نستبدله
       const existing = currentOrderRef.current;
@@ -805,7 +828,7 @@ additional_info:
     const refresh = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        void loadRequesterConversations(userId).then((result) => {
+        void loadMyConversations(userId).then((result) => {
           if (cancelled || !result) return;
           const existing = currentOrderRef.current;
           // نحدّث فقط الطلب الحالي (أو نستعيده إذا لم يكن هناك طلب)
@@ -826,8 +849,18 @@ additional_info:
   // ═══════════════════════════════════════════════════════════
   // Order
   // ═══════════════════════════════════════════════════════════
+  const analyzeOrderRequest = useCallback(
+    (params: { description: string; service_area: string; additional_info?: string }) =>
+      analyzeServiceRequest({
+        description: params.description,
+        serviceArea: params.service_area,
+        additionalInfo: params.additional_info,
+      }),
+    [],
+  );
+
   const startOrder = useCallback(
-    async (params: { description: string; service_area: string; additional_info?: string; is_urgent: boolean; region_id: string }): Promise<Order> => {
+    async (params: { description: string; service_area: string; additional_info?: string; is_urgent: boolean; region_id: string; analysis?: ServiceRequestAnalysis }): Promise<Order> => {
       clearTimer();
       const requesterId = user?.id;
 
@@ -842,6 +875,7 @@ additional_info:
         additionalInfo: params.additional_info,
         isUrgent: params.is_urgent,
         regionId: params.region_id,
+        analysis: params.analysis,
       });
 
       // ⭐ إذا فشل AI: نضيف إشعار (يظهر كـ banner بالجرس)
@@ -927,7 +961,11 @@ additional_info:
         }).then((created) => {
           if (!created) return;
           setCurrentOrder((prev) => (prev && prev.id === order.id ? { ...prev, id: created.id } : prev));
-          void syncOpenChatToSupabase(thread, created.id, provider.id, requesterId).then((conversationId) => {
+          // Keep the local thread linked to the persisted request ID used by Supabase.
+          setActiveChats((prev) =>
+            prev.map((t) => (t.id === thread.id ? { ...t, order_id: created.id } : t)),
+          );
+          void syncOpenChatToSupabase({ ...thread, order_id: created.id }, created.id, provider.id, requesterId).then((conversationId) => {
             if (!conversationId) return;
             setActiveChats((prev) =>
               prev.map((t) => (t.id === thread.id ? { ...t, conversation_id: conversationId } : t)),
@@ -1024,11 +1062,17 @@ additional_info:
         return { ok: false, error: agreementErrorMessage(null) };
       }
 
-      // السعر من المحادثة (تقدير)، أما العمولة فيحسبها السيرفر
-      const { agreement, error } = await requestAgreement(
-        conversationId,
-        extractPriceFromChat(chatHistory),
-      );
+      // لا نرسل اتفاقاً بسعر تخميني: يجب أن يظهر سعر صريح وواضح في رسائل التفاوض.
+      const agreedPriceCandidate = extractPriceFromChat(chatHistory);
+      if (agreedPriceCandidate == null) {
+        return {
+          ok: false,
+          error: 'لم أستطع تحديد السعر النهائي بثقة. اكتبوا رسالة واضحة مثل «السعر النهائي 50000 ليرة» ثم اضغط «تم الاتفاق» مجدداً.',
+        };
+      }
+
+      // العمولة النهائية تُحسب في الخادم؛ السعر يُستخرج فقط من عبارات سعر صريحة.
+      const { agreement, error } = await requestAgreement(conversationId, agreedPriceCandidate);
       if (error || !agreement) {
         console.error('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
         return { ok: false, error: agreementErrorMessage(error) };
@@ -1082,6 +1126,30 @@ additional_info:
     [activeChats, clearTimer, getProviderById, pushNotification],
   );
 
+  const providerRespondsToAgreement = useCallback(
+    async (approve: boolean): Promise<{ ok: boolean; error?: string }> => {
+      if (!pendingAgreementId) {
+        return { ok: false, error: agreementErrorMessage('AGREEMENT_UNAVAILABLE') };
+      }
+      const { agreement, error } = await respondToAgreement({
+        agreementId: pendingAgreementId,
+        approve,
+        reason: approve ? undefined : 'مقدم الخدمة رفض الاتفاق',
+      });
+      if (error || !agreement) {
+        return { ok: false, error: agreementErrorMessage(error) };
+      }
+      clearTimer();
+      await refreshWallet();
+      if (user?.id) {
+        const refreshed = await loadMyConversations(user.id);
+        if (refreshed) applyServerState(refreshed);
+      }
+      return { ok: true };
+    },
+    [pendingAgreementId, clearTimer, refreshWallet, user?.id, applyServerState],
+  );
+
   const customerCancelsAgreement = useCallback(async () => {
     // نلغي في السيرفر أولاً؛ إذا فشل لا نغيّر الحالة المحلية حتى لا تنفصل عن الحقيقة
     if (pendingAgreementId) {
@@ -1127,9 +1195,8 @@ additional_info:
 
     const now = new Date().toISOString();
     const isProviderReport = dto.reporter_role === 'provider';
-    const nextStatus = isProviderReport
-      ? OrderStatus.CANCELLED
-      : OrderStatus.NOT_EXECUTED_REVIEW;
+    // كلا الطرفين يجب أن يريا حالة مراجعة عدم التنفيذ كي يتمكنا من تقييم الطرف الآخر.
+    const nextStatus = OrderStatus.NOT_EXECUTED_REVIEW;
     const workflowStatus = isProviderReport ? 'cancelled_no_refund' : 'pending_review';
 
     setCurrentOrder((prev) => {
@@ -1170,6 +1237,22 @@ additional_info:
   // ═══════════════════════════════════════════════════════════
   // Complete + Rate
   // ═══════════════════════════════════════════════════════════
+  // سجل الطلبات من السيرفر: عند الدخول، وبعد اعتماد المتأخر منها (مهلة التقييم)
+  const refreshOrderHistory = useCallback(async () => {
+    if (!user?.id) return;
+    await finalizeOverdueRequests();
+    const history = await fetchOrderHistory();
+    if (!history) return;
+    setOrderHistory((prev) => {
+      // نحتفظ بأعلام التذكير المحلية فقط
+      const reminders = new Map(prev.map((o) => [o.id, o.rating_reminder_sent]));
+      const merged = history.map((o) => ({ ...o, rating_reminder_sent: reminders.get(o.id) ?? false }));
+      // طلب أنهيته للتو ولم يظهر بعد في الرد يبقى ظاهراً
+      const extras = prev.filter((o) => !merged.some((m) => m.id === o.id));
+      return [...merged, ...extras];
+    });
+  }, [user?.id]);
+
   const completeOrder = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     if (!currentOrder) return { ok: false, error: orderErrorMessage('REQUEST_NOT_FOUND') };
 
@@ -1229,7 +1312,8 @@ additional_info:
                 customer_rating: dto.stars,
                 customer_comment: dto.comment ?? null,
                 customer_tags: dto.tags ?? [],
-                status: OrderStatus.COMPLETED,
+                // إرسال التقييم لا يعني أن الخدمة اكتملت؛ السيرفر وحده يغيّر الحالة عند اكتمال المسار.
+                status: o.status,
                 rating_deadline: null,
                 rating_auto_approved: false,
                 updated_at: new Date().toISOString(),
@@ -1237,26 +1321,12 @@ additional_info:
             : o,
         ),
       );
+      // السيرفر هو من يحدد الحالة النهائية (completed عند تقييم الزبون): نزامن السجل حتى ينتقل الطلب لمكانه الصحيح.
+      void refreshOrderHistory();
       return { ok: true };
     },
-    [],
+    [refreshOrderHistory],
   );
-
-  // سجل الطلبات من السيرفر: عند الدخول، وبعد اعتماد المتأخر منها (مهلة التقييم)
-  const refreshOrderHistory = useCallback(async () => {
-    if (!user?.id) return;
-    await finalizeOverdueRequests();
-    const history = await fetchOrderHistory(user.id);
-    if (!history) return;
-    setOrderHistory((prev) => {
-      // نحتفظ بأعلام التذكير المحلية فقط
-      const reminders = new Map(prev.map((o) => [o.id, o.rating_reminder_sent]));
-      const merged = history.map((o) => ({ ...o, rating_reminder_sent: reminders.get(o.id) ?? false }));
-      // طلب أنهيته للتو ولم يظهر بعد في الرد يبقى ظاهراً
-      const extras = prev.filter((o) => !merged.some((m) => m.id === o.id));
-      return [...merged, ...extras];
-    });
-  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -1264,6 +1334,25 @@ additional_info:
       return;
     }
     void refreshOrderHistory();
+  }, [user?.id, refreshOrderHistory]);
+
+  // رسائل النظام (إنهاء الخدمة / تقييم الطرفين / اعتماد الطلب) تعني أن حالة طلب تغيّرت عند الطرف الآخر:
+  // نحدّث السجل ليظهر الطلب بمكانه الصحيح (بانتظار التقييم / السابقة) بدون إعادة تشغيل التطبيق.
+  useEffect(() => {
+    if (!user?.id) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`order-state:${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        if ((payload.new as { message_type?: string } | undefined)?.message_type !== 'system') return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => void refreshOrderHistory(), 500);
+      })
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
   }, [user?.id, refreshOrderHistory]);
 
   // تذكير قبل 24 ساعة من انتهاء مهلة التقييم؛ وعند الانتهاء نترك السيرفر يعتمد الطلب
@@ -1314,7 +1403,7 @@ additional_info:
   }, [pushNotification, refreshOrderHistory]);
 
   const addFirstSkill = useCallback(
-    async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string }> => {
+    async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }> => {
       const currentProfile = myProviderProfile;
       const isFirstSkill = !currentProfile || currentProfile.skills.length === 0;
 
@@ -1323,7 +1412,7 @@ additional_info:
         experience_years: skill.years_of_experience ?? 0,
         price_min: skill.price_min ?? 0,
         price_max: skill.price_max ?? 0,
-city: skill.city?.trim() || 'اللاذقية',
+city: skill.city?.trim() || DEFAULT_CITY,
 area: skill.area?.trim() || '',
 service_area: skill.service_area?.trim() || '',
 additional_info: skill.additional_info?.trim() || '',
@@ -1336,27 +1425,13 @@ additional_info: skill.additional_info?.trim() || '',
           body: response.error.message,
           route: '/orders/become-provider',
         });
-        return { welcomeBonus: false };
+        return { welcomeBonus: false, error: response.error.message };
       }
 
-      const row = response.data;
-     const savedSkill: ProviderSkill = {
-  id: row.id,
-  name: skill.name,
-  years_of_experience: row.experience_years,
-  description: row.description,
-  city: skill.city ?? 'اللاذقية',
-  area: skill.area ?? '',
-  service_area: skill.service_area ?? '',
-  additional_info: skill.additional_info,
-};
-
-      setMyProviderProfile((prev) => ({
-        skills: [...(prev?.skills ?? []), savedSkill],
-        bio: prev?.bio,
-        is_available: prev?.is_available ?? true,
-        welcome_bonus_received: prev?.welcome_bonus_received ?? false,
-      }));
+      // مصدر الحقيقة هو قاعدة البيانات: أعد تحميل الملف بعد نجاح الحفظ بدل إضافة مهارة محلية.
+      if (user?.id) {
+        await loadMyProviderProfile(user.id);
+      }
 
       // مكافأة الانضمام تُمنح من السيرفر (مرة واحدة، والمبلغ من الإعدادات)
       let welcomeBonus = false;
@@ -1378,8 +1453,20 @@ additional_info: skill.additional_info?.trim() || '',
       }
       return { welcomeBonus };
     },
-    [myProviderProfile, refreshWallet, pushNotification],
+    [myProviderProfile, refreshWallet, pushNotification, loadMyProviderProfile, user?.id],
   );
+
+  const removeProviderSkill = useCallback(async (skillId: string): Promise<{ ok: boolean; error?: string }> => {
+    const result = await api.providerServices.remove(skillId);
+    if (!result.success) {
+      return { ok: false, error: result.error.message };
+    }
+
+    setMyProviderProfile((prev) =>
+      prev ? { ...prev, skills: prev.skills.filter((skill) => skill.id !== skillId) } : prev,
+    );
+    return { ok: true };
+  }, []);
 
   const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
     setMyProviderProfile((prev) => {
@@ -1390,7 +1477,7 @@ additional_info: skill.additional_info?.trim() || '',
           if (!skill.id || skill.id.startsWith('skill_')) continue;
           if (skill.service_area === undefined && skill.additional_info === undefined) continue;
           void api.providerServices.update(skill.id, {
-  city: skill.city?.trim() || 'اللاذقية',
+  city: skill.city?.trim() || DEFAULT_CITY,
   area: skill.area?.trim() || '',
   service_area: skill.service_area?.trim() || '',
   additional_info: skill.additional_info,
@@ -1486,6 +1573,7 @@ additional_info: skill.additional_info?.trim() || '',
       clearAllNotifications,
       hasAcceptedDisclaimer,
       acceptDisclaimer,
+      analyzeOrderRequest,
       startOrder,
       setCandidates,
       resetOrder,
@@ -1497,9 +1585,12 @@ additional_info: skill.additional_info?.trim() || '',
       requestProviderAgain,
       customerAgrees,
       customerCancelsAgreement,
+      providerRespondsToAgreement,
       completeOrder,
+      refreshOrderHistory,
       rateOrder,
       addFirstSkill,
+      removeProviderSkill,
       updateProviderProfile,
       toggleAvailability,
       topUp,
@@ -1539,6 +1630,7 @@ additional_info: skill.additional_info?.trim() || '',
       clearAllNotifications,
       hasAcceptedDisclaimer,
       acceptDisclaimer,
+      analyzeOrderRequest,
       startOrder,
       setCandidates,
       resetOrder,
@@ -1550,9 +1642,12 @@ additional_info: skill.additional_info?.trim() || '',
       requestProviderAgain,
       customerAgrees,
       customerCancelsAgreement,
+      providerRespondsToAgreement,
       completeOrder,
+      refreshOrderHistory,
       rateOrder,
       addFirstSkill,
+      removeProviderSkill,
       updateProviderProfile,
       toggleAvailability,
       topUp,

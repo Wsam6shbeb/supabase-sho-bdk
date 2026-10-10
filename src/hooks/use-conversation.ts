@@ -18,7 +18,8 @@ import {
 } from '@/services/chat';
 import type { ChatMessage, MessageStatus } from '@/types/orders';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState } from 'react-native';
+import { containsPhoneNumber } from '@/domain/chatSafety';
 
 interface Options {
   conversationId: string | null;
@@ -219,6 +220,14 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
       });
 
       if (error && error !== 'DUPLICATE') {
+        if (error.includes('PHONE_NUMBER_NOT_ALLOWED')) {
+          setMessages((prev) => prev.filter((m) => m.id !== clientKey));
+          Alert.alert(
+            'تعذّر إرسال الرسالة',
+            'مشاركة أرقام الهاتف داخل المحادثة غير مسموحة. تابع التواصل والاتفاق من خلال التطبيق.',
+          );
+          return;
+        }
         console.error('[chat] فشل إرسال الرسالة:', error);
         // إن كان السبب أن المحادثة لم تعد قابلة للكتابة (حظر/إغلاق) فلا فائدة من إعادة المحاولة:
         // نزيل الرسالة المؤقتة وتظهر واجهة المنع بدلاً منها
@@ -239,6 +248,13 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
 
   const send = useCallback(
     async (text: string) => {
+      if (containsPhoneNumber(text)) {
+        Alert.alert(
+          'مشاركة أرقام الهاتف غير مسموحة',
+          'اكتب رسالتك بدون رقم هاتف، وتابع الاتفاق من خلال التطبيق.',
+        );
+        return;
+      }
       const clientKey = api.randomId('msg');
       typingRef.current?.send(false);
       lastTypingSent.current = 0;

@@ -11,7 +11,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { containsPhoneNumber } from '@/domain/chatSafety';
 
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -26,11 +27,17 @@ export function ChatInput({ onSend, onChangeText, disabled, placeholder }: ChatI
   const theme = useTheme();
   const scheme = Colors[theme];
   const [text, setText] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
 // [شرح الدالة: handleSend] يرسل البيانات الحالية إلى العملية المرتبطة بالصفحة، مثل الرسالة أو رمز التحقق.
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (containsPhoneNumber(trimmed)) {
+      setValidationError('مشاركة أرقام الهاتف داخل المحادثة غير مسموحة. اكتب الرسالة بدون رقم هاتف.');
+      return;
+    }
+    setValidationError(null);
     onSend(trimmed);
     setText('');
     onChangeText?.('');
@@ -47,6 +54,7 @@ export function ChatInput({ onSend, onChangeText, disabled, placeholder }: ChatI
         value={text}
         onChangeText={(value) => {
           setText(value);
+          setValidationError(null);
           onChangeText?.(value);
         }}
         placeholder={placeholder ?? t('orders.chat.inputPlaceholder')}
@@ -62,6 +70,11 @@ export function ChatInput({ onSend, onChangeText, disabled, placeholder }: ChatI
           },
         ]}
       />
+      {validationError && (
+        <Text style={[styles.validationError, { color: scheme.danger }]}>
+          {validationError}
+        </Text>
+      )}
       <AppButton
         title=""
         variant="primary"
@@ -101,5 +114,15 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     width: 48,
+  },
+  validationError: {
+    position: 'absolute',
+    bottom: 58,
+    right: Spacing.three,
+    left: Spacing.three,
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    backgroundColor: 'transparent',
   },
 });

@@ -42,6 +42,10 @@ export interface ServiceProvider {
   service_request_id?: string;
   /** درجة المطابقة المبدئية المحسوبة من structured_data. */
   match_score?: number;
+  /** صحيح عندما تكون النتيجة بديلاً محلياً لأن المطابقة القوية لم تُنتج نتائج. */
+  is_fallback_match?: boolean;
+  /** سبب مختصر لاقتراح مقدم الخدمة أو كونه بديلاً. */
+  match_reason?: string;
 }
 
 /** بيانات إنشاء طلب جديد */
@@ -54,6 +58,11 @@ export interface CreateOrderDto {
 export interface Order {
   id: string;
   customer_id: string;
+  customer_name?: string | null;
+  /** الطرف الحالي بالنسبة للطلب. */
+  my_role?: 'customer' | 'provider';
+  other_user_id?: string | null;
+  other_user_name?: string | null;
   description: string;
   is_urgent: boolean;
   status: OrderStatus;

@@ -68,10 +68,16 @@ export async function finalizeOverdueRequests(): Promise<void> {
 
 function mapStatus(state: string): OrderStatus {
   switch (state) {
+    case 'active':
+      return OrderStatus.ACTIVE;
+    case 'active':
+      return OrderStatus.ACTIVE;
     case 'completion_pending_rating':
       return OrderStatus.COMPLETION_PENDING_RATING;
     case 'completed':
       return OrderStatus.COMPLETED;
+    case 'not_executed_review':
+      return OrderStatus.NOT_EXECUTED_REVIEW;
     case 'cancelled':
     case 'expired':
       return OrderStatus.CANCELLED;
@@ -81,15 +87,17 @@ function mapStatus(state: string): OrderStatus {
 }
 
 /** سجل طلباتي المنتهية (مع مقدم الخدمة وتقييمي). null عند الفشل. */
-export async function fetchOrderHistory(userId: string): Promise<Order[] | null> {
-  const { data, error } = await supabase.rpc('get_my_order_history');
+export async function fetchOrderHistory(): Promise<Order[] | null> {
+  const { data, error } = await supabase.rpc('get_my_order_history_v2');
   if (error) {
     console.error('[orders] فشل جلب سجل الطلبات:', error.message);
     return null;
   }
   return (data ?? []).map((r) => ({
     id: r.request_id,
-    customer_id: userId,
+    customer_id: r.customer_id,
+    customer_name: r.customer_name,
+    my_role: r.my_role as 'customer' | 'provider',
     description: r.description,
     is_urgent: r.is_urgent,
     status: mapStatus(r.state),
@@ -98,7 +106,9 @@ export async function fetchOrderHistory(userId: string): Promise<Order[] | null>
     updated_at: r.updated_at,
     completed_at: r.completed_at,
     provider_id: r.provider_id,
-    provider_name: r.provider_name,
+    provider_name: r.my_role === 'provider' ? r.customer_name : r.provider_name,
+    other_user_id: r.my_role === 'provider' ? r.customer_id : r.provider_id,
+    other_user_name: r.my_role === 'provider' ? r.customer_name : r.provider_name,
     agreed_price: r.agreed_price != null ? Number(r.agreed_price) : null,
     commission_amount: r.commission_amount != null ? Number(r.commission_amount) : null,
     customer_rating: r.my_rating,
@@ -115,6 +125,11 @@ export interface ConversationRatingStatus {
   request_state: string;
   i_rated: boolean;
   my_score: number | null;
+  /** هل قيّم الطرف الآخر؟ */
+  other_rated: boolean;
+  /** هل قيّم الطرفان؟ (عندها تنتهي دعوات التقييم وتظهر رسالة اكتمال الخدمة) */
+  both_rated: boolean;
+  has_non_execution_report: boolean;
 }
 
 /** حالة الطلب في هذه المحادثة وهل قيّمتُ الطرف الآخر (لبطاقة تقييم مقدم الخدمة). */

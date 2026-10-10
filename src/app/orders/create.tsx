@@ -27,7 +27,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useState } from 'react';
+import type { ServiceRequestAnalysis } from '@/context/OrderContext';
 import {
     KeyboardAvoidingView,
     Pressable,
@@ -37,41 +39,77 @@ import {
     View,
 } from 'react-native';
 
-const VAGUE_KEYWORDS = ['شي', 'شيء', 'مشكلة', 'خدمة', 'مساعده', 'مساعدة', 'بدي'];
-
-// [شرح الدالة: needsClarification] يتحقق مما إذا كان وصف الطلب يحتاج إلى توضيح قبل المتابعة.
-function needsClarification(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.length < 15) return true;
-  const lower = trimmed.toLowerCase();
-  if (VAGUE_KEYWORDS.some((kw) => lower === kw)) return true;
-  return false;
-}
-
 // [شرح الدالة: CreateOrderScreen] يعرض نموذج إنشاء طلب خدمة جديد.
 export default function CreateOrderScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const { user } = useAuth();
-  const { startOrder, hasAcceptedDisclaimer } = useOrder();
+  const { startOrder, analyzeOrderRequest, hasAcceptedDisclaimer } = useOrder();
 
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState(user?.region?.id ?? '');
+  const { city, setCity, remember: rememberCity } = usePreferredCity(user?.region?.id);
   const [serviceArea, setServiceArea] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showClarification, setShowClarification] = useState(false);
+  const [clarificationQuestion, setClarificationQuestion] = useState('');
+  const [clarificationAnswer, setClarificationAnswer] = useState('');
+  const [clarificationContext, setClarificationContext] = useState('');
+  const [clarificationAttempts, setClarificationAttempts] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
 // [شرح الدالة: handleSubmit] يعالج إرسال النموذج الحالي بعد التحقق من البيانات وتنفيذ العملية المطلوبة.
+  const analyzeAndContinue = async (answer = '') => {
+    if (submitting) return;
+    const original = description.trim();
+    const finalDescription = [
+      original,
+      clarificationContext,
+      answer.trim() ? `توضيح المستخدم: ${answer.trim()}` : '',
+    ].filter(Boolean).join('\n');
+    const area = [city.trim(), serviceArea.trim()].filter(Boolean).join(' - ');
+    setSubmitting(true);
+    setError(null);
+    try {
+      const analysis = await analyzeOrderRequest({
+        description: finalDescription,
+        service_area: area,
+        additional_info: additionalInfo.trim(),
+      });
+      if (!analysis) {
+        setError('تعذّر تحليل الطلب حالياً. لم ننشئ الطلب بعد؛ حاول مرة أخرى.');
+        return;
+      }
+      if (analysis.needs_clarification) {
+        if (clarificationAttempts >= 2) {
+          setShowClarification(false);
+          setError('ما زال الطلب غير واضح. عدّل الوصف وأضف نوع الخدمة أو المطلوب الأساسي.');
+          return;
+        }
+        setClarificationAttempts((count) => count + 1);
+        if (answer.trim()) {
+          setClarificationContext((previous) =>
+            [previous, `توضيح المستخدم: ${answer.trim()}`].filter(Boolean).join('\n'),
+          );
+        }
+        setClarificationQuestion(analysis.clarification_question || 'ممكن توضح أكثر شو الخدمة التي تحتاجها تحديداً؟');
+        setClarificationAnswer('');
+        setShowClarification(true);
+        return;
+      }
+      setShowClarification(false);
+      await proceed(finalDescription, analysis);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = () => {
     if (submitting) return;
     setError(null);
-
     const trimmed = description.trim();
     const trimmedCity = city.trim();
-    const trimmedServiceArea = serviceArea.trim();
     if (!trimmed) {
       setError(t('orders.create.required'));
       return;
@@ -80,8 +118,7 @@ export default function CreateOrderScreen() {
       setError('يرجى كتابة المدينة.');
       return;
     }
-
-    // ⭐ إخلاء المسؤولية أول مرة
+    rememberCity(trimmedCity);
     if (!hasAcceptedDisclaimer) {
       router.push({
         pathname: '/orders/disclaimer',
@@ -89,39 +126,31 @@ export default function CreateOrderScreen() {
           description: trimmed,
           is_urgent: isUrgent.toString(),
           region_id: trimmedCity,
-          service_area: trimmedServiceArea,
+          service_area: serviceArea.trim(),
           additional_info: additionalInfo.trim(),
         },
       });
       return;
     }
-
-    // 🤔 فحص الغموض
-    if (needsClarification(trimmed)) {
-      setShowClarification(true);
+    if (showClarification) {
+      handleClarificationConfirm();
       return;
     }
-
-    proceed(trimmed);
+    void analyzeAndContinue();
   };
 
-// [شرح الدالة: proceed] ينفذ الانتقال إلى الخطوة التالية بعد فحص بيانات الطلب.
-  const proceed = async (trimmed: string) => {
-    setSubmitting(true);
+  const proceed = async (trimmed: string, analysis: ServiceRequestAnalysis) => {
     setError(null);
-
+    const area = [city.trim(), serviceArea.trim()].filter(Boolean).join(' - ');
     try {
-      // قاعدة البيانات يجب أن تؤكد إنشاء الطلب قبل الانتقال إلى البحث.
       const order = await startOrder({
         description: trimmed,
         is_urgent: isUrgent,
         region_id: city.trim(),
-        service_area: serviceArea.trim(),
+        service_area: area,
         additional_info: additionalInfo.trim(),
+        analysis,
       });
-
-      setSubmitting(false);
-
       router.push({
         pathname: '/orders/searching',
         params: {
@@ -131,20 +160,23 @@ export default function CreateOrderScreen() {
         },
       });
     } catch (err) {
-      setSubmitting(false);
       setError(err instanceof Error ? err.message : 'تعذر إنشاء طلب الخدمة. حاول مرة أخرى.');
     }
   };
 
-// [شرح الدالة: handleClarificationConfirm] يعالج تأكيد المستخدم على طلب التوضيح ويكمل سير إنشاء الطلب.
   const handleClarificationConfirm = () => {
-    setShowClarification(false);
-    proceed(description.trim());
+    if (!clarificationAnswer.trim()) {
+      setError('جاوب على سؤال التوضيح قبل المتابعة.');
+      return;
+    }
+    void analyzeAndContinue(clarificationAnswer);
   };
 
-// [شرح الدالة: handleClarificationCancel] يلغي طلب التوضيح ويعود إلى مسار إنشاء الطلب.
   const handleClarificationCancel = () => {
     setShowClarification(false);
+    setClarificationAnswer('');
+    setClarificationContext('');
+    setClarificationAttempts(0);
   };
 
   return (
@@ -197,6 +229,7 @@ export default function CreateOrderScreen() {
                 setCity(val);
                 setError(null);
               }}
+              onBlur={() => rememberCity()}
               containerStyle={styles.areaInput}
             />
 
@@ -273,8 +306,19 @@ export default function CreateOrderScreen() {
               <Text
                 style={[styles.clarificationBody, { color: scheme.textSecondary }]}
               >
-                {t('orders.create.clarificationBody')}
+                {clarificationQuestion}
               </Text>
+              <AppTextInput
+                placeholder="اكتب التوضيح هون..."
+                value={clarificationAnswer}
+                onChangeText={(value) => {
+                  setClarificationAnswer(value);
+                  setError(null);
+                }}
+                multiline
+                numberOfLines={2}
+                containerStyle={{ marginBottom: Spacing.three }}
+              />
               <View style={styles.clarificationActions}>
                 <AppButton
                   title="تعديل الطلب"
@@ -285,10 +329,12 @@ export default function CreateOrderScreen() {
                   style={{ flex: 1 }}
                 />
                 <AppButton
-                  title="متابعة على أي حال"
+                  title="إرسال التوضيح"
                   variant="primary"
                   size="md"
                   onPress={handleClarificationConfirm}
+                  loading={submitting}
+                  disabled={submitting}
                   fullWidth={false}
                   style={{ flex: 1, marginStart: Spacing.two }}
                 />

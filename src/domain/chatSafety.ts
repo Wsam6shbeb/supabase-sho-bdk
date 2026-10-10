@@ -1,0 +1,34 @@
+/**
+ * قواعد محلية سريعة لحماية محادثات «شو بدك».
+ * لا تعتمد على الذكاء الاصطناعي لاكتشاف أرقام الهاتف.
+ */
+
+const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
+const WESTERN_DIGITS = '01234567890123456789';
+
+export function normalizePhoneDigits(value: string): string {
+  return value.replace(/[٠-٩۰-۹]/g, (digit) => {
+    const index = ARABIC_DIGITS.indexOf(digit);
+    return index >= 0 ? WESTERN_DIGITS[index] : digit;
+  });
+}
+
+/**
+ * يلتقط أرقام الهواتف الشائعة، بما فيها الأرقام السورية المحلية والدولية،
+ * وكذلك أرقام الهاتف الطويلة المكتوبة مع مسافات أو شرطات.
+ * لا يعتبر الفواصل المستخدمة عادةً لتنسيق الأسعار جزءاً من رقم الهاتف.
+ */
+export function containsPhoneNumber(value: string): boolean {
+  const text = normalizePhoneDigits(value);
+  const patterns = [
+    // سوريا: موبايل محلي أو مع رمز الدولة.
+    /(?:^|[^\d])09[\s().-]*\d[\d\s().-]{6,}\d(?:$|[^\d])/,
+    /(?:^|[^\d])(?:\+|00)?963[\s().-]*9[\s().-]*\d[\d\s().-]{6,}\d(?:$|[^\d])/,
+    // أرقام دولية طويلة، مع رمز دولة اختياري وفواصل شائعة.
+    /(?:^|[^\d])(?:\+|00)\s*\d[\d\s().-]{7,}\d(?:$|[^\d])/,
+    // أرقام متصلة أو مفصولة بمسافات/شرطات؛ نستثني الفواصل لتقليل التباس الأسعار.
+    /(?:^|[^\d])\d{9,15}(?:$|[^\d])/,
+    /(?:^|[^\d])\d(?:[\s().-]+\d){8,14}(?:$|[^\d])/,
+  ];
+  return patterns.some((pattern) => pattern.test(text));
+}

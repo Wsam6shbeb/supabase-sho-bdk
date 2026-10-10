@@ -48,7 +48,7 @@ export default function ConversationScreen() {
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
   const { user } = useAuth();
-  const { isProviderBlocked, unblockProvider } = useOrder();
+  const { isProviderBlocked, unblockProvider, refreshOrderHistory } = useOrder();
 
   const conversationId = typeof params.conversation_id === 'string' ? params.conversation_id : '';
   const otherName = typeof params.name === 'string' && params.name ? params.name : 'محادثة';
@@ -109,9 +109,18 @@ export default function ConversationScreen() {
     );
   }, [conversationId, myId, loadAgreement, loadRatingStatus]);
 
+  // رسالة نظام جديدة (إنهاء الخدمة / تقييم الطرفين) = تغيّرت حالة الطلب: نحدّث حالة التقييم والسجل.
+  const lastSystemMessageId = [...messages].reverse().find((m) => m.is_system)?.id ?? null;
+  useEffect(() => {
+    if (!lastSystemMessageId) return;
+    void loadRatingStatus();
+    void refreshOrderHistory();
+  }, [lastSystemMessageId, loadRatingStatus, refreshOrderHistory]);
+
   const orderFinished =
     ratingStatus?.request_state === 'completion_pending_rating' ||
-    ratingStatus?.request_state === 'completed';
+    ratingStatus?.request_state === 'completed' ||
+    Boolean(ratingStatus?.has_non_execution_report && ratingStatus?.request_state === 'cancelled');
   const iAmProvider = agreement?.provider_id === myId;
   const canRateCustomer = !!ratingStatus && orderFinished && !ratingStatus.i_rated && iAmProvider;
 
@@ -126,6 +135,7 @@ export default function ConversationScreen() {
     }
     setStars(0);
     void loadRatingStatus();
+    void refreshOrderHistory();
   };
 
   const pendingForMe =
@@ -228,9 +238,13 @@ export default function ConversationScreen() {
                   loading={ratingBusy}
                 />
               </View>
-            ) : ratingStatus?.i_rated && orderFinished && iAmProvider ? (
+            ) : ratingStatus?.both_rated && orderFinished ? (
               <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
-                قيّمت الزبون بـ {ratingStatus.my_score} من 5 نجوم.
+                اكتملت الخدمة وتم تقييم الطرفين.
+              </Text>
+            ) : ratingStatus?.i_rated && orderFinished ? (
+              <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
+                {iAmProvider ? 'قيّمت الزبون' : 'قيّمت مقدم الخدمة'} بـ {ratingStatus.my_score} من 5 نجوم.
               </Text>
             ) : pendingForMe ? (
               <AgreementBubble

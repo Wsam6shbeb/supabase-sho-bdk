@@ -48,6 +48,8 @@ export default function SearchingScreen() {
 
     const searchTimeout = setTimeout(async () => {
       let providersData: any[] = [];
+      // يميّز "فشل البحث تقنياً" عن "لا يوجد مقدم مناسب" حتى لا نخدع المستخدم برسالة خاطئة.
+      let searchFailed = false;
 
       // ننتظر التحليل المنظم للطلب لفترة قصيرة لأن تحليل AI يعمل في الخلفية.
       // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
@@ -93,6 +95,7 @@ export default function SearchingScreen() {
 
         if (candidateError) {
           console.error('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
+          searchFailed = true;
         } else {
           providersData = (candidateRows ?? []).map((row: any) => ({
             user_id: row.provider_id,
@@ -116,8 +119,8 @@ export default function SearchingScreen() {
         }
       }
 
-      // احتياط فقط: إذا فشل RPC أو لم يوجد request_id، نحافظ على المسار السابق
-      // بدل أن تتعطل شاشة البحث بالكامل.
+      // احتياط قديم فقط عند غياب request_id. عند وجود طلب حقيقي لا نعرض مقدمي خدمة من مدن أخرى
+      // إذا أعاد RPC صفر نتائج؛ فـ RPC الجديد هو المسؤول عن بدائل نفس المدينة.
       if (providersData.length === 0 && !requestId) {
         const { data: fallbackProviders, error: fallbackError } = await supabase
           .from('provider_profiles')
@@ -154,7 +157,16 @@ export default function SearchingScreen() {
         location: null,
       };
 
-      // دفاع إضافي: مقدم الخدمة قد يملك أكثر من خدمة، لكن يجب أن يظهر مرة واحدة فقط.\n      providersData = Array.from(\n        new Map(\n          (providersData ?? [])\n            .filter((provider: any) => typeof provider.user_id === 'string' && provider.user_id.length > 0)\n            .map((provider: any) => [provider.user_id, provider]),\n        ).values(),\n      );\n\n      const providerCandidates = (providersData ?? []).map((p: any) => ({
+      // دفاع إضافي: مقدم الخدمة قد يملك أكثر من خدمة، لكن يجب أن يظهر مرة واحدة فقط.
+      providersData = Array.from(
+        new Map(
+          (providersData ?? [])
+            .filter((provider: any) => typeof provider.user_id === 'string' && provider.user_id.length > 0)
+            .map((provider: any) => [provider.user_id, provider]),
+        ).values(),
+      );
+
+      const providerCandidates = (providersData ?? []).map((p: any) => ({
         provider: p,
         services: Array.isArray(p.services) ? p.services : [],
       }));
@@ -162,33 +174,52 @@ export default function SearchingScreen() {
       let aiMatches: Array<{ provider_id: string; score: number; reason: string }> = [];
 
       if (providerCandidates.length > 0) {
-        const { data: matchData, error: matchError } = await supabase.functions.invoke(
-          'match-service-providers',
-          {
-            body: {
-              request: requestForMatching,
-              providers: providerCandidates.map(({ provider, services }) => ({
-                provider_id: provider.user_id,
-                service: services.length
-                  ? services
-                  : {
-                      service: '',
-                      skills: [],
-                      synonyms: [],
-                      region: null,
-                      location: null,
-                    },
-              })),
-            },
-          },
+        // الـ Edge Function تقبل 20 مقدم خدمة كحد أقصى لكل طلب؛ نقسّم القائمة (حتى 50) إلى دفعات
+        // بدل أن يُهمَل بصمت كل من بعد العشرين.
+        const MATCH_BATCH_SIZE = 20;
+        const batches: Array<typeof providerCandidates> = [];
+        for (let i = 0; i < providerCandidates.length; i += MATCH_BATCH_SIZE) {
+          batches.push(providerCandidates.slice(i, i + MATCH_BATCH_SIZE));
+        }
+
+        const batchResults = await Promise.all(
+          batches.map(async (batch) => {
+            const { data: matchData, error: matchError } = await supabase.functions.invoke(
+              'match-service-providers',
+              {
+                body: {
+                  request: requestForMatching,
+                  providers: batch.map(({ provider, services }) => ({
+                    provider_id: provider.user_id,
+                    service: services.length
+                      ? services
+                      : {
+                          service: '',
+                          skills: [],
+                          synonyms: [],
+                          region: null,
+                          location: null,
+                        },
+                  })),
+                },
+              },
+            );
+
+            if (matchError) {
+              console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
+              return null;
+            }
+            return Array.isArray(matchData?.matches)
+              ? (matchData.matches as Array<{ provider_id: string; score: number; reason: string }>)
+              : null;
+          }),
         );
 
-        if (matchError) {
-          console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
-        } else if (Array.isArray(matchData?.matches)) {
-          aiMatches = matchData.matches;
-          console.log('[Supabase][searching] نتائج المطابقة بالذكاء الاصطناعي:', aiMatches);
+        for (const matches of batchResults) {
+          if (matches) aiMatches = aiMatches.concat(matches);
+          else searchFailed = true;
         }
+        console.log('[Supabase][searching] نتائج المطابقة بالذكاء الاصطناعي:', aiMatches);
       }
 
       const scoreByProvider = new Map(
@@ -211,28 +242,10 @@ export default function SearchingScreen() {
             (b.provider.preliminary_score ?? 0) - (a.provider.preliminary_score ?? 0),
         );
 
-      const isFallbackResults = rankedMatches.length === 0;
-      const displayedMatches = isFallbackResults
-        ? [...(providersData ?? [])]
-            .sort(
-              (a: any, b: any) =>
-                (Number(b.preliminary_score) || 0) - (Number(a.preliminary_score) || 0) ||
-                (Number(b.rating_avg) || 0) - (Number(a.rating_avg) || 0) ||
-                (Number(b.completed_services_count) || 0) - (Number(a.completed_services_count) || 0),
-            )
-            .slice(0, 3)
-            .map((provider: any) => ({
-              provider,
-              match: {
-                provider_id: provider.user_id,
-                score: 0,
-                reason: 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.',
-              },
-            }))
-        : rankedMatches;
-
-      const results: ServiceProvider[] = displayedMatches
-        .map(({ provider: p, match }, index) => ({
+      // المبدأ الأساسي: لا نعرض بديلاً غير مطابق، حتى لو كان من المدينة نفسها.
+      // إذا لم يؤكد محرك الذكاء الاصطناعي وجود تطابق مناسب، تبقى النتائج فارغة.
+      const results: ServiceProvider[] = rankedMatches
+        .map(({ provider: p, match }) => ({
           id: p.user_id,
           name: p.users?.full_name ?? 'مقدم خدمة',
           avatar_url: p.users?.avatar_url ?? null,
@@ -249,11 +262,9 @@ export default function SearchingScreen() {
           verification_status: 'not_verified',
           card_color: '#3B82F6',
           service_request_id: requestId || undefined,
-          match_score: isFallbackResults ? 0 : match?.score ?? 0,
-          is_fallback_match: isFallbackResults,
-          match_reason: isFallbackResults
-            ? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة.'
-            : match?.reason,
+          match_score: match?.score ?? 0,
+          is_fallback_match: false,
+          match_reason: match?.reason,
         }));
 
       setProviders(results);
@@ -286,7 +297,13 @@ export default function SearchingScreen() {
       setTimeout(() => {
         router.replace({
           pathname: '/orders/candidates',
-          params: { description, is_urgent: isUrgent.toString(), request_id: requestId },
+          params: {
+            description,
+            is_urgent: isUrgent.toString(),
+            request_id: requestId,
+            // نمرر فشل البحث التقني فقط عندما لا توجد أي نتيجة لنعرض رسالة صادقة.
+            ...(searchFailed && results.length === 0 ? { search_failed: '1' } : {}),
+          },
         });
       }, 2000);
     }, 1500);

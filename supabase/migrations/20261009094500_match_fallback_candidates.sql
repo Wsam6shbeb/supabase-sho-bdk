@@ -1,5 +1,4 @@
--- If no strong candidates exist, return up to three available providers in the requester's city
--- as clearly-labelled alternatives. Strong matches always take precedence.
+-- Return only providers with meaningful service-term overlap. Never substitute unrelated local providers.
 create or replace function public.get_provider_candidates(p_request_id uuid, p_limit integer default 50)
 returns table(
   provider_id uuid,
@@ -47,7 +46,7 @@ request_terms as (
   cross join lateral (select regexp_replace(w.raw,'^ال','') base) b
   cross join lateral (values (b.base),(case when length(b.base)>=5 then left(b.base,greatest(4,length(b.base)-1)) end)) t(term)
   where t.term is not null and length(t.term)>=3
-    and t.term not in ('خدمه','خدمات','عام','عامه','اعمال','مهام','مهارات')
+    and t.term not in ('خدمه','خدمات','عام','عامه','اعمال','مهام','مهارات','مدرس','معلم','معلمه','استاذ','استاذه','مدرسه','تعليم','تدريس','تعلم','لغه','لغات','مطلوب','بدي','اريد','احتاج','خدماتي','خدمتي')
 ),
 provider_docs as (
   select ps.provider_id,
@@ -84,13 +83,15 @@ provider_scored as (
   join public.provider_profiles pp on pp.user_id=pd.provider_id
   left join request_terms rt on pd.doc like '%'||rt.term||'%'
   where pp.is_available=true and pd.provider_id<>(select requester_id from request_row)
-  group by pd.provider_id,
+  group by pd.provider_id
+),
 eligible as (
   select s.provider_id,s.word_matches,
     (s.category_match*60+s.word_matches*10+
       case when s.location_tier=2 then 40 when s.location_tier=1 then 20 else 0 end) preliminary_score
   from provider_scored s
-  where ((select public.norm_ar(data->>'category') from request_row)='' or s.category_match=1)
+  where s.word_matches > 0
+    and ((select public.norm_ar(data->>'category') from request_row)='' or s.category_match=1)
     and (cardinality((select cities from request_row))=0 or s.location_tier>0)
 ),
 final_chosen as (
@@ -99,23 +100,8 @@ final_chosen as (
   order by e.preliminary_score desc,e.word_matches desc,e.provider_id
   limit greatest(1,least(coalesce(p_limit,50),100))
 ),
-fallback_chosen as (
-  select s.provider_id,
-    (s.category_match*20+s.word_matches*10+
-      case when s.location_tier=2 then 40 when s.location_tier=1 then 20 else 0 end)::integer preliminary_score,
-    s.word_matches
-  from provider_scored s
-  join public.provider_profiles pp on pp.user_id=s.provider_id
-  where not exists(select 1 from eligible)
-    and (cardinality((select cities from request_row))=0 or s.location_tier>0)
-  order by s.category_match desc,s.word_matches desc,s.location_tier desc,
-    pp.rating_avg desc,pp.completed_services_count desc,s.provider_id
-  limit greatest(1,least(coalesce(p_limit,3),3))
-),
 chosen as (
   select * from final_chosen
-  union all
-  select * from fallback_chosen
 )
 select c.provider_id,pp.rating_avg,pp.completed_services_count,u.full_name,u.avatar_url,u.region,
   u.verification_status::text,

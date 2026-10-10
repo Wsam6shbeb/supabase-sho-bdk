@@ -18,8 +18,8 @@ import { t } from '@/i18n/ar';
 import { OrderStatus } from '@/types/common';
 import type { Order } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
     Pressable,
@@ -35,7 +35,14 @@ type TabKey = 'active' | 'awaitingRating' | 'previous';
 export default function OrdersTab() {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const { currentOrder, orderHistory } = useOrder();
+  const { currentOrder, orderHistory, refreshOrderHistory } = useOrder();
+
+  // كل مرة يفتح المستخدم هذا التبويب نحدّث السجل من السيرفر، حتى يظهر كل طلب بمكانه الصحيح.
+  useFocusEffect(
+    useCallback(() => {
+      void refreshOrderHistory();
+    }, [refreshOrderHistory]),
+  );
   const [activeTab, setActiveTab] = useState<TabKey>('active');
 
   // النشطة
@@ -49,7 +56,8 @@ export default function OrdersTab() {
   // بانتظار التقييم
   const awaitingRatingOrders = useMemo<Order[]>(() => {
     return orderHistory.filter(
-      (o) => o.status === OrderStatus.COMPLETION_PENDING_RATING && !o.customer_rating && o.provider_id,
+      // أبقِ الطلب ضمن انتظار التقييم حتى لو قيّم المستخدم الطرف الآخر؛ قد يبقى تقييم الطرف المقابل مطلوباً.
+      (o) => o.status === OrderStatus.COMPLETION_PENDING_RATING && !!o.provider_id,
     );
   }, [orderHistory]);
 
@@ -88,13 +96,13 @@ export default function OrdersTab() {
 // [شرح الدالة: handleReport] يفتح إجراء الإبلاغ المرتبط بالطلب.
   const handleReport = (orderId: string) => {
     const order = orderHistory.find((o) => o.id === orderId);
-    if (!order?.provider_id) return;
+    if (!order?.other_user_id) return;
 
     router.push({
       pathname: '/orders/report',
       params: {
-        reported_user_id: order.provider_id,
-        reported_user_name: order.provider_name ?? 'مقدم الخدمة',
+        reported_user_id: order.other_user_id,
+        reported_user_name: order.other_user_name ?? 'المستخدم الآخر',
         order_id: orderId,
       },
     });

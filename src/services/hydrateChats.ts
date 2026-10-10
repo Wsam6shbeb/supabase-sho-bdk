@@ -73,15 +73,19 @@ function mapVerification(status: string | null): ServiceProvider['verification_s
 }
 
 /** يرجع null إذا لا توجد محادثات مفتوحة لاستعادتها (أو عند الفشل). */
-export async function loadRequesterConversations(userId: string): Promise<HydratedChats | null> {
+export async function loadMyConversations(userId: string): Promise<HydratedChats | null> {
   try {
-    const inbox = (await fetchMyConversations()).filter((c) => c.my_role === 'requester');
+    // هذه الاستعادة تبني حالة الطلب المحلية القديمة، وهي مهيأة لطالب الخدمة فقط.
+    // محادثات المستخدم بصفته الطرف الآخر تُفتح من صندوق الوارد عبر conversation_id الحقيقي،
+    // ولا يجوز تحويل الطرف الآخر تلقائياً إلى مقدم خدمة داخل OrderContext.
+    const allInbox = await fetchMyConversations();
+    const inbox = allInbox.filter((conversation) => conversation.my_role === 'requester');
     if (inbox.length === 0) return null;
 
     const requestIds = Array.from(new Set(inbox.map((c) => c.request_id)));
     const { data: requests, error: requestsError } = await supabase
       .from('service_requests')
-      .select('id, raw_text, state, urgency, region, created_at, updated_at')
+      .select('id, requester_id, raw_text, state, urgency, region, created_at, updated_at')
       .in('id', requestIds);
 
     if (requestsError || !requests?.length) {
@@ -136,14 +140,17 @@ export async function loadRequesterConversations(userId: string): Promise<Hydrat
 
     const order: Order = {
       id: openRequest.id,
-      customer_id: userId,
+      customer_id: openRequest.requester_id,
+      my_role: conversations[0]?.my_role === 'provider' ? 'provider' : 'customer',
+      other_user_id: conversations[0]?.other_user_id ?? null,
+      other_user_name: conversations[0]?.other_name ?? null,
       description: openRequest.raw_text,
       is_urgent: openRequest.urgency === 'urgent',
       status: mapOrderStatus(openRequest.state),
       region_id: openRequest.region ?? '',
       created_at: openRequest.created_at,
       updated_at: openRequest.updated_at,
-      provider_id: agreement?.provider_id ?? null,
+      provider_id: agreement?.provider_id ?? (conversations[0]?.my_role === 'provider' ? userId : null),
       provider_name: null,
       commission_amount: agreement ? Number(agreement.commission_amount) : null,
       agreed_price: agreement?.price != null ? Number(agreement.price) : null,
@@ -200,7 +207,9 @@ export async function loadRequesterConversations(userId: string): Promise<Hydrat
     }));
 
     const agreed = conversations.find((c) => c.state === 'agreement_pending' || c.state === 'active');
-    order.provider_name = providers.find((p) => p.id === order.provider_id)?.name ?? null;
+    order.provider_name = conversations[0]?.my_role === 'provider'
+      ? providers.find((p) => p.id === userId)?.name ?? null
+      : providers.find((p) => p.id === order.provider_id)?.name ?? null;
 
     return {
       order,

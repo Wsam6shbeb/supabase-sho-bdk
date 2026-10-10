@@ -24,6 +24,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
+
 if (!I18nManager.isRTL) {
   I18nManager.forceRTL(true);
   I18nManager.allowRTL(true);

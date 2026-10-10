@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { openConversation } from '@/services/chat';
+import { extractPriceFromChat } from '@/domain/commission';
 import { useConversation } from '@/hooks/use-conversation';
 import { ChatStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -54,6 +55,7 @@ export default function ChatScreen() {
     openChat,
     customerAgrees,
     customerCancelsAgreement,
+    providerRespondsToAgreement,
     approvalRemainingSeconds,
     estimateCommission,
     completeOrder,
@@ -157,18 +159,61 @@ export default function ChatScreen() {
     setSharePhone(false);
   };
 
-// [شرح الدالة: handleCompleteOrder] ينفذ خطوة إكمال الطلب بعد انتهاء الخدمة.
-  const handleCompleteOrder = async () => {
-    const orderId = thread.order_id;
-    const result = await completeOrder();
-    if (!result.ok) {
-      Alert.alert('', result.error ?? 'تعذر إنهاء الخدمة. حاول مرة أخرى.');
-      return;
-    }
-    router.replace({
-      pathname: '/orders/rate',
-      params: { order_id: orderId },
-    });
+// [شرح الدالة: handleCompleteOrder] يطلب تأكيد إتمام الخدمة قبل الانتقال إلى التقييم.
+  const handleProviderApprove = () => {
+    Alert.alert('تأكيد الاتفاق', 'هل تريد الموافقة على الاتفاق وبدء الخدمة؟', [
+      { text: 'رجوع', style: 'cancel' },
+      {
+        text: 'موافقة',
+        onPress: () => {
+          void providerRespondsToAgreement(true).then((result) => {
+            if (!result.ok) Alert.alert('', result.error ?? 'تعذرت الموافقة.');
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleProviderReject = () => {
+    Alert.alert('رفض الاتفاق', 'هل تريد رفض هذا الاتفاق؟', [
+      { text: 'إلغاء', style: 'cancel' },
+      {
+        text: 'رفض الاتفاق',
+        style: 'destructive',
+        onPress: () => {
+          void providerRespondsToAgreement(false).then((result) => {
+            if (!result.ok) Alert.alert('', result.error ?? 'تعذر رفض الاتفاق.');
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleCompleteOrder = () => {
+    Alert.alert(
+      'تأكيد إكمال الخدمة',
+      'هل أُنجزت الخدمة بالفعل؟ إذا أكدت إكمالها، ستتمكن من تقييم مقدم الخدمة. ويمكنك العودة إلى هذه المحادثة في أي وقت لاحق لإضافة تقييمك.',
+      [
+        { text: 'ليس بعد', style: 'cancel' },
+        {
+          text: 'نعم، أُنجزت الخدمة',
+          onPress: () => {
+            void (async () => {
+              const orderId = thread.order_id;
+              const result = await completeOrder();
+              if (!result.ok) {
+                Alert.alert('', result.error ?? 'تعذر إنهاء الخدمة. حاول مرة أخرى.');
+                return;
+              }
+              router.replace({
+                pathname: '/orders/rate',
+                params: { order_id: orderId },
+              });
+            })();
+          },
+        },
+      ],
+    );
   };
 
 // [شرح الدالة: handleCloseNegotiation] يغلق مسار التفاوض/المحادثة وفق قواعد الطلب.
@@ -187,8 +232,10 @@ export default function ChatScreen() {
     setActiveProviderId(providerId);
   };
 
-  const canCustomerAgree = thread.status === ChatStatus.NEGOTIATING;
-  const canCustomerCancel = thread.status === ChatStatus.AWAITING_APPROVAL;
+  const isProviderSide = currentOrder?.my_role === 'provider';
+  const canCustomerAgree = !isProviderSide && thread.status === ChatStatus.NEGOTIATING;
+  const canCustomerCancel = !isProviderSide && thread.status === ChatStatus.AWAITING_APPROVAL;
+  const canProviderRespond = isProviderSide && thread.status === ChatStatus.AWAITING_APPROVAL;
   const canCustomerComplete = thread.status === ChatStatus.ACTIVE;
   const canSendMessage =
     thread.status === ChatStatus.NEGOTIATING || thread.status === ChatStatus.ACTIVE;
@@ -278,6 +325,7 @@ export default function ChatScreen() {
         />
 
         <FlatList
+          removeClippedSubviews={false}
           data={currentMessages}
           renderItem={({ item }) => {
             return (
@@ -298,6 +346,22 @@ export default function ChatScreen() {
           <Text style={[styles.typingText, { color: scheme.textSecondary }]}>
             يكتب الآن...
           </Text>
+        )}
+
+        {canProviderRespond && (
+          <View style={styles.actionWrap}>
+            <View style={[styles.waitingNotice, { backgroundColor: `${scheme.warning}15`, borderColor: `${scheme.warning}40` }]}>
+              <Ionicons name="time" size={18} color={scheme.warning} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.waitingTitle, { color: scheme.warning }]}>طلب اتفاق بانتظار موافقتك</Text>
+                <Text style={[styles.waitingBody, { color: scheme.textSecondary }]}>راجع السعر والتفاصيل قبل قبول الاتفاق.</Text>
+              </View>
+            </View>
+            <View style={styles.confirmActions}>
+              <AppButton title="موافقة وبدء الخدمة" variant="primary" size="md" onPress={handleProviderApprove} fullWidth={false} style={{ flex: 1 }} />
+              <AppButton title="رفض الاتفاق" variant="danger" size="md" onPress={handleProviderReject} fullWidth={false} style={{ flex: 1, marginStart: Spacing.two }} />
+            </View>
+          </View>
         )}
 
         {canCustomerCancel && (
@@ -337,13 +401,15 @@ export default function ChatScreen() {
         )}
 
         {isActive && (
-          <View
-            style={[styles.activeNotice, { backgroundColor: `${scheme.success}15` }]}
-          >
-            <Ionicons name="checkmark-circle" size={18} color={scheme.success} />
-            <Text style={[styles.activeText, { color: scheme.success }]}>
-              المحادثة نشطة — تم قبول الاتفاق
-            </Text>
+          <View style={{ gap: Spacing.two }}>
+            <View
+              style={[styles.activeNotice, { backgroundColor: `${scheme.success}15` }]}
+            >
+              <Ionicons name="checkmark-circle" size={18} color={scheme.success} />
+              <Text style={[styles.activeText, { color: scheme.success }]}>
+                المحادثة نشطة — تم قبول الاتفاق
+              </Text>
+            </View>
           </View>
         )}
 
@@ -415,7 +481,7 @@ export default function ChatScreen() {
             </Text>
             <View style={[styles.confirmPriceRow, { backgroundColor: `${scheme.primary}10`, borderColor: `${scheme.primary}30` }]}>
               <Text style={[styles.confirmPriceLabel, { color: scheme.textSecondary }]}>قيمة الخدمة المتفق عليها</Text>
-              <Text style={[styles.confirmPriceValue, { color: scheme.text }]}>{currentOrder?.agreed_price != null ? `${currentOrder.agreed_price} ل.س` : 'غير محددة — يجب تأكيد السعر في المحادثة'}</Text>
+              <Text style={[styles.confirmPriceValue, { color: scheme.text }]}>{extractPriceFromChat(currentMessages) != null ? `${extractPriceFromChat(currentMessages)} ل.س` : 'غير محددة — اكتبوا السعر النهائي بوضوح في المحادثة'}</Text>
             </View>
 
             <Pressable

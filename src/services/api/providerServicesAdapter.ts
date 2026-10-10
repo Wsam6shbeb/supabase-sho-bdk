@@ -22,6 +22,7 @@ export interface ProviderServiceRow {
   price_max: number;
   structured_data: {
     service?: string | null;
+    category?: string | null;
     skills?: string[];
     region?: string | null;
     location?: string | null;
@@ -54,36 +55,71 @@ async function getCurrentUserId(): Promise<string | null> {
 }
 
 // [شرح الدالة: analyzeProviderService] يرسل وصف الخدمة إلى Edge Function لتحليله بالذكاء الاصطناعي.
-// لا نحفظ الخدمة إذا فشل تحليل الذكاء الاصطناعي؛ حتى تبقى بياناتها المنظمة مكتملة.
+// نعيد المحاولة مرة واحدة عند الفشل (الخدمة قد تكون مشغولة لحظياً)، ولا نحفظ الخدمة إذا فشل التحليل
+// نهائياً؛ حتى تبقى بياناتها المنظمة (التصنيف/الخدمة/المهارات/المرادفات) مكتملة وصالحة للمطابقة.
+const AI_ANALYSIS_ATTEMPTS = 2;
+const AI_ANALYSIS_RETRY_DELAY_MS = 800;
+
 async function analyzeProviderService(input: {
   service: string;
   service_area: string;
   additional_info?: string;
 }): Promise<ProviderServiceRow['structured_data']> {
-  try {
-    const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
-      body: {
-        service_text: input.service,
-        service_area: input.service_area,
-        additional_info: input.additional_info ?? '',
-      },
-    });
+  for (let attempt = 1; attempt <= AI_ANALYSIS_ATTEMPTS; attempt += 1) {
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
+        body: {
+          service_text: input.service,
+          service_area: input.service_area,
+          additional_info: input.additional_info ?? '',
+        },
+      });
 
-    if (error) {
-      console.error('[Supabase][providerServices][AI] فشل تحليل الخدمة:', error.message);
-      return null;
+      if (error) {
+        console.error(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
+      } else if (!data?.structured_data || typeof data.structured_data !== 'object') {
+        console.error(`[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة (محاولة ${attempt}).`);
+      } else {
+        return data.structured_data as ProviderServiceRow['structured_data'];
+      }
+    } catch (error) {
+      console.error(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
     }
 
-    if (!data?.structured_data || typeof data.structured_data !== 'object') {
-      console.error('[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة.');
-      return null;
+    if (attempt < AI_ANALYSIS_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, AI_ANALYSIS_RETRY_DELAY_MS));
     }
-
-    return data.structured_data as ProviderServiceRow['structured_data'];
-  } catch (error) {
-    console.error('[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة:', error);
-    return null;
   }
+
+  return null;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+// [شرح الدالة: normalizeAnalysis] يضمن أن نتيجة التحليل تحوي دائماً service وskills وsynonyms صالحة،
+// حتى لو أهمل الذكاء الاصطناعي أحدها، لأن المطابقة تعتمد عليها.
+function normalizeAnalysis(
+  analysis: ProviderServiceRow['structured_data'],
+  description: string,
+): NonNullable<ProviderServiceRow['structured_data']> {
+  const raw = (analysis ?? {}) as Record<string, unknown>;
+  const service = typeof raw.service === 'string' && raw.service.trim() ? raw.service.trim() : description;
+  const skills = asStringArray(raw.skills);
+  const category = typeof raw.category === 'string' && raw.category.trim() ? raw.category.trim() : null;
+
+  return {
+    ...raw,
+    service,
+    category,
+    skills: skills.length ? skills : [description],
+    synonyms: asStringArray(raw.synonyms),
+  } as NonNullable<ProviderServiceRow['structured_data']>;
 }
 
 // [شرح الدالة: create] ينشئ خدمة جديدة لمقدّم الخدمة الحالي، وينشئ ملفه التعريفي كمزوّد إن لم يكن موجودًا.
@@ -103,15 +139,16 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     return { success: false, error: { code: 'MISSING_SERVICE_AREA', message: 'يجب تحديد المدينة ومكان تقديم الخدمة.' } };
   }
 
- const structuredData = {
-  city,
-  area: area || null,
-  service_area: serviceArea,
-  additional_info: input.additional_info?.trim() || null,
-};
-  if (!structuredData) {
+  // مسار واحد لكل المهارات (من "اقدم خدمة" ومن "بروفايلي كمقدم خدمة"): تحليل بالذكاء الاصطناعي قبل الحفظ.
+  const analysis = await analyzeProviderService({
+    service: description,
+    service_area: serviceArea,
+    additional_info: input.additional_info?.trim() ?? '',
+  });
+  if (!analysis) {
     return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إضافة الخدمة حالياً، يبدو أن الخدمة مشغولة. حاول مرة ثانية بعد قليل.' } };
   }
+  const structuredData = normalizeAnalysis(analysis, description);
 
   // أول خدمة يضيفها المستخدم تنشئ سجل provider_profiles تلقائيًا (لا يوجد trigger لهذا بقاعدة البيانات).
   const { error: profileError } = await supabase
@@ -250,4 +287,90 @@ const structuredData = {
   return { success: true, data: data as ProviderServiceRow };
 }
 
-export const providerServices = { create, mine, update };
+// خدمات تُحفظ بدون تحليل (أُضيفت أثناء فترة كان التحليل فيها معطلاً) تبقى بلا تصنيف/مرادفات.
+// نعيد تحليلها مرة لكل جلسة ونكمل بياناتها مع الحفاظ على الموقع كما أدخله المستخدم.
+const repairAttempted = new Set<string>();
+
+// [شرح الدالة: repairIncomplete] يكمل التحليل لخدمات المستخدم الناقصة. يرجع true إذا تغيّر شيء.
+async function repairIncomplete(): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+
+  const mineResult = await mine();
+  if (!mineResult.success) return false;
+
+  let changed = false;
+
+  for (const row of mineResult.data) {
+    const current = row.structured_data ?? {};
+    const hasService = typeof current.service === 'string' && current.service.trim() !== '';
+    const hasCategory = typeof current.category === 'string' && current.category.trim() !== '';
+
+    if (!row.is_active || (hasService && hasCategory) || repairAttempted.has(row.id)) continue;
+    repairAttempted.add(row.id);
+
+    const city = typeof current.city === 'string' ? current.city.trim() : '';
+    const area = typeof current.area === 'string' ? current.area.trim() : '';
+    const serviceArea =
+      (typeof current.service_area === 'string' ? current.service_area.trim() : '') ||
+      [city, area].filter(Boolean).join(' ');
+    if (!serviceArea) continue;
+
+    const additionalInfo = typeof current.additional_info === 'string' ? current.additional_info : '';
+    const analysis = await analyzeProviderService({
+      service: row.description,
+      service_area: serviceArea,
+      additional_info: additionalInfo,
+    });
+    if (!analysis) continue;
+
+    const merged = {
+      ...normalizeAnalysis(analysis, row.description),
+      ...(city ? { city } : {}),
+      area: area || null,
+      service_area: serviceArea,
+      additional_info: additionalInfo.trim() || null,
+    };
+
+    const { error } = await supabase
+      .from('provider_services')
+      .update({ structured_data: merged })
+      .eq('id', row.id)
+      .eq('provider_id', userId);
+
+    if (error) {
+      console.error('[Supabase][providerServices] فشل إكمال بيانات الخدمة:', error.message);
+      continue;
+    }
+    changed = true;
+  }
+
+  return changed;
+}
+
+// [شرح الدالة: remove] يحذف مهارة مقدم الخدمة من قاعدة البيانات بعد التحقق من ملكيتها.
+async function remove(id: string): Promise<ApiResponse<{ id: string }>> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return { success: false, error: { code: 'UNAUTHENTICATED', message: 'يجب تسجيل الدخول لحذف الخدمة.' } };
+  }
+
+  const { data, error } = await supabase
+    .from('provider_services')
+    .delete()
+    .eq('id', id)
+    .eq('provider_id', userId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+  }
+  if (!data) {
+    return { success: false, error: { code: 'NOT_DELETED', message: 'لم تُحذف الخدمة من قاعدة البيانات.' } };
+  }
+
+  return { success: true, data: { id: data.id } };
+}
+
+export const providerServices = { create, mine, update, remove, repairIncomplete };

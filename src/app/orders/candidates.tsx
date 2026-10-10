@@ -477,7 +477,9 @@ export default function CandidatesScreen() {
         <View style={styles.emptyContainer}>
           <Ionicons name="search" size={64} color={scheme.textTertiary} />
           <Text style={[styles.emptyTitle, { color: scheme.text }]}>
-            {t('orders.candidates.emptyState')}
+            {params.search_failed === '1'
+              ? t('orders.candidates.searchFailed')
+              : t('orders.candidates.emptyState')}
           </Text>
           <AppButton
             title={t('orders.candidates.tryAgain')}

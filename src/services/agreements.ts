@@ -138,6 +138,8 @@ export function agreementErrorMessage(code: string | null): string {
       return 'في اتفاق قائم بالفعل على هالطلب.';
     case 'BLOCKED':
       return 'ما بقدر تتفق مع شخص حاظره. ألغِ الحظر أولاً.';
+    case 'AGREED_PRICE_REQUIRED':
+      return 'لا يمكن تثبيت الاتفاق قبل تحديد السعر النهائي بوضوح.';
     case 'AGREEMENT_UNAVAILABLE':
       return 'هالاتفاق غير متاح حالياً.';
     case 'FORBIDDEN':
