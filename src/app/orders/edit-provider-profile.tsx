@@ -389,7 +389,13 @@ service_area: [
             <AppTextInput
               placeholder={t('home.becomeProvider.bioPlaceholder')}
               value={profile.bio ?? ''}
-              onChangeText={(v) => updateProviderProfile({ bio: v })}
+              onChangeText={(v) => {
+                if (containsPhoneNumber(v)) {
+                  Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في نبذة عنك.');
+                  return;
+                }
+                updateProviderProfile({ bio: v });
+              }}
               multiline
               numberOfLines={3}
               style={{ minHeight: 80, textAlignVertical: 'top' }}
