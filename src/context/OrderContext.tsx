@@ -1398,24 +1398,10 @@ additional_info: skill.additional_info?.trim() || '',
         return { welcomeBonus: false };
       }
 
-      const row = response.data;
-     const savedSkill: ProviderSkill = {
-  id: row.id,
-  name: skill.name,
-  years_of_experience: row.experience_years,
-  description: row.description,
-  city: skill.city ?? 'اللاذقية',
-  area: skill.area ?? '',
-  service_area: skill.service_area ?? '',
-  additional_info: skill.additional_info,
-};
-
-      setMyProviderProfile((prev) => ({
-        skills: [...(prev?.skills ?? []), savedSkill],
-        bio: prev?.bio,
-        is_available: prev?.is_available ?? true,
-        welcome_bonus_received: prev?.welcome_bonus_received ?? false,
-      }));
+      // مصدر الحقيقة هو قاعدة البيانات: أعد تحميل الملف بعد نجاح الحفظ بدل إضافة مهارة محلية.
+      if (user?.id) {
+        await loadMyProviderProfile(user.id);
+      }
 
       // مكافأة الانضمام تُمنح من السيرفر (مرة واحدة، والمبلغ من الإعدادات)
       let welcomeBonus = false;
@@ -1437,7 +1423,7 @@ additional_info: skill.additional_info?.trim() || '',
       }
       return { welcomeBonus };
     },
-    [myProviderProfile, refreshWallet, pushNotification],
+    [myProviderProfile, refreshWallet, pushNotification, loadMyProviderProfile, user?.id],
   );
 
   const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
