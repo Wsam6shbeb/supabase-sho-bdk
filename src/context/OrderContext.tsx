@@ -952,7 +952,11 @@ additional_info:
         }).then((created) => {
           if (!created) return;
           setCurrentOrder((prev) => (prev && prev.id === order.id ? { ...prev, id: created.id } : prev));
-          void syncOpenChatToSupabase(thread, created.id, provider.id, requesterId).then((conversationId) => {
+          // Keep the local thread linked to the persisted request ID used by Supabase.
+          setActiveChats((prev) =>
+            prev.map((t) => (t.id === thread.id ? { ...t, order_id: created.id } : t)),
+          );
+          void syncOpenChatToSupabase({ ...thread, order_id: created.id }, created.id, provider.id, requesterId).then((conversationId) => {
             if (!conversationId) return;
             setActiveChats((prev) =>
               prev.map((t) => (t.id === thread.id ? { ...t, conversation_id: conversationId } : t)),
