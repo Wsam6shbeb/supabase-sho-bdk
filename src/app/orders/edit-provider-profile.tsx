@@ -18,6 +18,7 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder, type ProviderSkill } from '@/context/OrderContext';
 import { DEFAULT_CITY } from '@/config/location';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
+import { areaPlaceholder } from '@/domain/areaSuggestions';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -271,7 +272,7 @@ service_area: [
                   />
                   <AppTextInput
                     label="المنطقة (اختياري)"
-                    placeholder={newSkillCity.trim() === 'اللاذقية' ? 'المشروع السابع' : ''}
+                    placeholder={areaPlaceholder(newSkillCity)}
                     value={newSkillArea}
                     onChangeText={setNewSkillArea}
                     containerStyle={styles.rowField}
@@ -354,7 +355,7 @@ service_area: [
                         />
                         <AppTextInput
                           label="المنطقة (اختياري)"
-                          placeholder={city.trim() === 'اللاذقية' ? 'المشروع السابع' : ''}
+                          placeholder={areaPlaceholder(city)}
                           value={area}
                           onChangeText={(value) =>
                             setSkillAreas((prev) => ({ ...prev, [skill.id]: value }))

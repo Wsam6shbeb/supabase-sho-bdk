@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { DEFAULT_CITY } from '@/config/location';
+import { sharePhone as shareMyPhone } from '@/services/phone';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
@@ -170,6 +171,7 @@ export interface OrderContextValue {
     providerId: string,
     customerName: string,
     chatHistory: ChatMessage[],
+    shareMyPhoneWithProvider?: boolean,
   ) => Promise<{ ok: boolean; error?: string }>;
   customerCancelsAgreement: () => Promise<void>;
   providerRespondsToAgreement: (approve: boolean) => Promise<{ ok: boolean; error?: string }>;
@@ -1042,6 +1044,7 @@ additional_info:
       providerId: string,
       customerName: string,
       chatHistory: ChatMessage[],
+      shareMyPhoneWithProvider = false,
     ): Promise<{ ok: boolean; error?: string }> => {
       const thread = activeChats.find((t) => t.id === threadId);
       if (!thread) return { ok: false, error: agreementErrorMessage('CONVERSATION_NOT_FOUND') };
@@ -1076,6 +1079,12 @@ additional_info:
       if (error || !agreement) {
         console.error('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
         return { ok: false, error: agreementErrorMessage(error) };
+      }
+
+      // الزبون اختار "شارك رقمي": نسجّل ذلك؛ الطرف الآخر لا يراه إلا بعد موافقته على الاتفاق.
+      if (shareMyPhoneWithProvider) {
+        const shared = await shareMyPhone(conversationId);
+        if (!shared.ok) console.error('[Supabase][customerAgrees] تعذرت مشاركة الرقم:', shared.error);
       }
 
       clearTimer();

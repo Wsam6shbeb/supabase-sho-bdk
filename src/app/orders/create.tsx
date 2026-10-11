@@ -27,6 +27,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { areaPlaceholder } from '@/domain/areaSuggestions';
+import { PHONE_IN_TEXT_MESSAGE, containsPhoneNumber } from '@/domain/chatSafety';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useState } from 'react';
 import type { ServiceRequestAnalysis } from '@/context/OrderContext';
@@ -116,6 +118,10 @@ export default function CreateOrderScreen() {
     }
     if (!trimmedCity) {
       setError('يرجى كتابة المدينة.');
+      return;
+    }
+    if ([trimmed, trimmedCity, serviceArea, additionalInfo].some((value) => containsPhoneNumber(value))) {
+      setError(PHONE_IN_TEXT_MESSAGE);
       return;
     }
     rememberCity(trimmedCity);
@@ -235,7 +241,7 @@ export default function CreateOrderScreen() {
 
             <Text style={[styles.fieldLabel, { color: scheme.text }]}>بأي منطقة؟ (اختياري)</Text>
             <AppTextInput
-              placeholder="مثال: المشروع السابع"
+              placeholder={areaPlaceholder(city)}
               value={serviceArea}
               onChangeText={(val) => {
                 setServiceArea(val);

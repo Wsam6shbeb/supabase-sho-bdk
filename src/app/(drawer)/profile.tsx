@@ -14,6 +14,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
+import { formatPhoneForDisplay } from '@/domain/phone';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -132,6 +133,17 @@ export default function ProfileScreen() {
               <Text style={[styles.email, { color: scheme.textSecondary }]} numberOfLines={1}>
                 {user?.email ?? ''}
               </Text>
+              <Pressable
+                onPress={() => router.push('/auth/complete-phone?mode=edit')}
+                hitSlop={6}
+                style={styles.regionRow}
+              >
+                <Ionicons name="call-outline" size={14} color={scheme.textSecondary} />
+                <Text style={[styles.region, { color: scheme.textSecondary }]}>
+                  {user?.phone ? formatPhoneForDisplay(user.phone) : 'أضف رقم هاتفك'}
+                </Text>
+                <Text style={[styles.region, { color: scheme.primary }]}>تعديل</Text>
+              </Pressable>
               {user?.region && (
                 <View style={styles.regionRow}>
                   <Ionicons name="location" size={14} color={scheme.textSecondary} />

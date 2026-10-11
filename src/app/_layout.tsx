@@ -16,7 +16,7 @@ import { OrderProvider } from '@/context/OrderContext';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
 import { I18nManager, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -39,7 +39,8 @@ function AppEntry() {
   useEffect(() => {
     if (!isInitialized) return;
     if (user) {
-      router.replace('/(drawer)/(tabs)');
+      // لا أحد يدخل التطبيق بدون رقم هاتف (يُطلب مرة واحدة بعد أول تسجيل دخول)
+      router.replace(user.phone ? '/(drawer)/(tabs)' : '/auth/complete-phone');
     } else {
       router.replace('/auth/login');
     }
@@ -52,6 +53,21 @@ function AppEntry() {
       </View>
     );
   }
+
+  return null;
+}
+
+// [شرح الدالة: PhoneGate] يمنع الوصول لأي شاشة (حتى عبر إشعار/رابط) قبل إدخال رقم الهاتف.
+function PhoneGate() {
+  const { isInitialized, user } = useAuth();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isInitialized || !user || user.phone) return;
+    // '/' يعالجه AppEntry، وشاشة الرقم نفسها لا نعيد توجيهها
+    if (pathname === '/' || pathname === '/auth/complete-phone') return;
+    router.replace('/auth/complete-phone');
+  }, [isInitialized, user, pathname]);
 
   return null;
 }
@@ -85,6 +101,7 @@ function RootStack() {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="auth/login" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="auth/complete-phone" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="auth/register" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="auth/forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="auth/verify-email" options={{ headerShown: false, animation: 'slide_from_right' }} />
@@ -107,6 +124,7 @@ function RootStack() {
         <Stack.Screen name="orders/request-again" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       </Stack>
       <AppEntry />
+      <PhoneGate />
     </ThemeProvider>
   );
 }
