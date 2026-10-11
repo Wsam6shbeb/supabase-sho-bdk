@@ -9,8 +9,17 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+// آخر إشعار تم التعامل معه. getLastNotificationResponseAsync يُرجع آخر نقرة حتى لو عولجت سابقاً،
+// فبدون هذا السجل كان يُعاد فتح نفس الإشعار بعد تبديل الحساب (تسجيل خروج ثم دخول بحساب آخر).
+let lastHandledNotificationId: string | null = null;
+
 function openRouteFrom(response: Notifications.NotificationResponse | null | undefined) {
-  const route = response?.notification.request.content.data?.route;
+  if (!response) return;
+  const notificationId = response.notification.request.identifier;
+  if (notificationId === lastHandledNotificationId) return;
+  lastHandledNotificationId = notificationId;
+
+  const route = response.notification.request.content.data?.route;
   if (typeof route !== 'string' || !route.startsWith('/')) return;
   // تأخير بسيط ليسبقه توجيه الدخول الأولي (AppEntry) ثم نفتح وجهة الإشعار
   setTimeout(() => {

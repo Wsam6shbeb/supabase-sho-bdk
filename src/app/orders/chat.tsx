@@ -12,6 +12,7 @@
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
+import { WrongAccountNotice } from '@/components/orders/WrongAccountNotice';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
 import { ChatStatusBar } from '@/components/orders/ChatStatusBar';
@@ -118,20 +119,10 @@ export default function ChatScreen() {
 
   if (!provider || !thread) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
-        <View style={styles.errorWrap}>
-          <Ionicons name="alert-circle" size={64} color={scheme.danger} />
-          <Text style={[styles.errorText, { color: scheme.text }]}>
-            المحادثة غير موجودة
-          </Text>
-          <AppButton
-            title={t('common.back')}
-            variant="primary"
-            size="md"
-            onPress={() => router.back()}
-          />
-        </View>
-      </SafeAreaView>
+      <WrongAccountNotice
+        title="لم نجد هذه المحادثة في حسابك"
+        message="قد يكون الإشعار أو الرابط خاصاً بحساب آخر، أو أن هذه المحادثة انتهت. سجّل الخروج وادخل بالحساب الصحيح إن كان الإشعار لحساب آخر."
+      />
     );
   }
 

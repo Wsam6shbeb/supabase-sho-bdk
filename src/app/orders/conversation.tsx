@@ -5,6 +5,7 @@
 
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
+import { WrongAccountNotice } from '@/components/orders/WrongAccountNotice';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
 import { ChatBubble } from '@/components/orders/ChatBubble';
@@ -48,7 +49,7 @@ export default function ConversationScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { isProviderBlocked, unblockProvider, refreshOrderHistory } = useOrder();
 
   const conversationId = typeof params.conversation_id === 'string' ? params.conversation_id : '';
@@ -196,31 +197,7 @@ export default function ConversationScreen() {
     return true;
   };
 
-  if (access === 'denied') {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
-        <View style={styles.deniedContainer}>
-          <Text style={[styles.deniedTitle, { color: scheme.text }]}>هذه المحادثة تخص حساباً آخر</Text>
-          <Text style={[styles.deniedText, { color: scheme.textSecondary }]}>
-            أنت مسجّل الدخول بحساب مختلف عن الحساب المرتبط بهذه المحادثة. سجّل الخروج ثم ادخل بحساب
-            Google الصحيح.
-          </Text>
-          <AppButton
-            title="تسجيل الخروج"
-            variant="primary"
-            size="md"
-            onPress={() => {
-              void (async () => {
-                await logout();
-                router.replace('/auth/login');
-              })();
-            }}
-          />
-          <AppButton title="رجوع" variant="secondary" size="md" onPress={() => router.back()} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  if (access === 'denied') return <WrongAccountNotice />;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
@@ -326,22 +303,6 @@ export default function ConversationScreen() {
 }
 
 const styles = StyleSheet.create({
-  deniedContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  deniedTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: FontWeights.bold,
-    textAlign: 'center',
-  },
-  deniedText: {
-    fontSize: FontSizes.base,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
   safe: { flex: 1 },
   flex: { flex: 1 },
   header: {
