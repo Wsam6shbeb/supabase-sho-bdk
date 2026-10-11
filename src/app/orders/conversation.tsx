@@ -5,6 +5,7 @@
 
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
+import { PhoneSharePanel } from '@/components/orders/PhoneSharePanel';
 import { WrongAccountNotice } from '@/components/orders/WrongAccountNotice';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
@@ -12,6 +13,7 @@ import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
+import { sharePhone as shareMyPhone } from '@/services/phone';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -191,6 +193,11 @@ export default function ConversationScreen() {
       return false;
     }
     setAgreement(updated);
+    // المزود اختار "شارك رقمي" عند الموافقة: نسجّل ذلك (يصير الرقم ظاهراً للزبون لأن الاتفاق صار فعّالاً)
+    if (approve && sharePhone && conversationId) {
+      const shared = await shareMyPhone(conversationId);
+      if (!shared.ok) Alert.alert('', shared.error ?? 'تعذرت مشاركة الرقم.');
+    }
     if (updated.state === 'expired') {
       Alert.alert('', 'انتهت مهلة الموافقة على هالاتفاق.');
     }
@@ -219,6 +226,8 @@ export default function ConversationScreen() {
           </Text>
           <View style={styles.backBtn} />
         </View>
+
+        <PhoneSharePanel conversationId={conversationId} refreshKey={lastSystemMessageId} />
 
         <FlatList
           ref={listRef}

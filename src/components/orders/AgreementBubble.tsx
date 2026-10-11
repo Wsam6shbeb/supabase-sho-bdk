@@ -117,7 +117,7 @@ export function AgreementBubble({
                 )}
               </View>
               <Text style={[styles.checkboxLabel, { color: scheme.text }]}>
-                {t('orders.chat.sharePhoneLabel')}
+                {t('orders.chat.sharePhoneWithCustomerLabel')}
               </Text>
             </Pressable>
 

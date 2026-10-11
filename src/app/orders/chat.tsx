@@ -12,6 +12,7 @@
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
+import { PhoneSharePanel } from '@/components/orders/PhoneSharePanel';
 import { WrongAccountNotice } from '@/components/orders/WrongAccountNotice';
 import { ChatInput } from '@/components/orders/ChatInput';
 import { BottomInsetSpacer } from '@/components/ui/BottomInsetSpacer';
@@ -141,6 +142,7 @@ export default function ChatScreen() {
       provider.id,
       user?.name ?? 'الزبون',
       currentMessages,
+      sharePhone,
     );
     if (!result.ok) {
       Alert.alert('', result.error ?? 'تعذر إرسال طلب الاتفاق. حاول مرة أخرى.');
@@ -313,6 +315,11 @@ export default function ChatScreen() {
           providers={allProviders}
           activeProviderId={activeProviderId}
           onSelect={handleSwitchProvider}
+        />
+
+        <PhoneSharePanel
+          conversationId={conversationId}
+          refreshKey={[...remoteMessages].reverse().find((m) => m.is_system)?.id ?? null}
         />
 
         <FlatList

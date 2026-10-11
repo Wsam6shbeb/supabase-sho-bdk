@@ -235,7 +235,8 @@ export const ar = {
         'سيتم إرسال طلب تأكيد الاتفاق إلى {name}. تأكد أن السعر والتفاصيل المتفق عليها واضحة في المحادثة قبل المتابعة.',
       customerConfirmNote:
         'عند الموافقة، سيتم خصم المبلغ من رصيد مقدم الخدمة وتبدأ الخدمة.',
-      sharePhoneLabel: 'شارك رقم هاتفك مع مقدم الخدمة',
+      sharePhoneLabel: 'شارك رقم هاتفي مع مقدم الخدمة',
+      sharePhoneWithCustomerLabel: 'شارك رقم هاتفي مع الزبون',
       confirmBtn: 'تأكيد الاتفاق',
       cancelBtn: 'إلغاء',
       providerApprovalTitle: 'طلب موافقة',
