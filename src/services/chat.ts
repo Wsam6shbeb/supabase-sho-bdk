@@ -192,7 +192,7 @@ export async function fetchMyConversations(): Promise<InboxConversation[]> {
 /** اشتراك لحظي بأي رسالة جديدة أو تغيّر حالة تخصني (لتحديث صندوق الوارد والعدّاد). */
 export function subscribeToInbox(onChange: () => void): () => void {
   const channel = supabase
-    .channel('inbox')
+    .channel(`inbox:${Date.now()}-${Math.random().toString(36).slice(2)}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => onChange())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => onChange())
     .subscribe();
