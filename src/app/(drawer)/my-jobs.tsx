@@ -168,12 +168,7 @@ export default function MyJobsScreen() {
                   <Text style={[styles.meta, { color: scheme.textSecondary }]}>
                     {item.price != null ? `${item.price} ل.س` : 'سعر غير محدد'} · عمولة {item.commission_amount}
                   </Text>
-                  {item.rating_received != null && (
-                    <View style={styles.rating}>
-                      <Ionicons name="star" size={14} color={scheme.warning} />
-                      <Text style={[styles.meta, { color: scheme.textSecondary }]}>{item.rating_received}</Text>
-                    </View>
-                  )}
+                  {/* لا نعرض تقييم زبون محدد لمقدم الخدمة؛ يرى تقييمه العام فقط (أعلى الشاشة). */}
                 </View>
               </AppCard>
             </Pressable>

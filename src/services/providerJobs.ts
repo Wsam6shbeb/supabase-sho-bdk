@@ -20,6 +20,7 @@ export interface ProviderJob {
   created_at: string;
   expires_at: string;
   completed_at: string | null;
+  /** @deprecated يرجع دائماً null: مقدم الخدمة لا يرى تقييم زبون محدد، فقط تقييمه العام. */
   rating_received: number | null;
   rating_given: number | null;
 }
