@@ -6,6 +6,10 @@
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
 const WESTERN_DIGITS = '01234567890123456789';
 
+/** رسالة موحدة عند محاولة كتابة رقم هاتف بحقل نصي عام. */
+export const PHONE_IN_TEXT_MESSAGE =
+  'لا يمكن كتابة أرقام الهاتف هنا. يمكنك مشاركة رقمك مع الطرف الآخر بعد تأكيد الاتفاق عبر خانة «شارك رقم هاتفي».';
+
 export function normalizePhoneDigits(value: string): string {
   return value.replace(/[٠-٩۰-۹]/g, (digit) => {
     const index = ARABIC_DIGITS.indexOf(digit);

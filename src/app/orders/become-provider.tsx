@@ -15,6 +15,8 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
+import { areaPlaceholder } from '@/domain/areaSuggestions';
+import { PHONE_IN_TEXT_MESSAGE, containsPhoneNumber } from '@/domain/chatSafety';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,6 +60,11 @@ export default function BecomeProviderScreen() {
 
     if (!trimmedCity) {
       setError('اكتب المدينة التي تقدم فيها الخدمة.');
+      return;
+    }
+
+    if ([trimmed, trimmedCity, trimmedArea, additionalInfo].some((value) => containsPhoneNumber(value))) {
+      setError(PHONE_IN_TEXT_MESSAGE);
       return;
     }
 
@@ -160,7 +167,7 @@ export default function BecomeProviderScreen() {
 
             <AppTextInput
               label="بأي منطقة؟ (اختياري)"
-              placeholder="مثال: المشروع السابع"
+              placeholder={areaPlaceholder(city)}
               value={serviceArea}
               onChangeText={(v) => {
                 setServiceArea(v);
