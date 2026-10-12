@@ -21,6 +21,8 @@ export interface User {
   has_provider_profile: boolean;
   provider_profile?: ProviderProfilePlaceholder | null;
   verification_status: VerificationStatus;
+  /** أدمن: يراجع البلاغات ويقرر رد العمولة (يُحدَّد من قاعدة البيانات فقط). */
+  is_admin?: boolean;
   balance: number;
   received_welcome_bonus: boolean;
   created_at: string;

@@ -98,7 +98,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name, phone, region, avatar_url, is_provider, verification_status, created_at')
+      .select('id, full_name, phone, region, avatar_url, is_provider, is_admin, verification_status, created_at')
       .eq('id', sbUser.id)
       .maybeSingle();
 
@@ -114,6 +114,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
         : fallback.region,
       avatar_url: data.avatar_url ?? fallback.avatar_url,
       has_provider_profile: data.is_provider,
+      is_admin: Boolean(data.is_admin),
       verification_status: data.verification_status as VerificationStatus,
       created_at: data.created_at,
     };
