@@ -1,17 +1,17 @@
 // ===============================================================
-// بطاقة مشاركة الرقم داخل المحادثة. القرار يُتخذ وقت الاتفاق عبر خانة "شارك رقمي":
-//  - إذا شارك الطرف الآخر رقمه وكان الاتفاق فعّالاً: تظهر بطاقة الرقم مع اتصال/واتساب.
-//  - إذا شاركت أنت رقمك: تظهر ملاحظة صغيرة.
-//  - غير ذلك: لا تظهر شيئاً.
+// بطاقة مشاركة الرقم داخل المحادثة.
+//  - خانة "شارك رقمي" وقت الاتفاق تسجّل القرار مسبقاً.
+//  - بعد تأكيد الاتفاق (أي بعد خصم العمولة) يظهر زر "شارك رقمي" لمن لم يشارك بعد.
+//  - رقم الطرف الآخر يظهر فقط إذا شاركه والاتفاق فعّال (مع اتصال/واتساب).
 // ===============================================================
 import { AppButton } from '@/components/ui/AppButton';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { formatPhoneForDisplay } from '@/domain/phone';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchPhoneShareStatus, type PhoneShareStatus } from '@/services/phone';
+import { fetchPhoneShareStatus, sharePhone, type PhoneShareStatus } from '@/services/phone';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 interface Props {
   conversationId?: string | null;
@@ -23,13 +23,22 @@ export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
   const theme = useTheme();
   const scheme = Colors[theme];
   const [status, setStatus] = useState<PhoneShareStatus | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(async () => {
     if (!conversationId) {
       setStatus(null);
       return;
     }
+    setStatus(await fetchPhoneShareStatus(conversationId));
+  }, [conversationId]);
+
+  useEffect(() => {
     let alive = true;
+    if (!conversationId) {
+      setStatus(null);
+      return;
+    }
     void fetchPhoneShareStatus(conversationId).then((s) => {
       if (alive) setStatus(s);
     });
@@ -40,56 +49,93 @@ export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
 
   if (!status?.available) return null;
 
+  const isActive = status.agreement_state === 'active';
   const otherPhone = status.other_shared ? status.other_phone : null;
+  // الزر يظهر فقط بعد تأكيد الاتفاق (العمولة تُخصم عند موافقة مقدم الخدمة)
+  const canShareNow = isActive && !status.i_shared;
 
-  if (!otherPhone && !status.i_shared) return null;
+  if (!otherPhone && !status.i_shared && !canShareNow) return null;
 
-  const box = [styles.box, { backgroundColor: scheme.backgroundElevated, borderColor: scheme.border }];
+  const handleShare = () => {
+    if (!conversationId || busy) return;
+    Alert.alert('مشاركة رقمك', 'سيظهر رقم هاتفك للطرف الآخر في هذه المحادثة. هل تريد المتابعة؟', [
+      { text: 'إلغاء', style: 'cancel' },
+      {
+        text: 'شارك رقمي',
+        onPress: () => {
+          void (async () => {
+            setBusy(true);
+            const result = await sharePhone(conversationId);
+            setBusy(false);
+            if (!result.ok) {
+              Alert.alert('', result.error ?? 'تعذرت مشاركة الرقم.');
+              return;
+            }
+            await reload();
+          })();
+        },
+      },
+    ]);
+  };
 
-  if (!otherPhone) {
-    return (
-      <View style={box}>
+  const digits = otherPhone ? otherPhone.replace(/\D/g, '') : '';
+
+  return (
+    <View style={[styles.box, { backgroundColor: scheme.backgroundElevated, borderColor: scheme.border }]}>
+      {otherPhone ? (
+        <>
+          <View style={styles.row}>
+            <Ionicons name="call" size={18} color={scheme.primary} />
+            <Text style={[styles.title, { color: scheme.text }]}>
+              رقم {status.other_name ?? 'الطرف الآخر'}
+            </Text>
+          </View>
+          <Text style={[styles.phone, { color: scheme.text }]}>{formatPhoneForDisplay(otherPhone)}</Text>
+          <View style={styles.actions}>
+            <View style={styles.actionBtn}>
+              <AppButton
+                title="اتصال"
+                variant="primary"
+                size="md"
+                onPress={() => void Linking.openURL(`tel:${otherPhone}`)}
+              />
+            </View>
+            <View style={styles.actionBtn}>
+              <AppButton
+                title="واتساب"
+                variant="secondary"
+                size="md"
+                onPress={() => void Linking.openURL(`https://wa.me/${digits}`)}
+              />
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      {canShareNow ? (
+        <View style={styles.shareRow}>
+          <Text style={[styles.note, { color: scheme.textSecondary }]}>
+            الاتفاق مؤكد. تقدر تشارك رقمك مع الطرف الآخر للتنسيق.
+          </Text>
+          <AppButton
+            title="شارك رقمي"
+            variant={otherPhone ? 'secondary' : 'primary'}
+            size="md"
+            onPress={handleShare}
+            loading={busy}
+            disabled={busy}
+          />
+        </View>
+      ) : null}
+
+      {status.i_shared ? (
         <View style={styles.row}>
           <Ionicons name="shield-checkmark-outline" size={18} color={scheme.textSecondary} />
           <Text style={[styles.note, { color: scheme.textSecondary }]}>
-            {status.agreement_state === 'active'
-              ? 'رقمك مشارَك مع الطرف الآخر.'
-              : 'سيصل رقمك للطرف الآخر عند تأكيد الاتفاق.'}
+            {isActive ? 'رقمك مشارَك مع الطرف الآخر.' : 'سيصل رقمك للطرف الآخر عند تأكيد الاتفاق.'}
           </Text>
         </View>
-      </View>
-    );
-  }
-
-  const digits = otherPhone.replace(/\D/g, '');
-
-  return (
-    <View style={box}>
-      <View style={styles.row}>
-        <Ionicons name="call" size={18} color={scheme.primary} />
-        <Text style={[styles.title, { color: scheme.text }]}>
-          رقم {status.other_name ?? 'الطرف الآخر'}
-        </Text>
-      </View>
-      <Text style={[styles.phone, { color: scheme.text }]}>{formatPhoneForDisplay(otherPhone)}</Text>
-      <View style={styles.actions}>
-        <View style={styles.actionBtn}>
-          <AppButton
-            title="اتصال"
-            variant="primary"
-            size="md"
-            onPress={() => void Linking.openURL(`tel:${otherPhone}`)}
-          />
-        </View>
-        <View style={styles.actionBtn}>
-          <AppButton
-            title="واتساب"
-            variant="secondary"
-            size="md"
-            onPress={() => void Linking.openURL(`https://wa.me/${digits}`)}
-          />
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -104,6 +150,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  shareRow: { gap: Spacing.two },
   title: { fontSize: FontSizes.base, fontWeight: FontWeights.bold },
   note: { fontSize: FontSizes.sm, flex: 1 },
   phone: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, textAlign: 'left', writingDirection: 'ltr' },
