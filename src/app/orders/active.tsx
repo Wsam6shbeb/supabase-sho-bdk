@@ -18,7 +18,7 @@ import { t } from '@/i18n/ar';
 import { OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: ActiveOrderScreen] يعرض تفاصيل الطلب النشط والإجراءات المتاحة خلال تنفيذه.
@@ -117,13 +117,6 @@ export default function ActiveOrderScreen() {
             leadingIcon={<Ionicons name="chatbubble-outline" size={20} color={scheme.text} />}
           />
           <AppButton
-            title={t('orders.active.reportNotExecuted')}
-            variant="danger"
-            size="lg"
-            onPress={reportNotExecuted}
-            leadingIcon={<Ionicons name="flag-outline" size={20} color={scheme.dangerContrast} />}
-          />
-          <AppButton
             title={t('orders.active.finish')} 
             variant="primary"
             size="lg"
@@ -131,6 +124,13 @@ export default function ActiveOrderScreen() {
             leadingIcon={<Ionicons name="checkmark-done-circle" size={20} color={scheme.primaryContrast} />}
           />
         </View>
+
+        {/* بلاغ "لم تُنفّذ الخدمة": رابط صغير وهادئ عمداً (قرار حساس تراجعه الإدارة يدوياً) */}
+        <Pressable onPress={reportNotExecuted} hitSlop={10} style={styles.reportLink}>
+          <Text style={[styles.reportLinkText, { color: scheme.textSecondary }]}>
+            {t('orders.active.reportNotExecuted')}
+          </Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -138,6 +138,8 @@ export default function ActiveOrderScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  reportLink: { alignSelf: 'center', marginTop: Spacing.four, paddingVertical: Spacing.one },
+  reportLinkText: { fontSize: FontSizes.xs, textDecorationLine: 'underline', opacity: 0.7 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

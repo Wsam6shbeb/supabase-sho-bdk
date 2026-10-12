@@ -43,7 +43,7 @@ function BackButton() {
 function DrawerContent(props: any) {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { myProviderProfile } = useOrder();
   const insets = useSafeAreaInsets();
 
@@ -78,6 +78,10 @@ function DrawerContent(props: any) {
     // "أعمالي" يظهر فقط لمن سجّل خدمة كمقدم خدمة
     ...(myProviderProfile
       ? [{ name: 'my-jobs', label: 'أعمالي', icon: 'briefcase-outline' as const }]
+      : []),
+    // مراجعة البلاغات: للأدمن فقط
+    ...(user?.is_admin
+      ? [{ name: 'admin-reports', label: 'مراجعة البلاغات', icon: 'flag-outline' as const }]
       : []),
     { name: 'notifications', label: 'الإشعارات', icon: 'notifications-outline' as const },
     { name: 'settings', label: 'الإعدادات', icon: 'settings-outline' as const },
@@ -224,6 +228,7 @@ export default function DrawerLayout() {
       ) }} />
       <Drawer.Screen name="profile" options={{ title: t('tabs.profile'), drawerLabel: t('tabs.profile') }} />
       <Drawer.Screen name="my-jobs" options={{ title: 'أعمالي', drawerLabel: 'أعمالي' }} />
+      <Drawer.Screen name="admin-reports" options={{ title: 'مراجعة البلاغات', drawerLabel: 'مراجعة البلاغات' }} />
       <Drawer.Screen name="notifications" options={{ title: 'الإشعارات', drawerLabel: 'الإشعارات' }} />
       <Drawer.Screen name="settings" options={{ title: 'الإعدادات', drawerLabel: 'الإعدادات' }} />
       <Drawer.Screen name="about" options={{ title: 'عن التطبيق', drawerLabel: 'عن التطبيق' }} />

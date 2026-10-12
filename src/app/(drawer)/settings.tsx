@@ -14,6 +14,7 @@ import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
+import { deleteMyAccount } from '@/services/account';
 import { useTheme } from '@/hooks/use-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
@@ -32,13 +33,26 @@ export default function SettingsScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'حذف الحساب',
-      'هل أنت متأكد؟ لا يمكن التراجع عن هذا الإجراء.',
+      'سيتم حذف بياناتك الشخصية (الاسم، رقم الهاتف، الإيميل، خدماتك ونبذتك) ولن تتمكن من الدخول بهذا الحساب مجدداً. ' +
+        'قد يبقى سجل المحادثات والتقييمات والعمليات المالية بدون أي بيانات تعرّف بك، لحماية الطرف الآخر ولمنع الاحتيال. ' +
+        'أي رصيد متبقٍ في محفظتك سيُفقد. لا يمكن التراجع عن هذا الإجراء.',
       [
         { text: 'إلغاء', style: 'cancel' },
         {
           text: 'حذف نهائي',
           style: 'destructive',
-          onPress: () => Alert.alert('قريباً', 'سيتم تفعيل حذف الحساب قريباً'),
+          onPress: () => {
+            void (async () => {
+              const result = await deleteMyAccount();
+              if (!result.ok) {
+                Alert.alert('تعذر حذف الحساب', result.error);
+                return;
+              }
+              await logout();
+              router.replace('/auth/login');
+              Alert.alert('تم حذف حسابك', 'تم حذف بياناتك الشخصية. نتمنى لك التوفيق.');
+            })();
+          },
         },
       ],
     );
