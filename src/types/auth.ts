@@ -23,6 +23,8 @@ export interface User {
   verification_status: VerificationStatus;
   /** أدمن: يراجع البلاغات ويقرر رد العمولة (يُحدَّد من قاعدة البيانات فقط). */
   is_admin?: boolean;
+  /** Account state managed by the admin dashboard. */
+  status?: 'active' | 'suspended' | 'deleted';
   balance: number;
   received_welcome_bonus: boolean;
   created_at: string;
