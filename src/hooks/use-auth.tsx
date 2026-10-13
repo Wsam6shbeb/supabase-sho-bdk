@@ -84,6 +84,14 @@ function mapSupabaseUser(sbUser: any): User {
 }
 
 function mapError(err: any): ApiError {
+  const rawMessage = String(err?.message ?? '');
+  const normalized = rawMessage.toLowerCase();
+  if (normalized.includes('user is banned') || normalized.includes('user banned') || err?.code === 'user_banned') {
+    return {
+      code: 'ACCOUNT_SUSPENDED',
+      message: 'نعتذر منك، تم إيقاف حسابك مؤقتاً. يرجى التواصل مع الإدارة.',
+    };
+  }
   return {
     code: err?.code ?? 'UNKNOWN',
     message: err?.message ?? 'حدث خطأ غير متوقع',
