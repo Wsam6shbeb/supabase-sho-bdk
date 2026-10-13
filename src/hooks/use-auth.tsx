@@ -98,7 +98,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name, phone, region, avatar_url, is_provider, is_admin, verification_status, created_at')
+      .select('id, full_name, phone, region, avatar_url, is_provider, is_admin, verification_status, status, deleted_at, created_at')
       .eq('id', sbUser.id)
       .maybeSingle();
 
@@ -115,6 +115,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
       avatar_url: data.avatar_url ?? fallback.avatar_url,
       has_provider_profile: data.is_provider,
       is_admin: Boolean(data.is_admin),
+      status: data.deleted_at ? 'deleted' : (data.status ?? 'active'),
       verification_status: data.verification_status as VerificationStatus,
       created_at: data.created_at,
     };
@@ -180,6 +181,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           const user = await loadUserProfile(session.user);
+          if (user.status === 'suspended' || user.status === 'deleted') {
+            await supabase.auth.signOut({ scope: 'local' });
+            if (!cancelled) setState((p) => ({ ...p, user: null, token: null, isInitialized: true, isLoading: false, lastError: { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' } }));
+            return;
+          }
           setState((p) => ({
             ...p,
             user,
@@ -213,6 +219,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         void loadUserProfile(session.user).then((user) => {
           if (cancelled) return;
+          if (user.status === 'suspended' || user.status === 'deleted') {
+            void supabase.auth.signOut({ scope: 'local' });
+            setState((p) => ({ ...p, user: null, token: null, isInitialized: true, isLoading: false, lastError: { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' } }));
+            return;
+          }
           setState((p) => ({
             ...p,
             user,
@@ -259,6 +270,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const user = await loadUserProfile(data.user);
+    if (user.status === 'suspended' || user.status === 'deleted') {
+      await supabase.auth.signOut({ scope: 'local' });
+      const apiErr = { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' };
+      setState((p) => ({ ...p, user: null, token: null, isLoading: false, lastError: apiErr }));
+      return null;
+    }
     setState((p) => ({
       ...p,
       user,
@@ -381,6 +398,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const user = await loadUserProfile(sessionData.session.user);
+      if (user.status === 'suspended' || user.status === 'deleted') {
+        await supabase.auth.signOut({ scope: 'local' });
+        const apiErr = { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' };
+        setState((p) => ({ ...p, user: null, token: null, isLoading: false, lastError: apiErr }));
+        return null;
+      }
       void ensureUserProfile(sessionData.session.user);
 
       setState((p) => ({
