@@ -9,6 +9,7 @@
 // شاشة معلومات التطبيق
 // ═══════════════════════════════════════════════════════════
 
+import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -220,8 +221,6 @@ function FAQItem({
     </View>
   );
 }
-
-import { useEffect, useState } from 'react';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
