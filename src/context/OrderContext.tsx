@@ -29,7 +29,6 @@ import {
   completeRequest,
   fetchOrderHistory,
   reportNonExecution as reportNonExecutionOnServer,
-  finalizeOverdueRequests,
   orderErrorMessage,
   submitRating,
 } from '@/services/orders';
@@ -1249,7 +1248,6 @@ additional_info:
   // سجل الطلبات من السيرفر: عند الدخول، وبعد اعتماد المتأخر منها (مهلة التقييم)
   const refreshOrderHistory = useCallback(async () => {
     if (!user?.id) return;
-    await finalizeOverdueRequests();
     const history = await fetchOrderHistory();
     if (!history) return;
     setOrderHistory((prev) => {
