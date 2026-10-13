@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getSupportContacts, type SupportContacts } from '@/services/support';
 
 const FAQ_ITEMS = [
   {
@@ -45,15 +46,22 @@ export default function AboutScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = Colors[theme];
+  const [supportContacts, setSupportContacts] = useState<SupportContacts>({ email: 'shobdkhelpcenter@gmail.com', phone: '' });
+
+  useEffect(() => {
+    let active = true;
+    void getSupportContacts().then((contacts) => {
+      if (active) setSupportContacts(contacts);
+    });
+    return () => { active = false; };
+  }, []);
 
 // [شرح الدالة: handleContact] يعالج تواصل المستخدم مع وسيلة الدعم/التواصل المحددة.
-  const handleContact = (method: 'email' | 'whatsapp' | 'phone') => {
-    const urls = {
-      email: 'mailto:support@shobdk.app',
-      whatsapp: 'https://wa.me/963999999999',
-      phone: 'tel:+963999999999',
-    };
-    Linking.openURL(urls[method]);
+  const handleContact = (method: 'email' | 'phone') => {
+    const url = method === 'email'
+      ? `mailto:${supportContacts.email}`
+      : `tel:${supportContacts.phone}`;
+    void Linking.openURL(url);
   };
 
   return (
@@ -85,22 +93,19 @@ export default function AboutScreen() {
         <ContactRow
           icon="mail-outline"
           label="البريد الإلكتروني"
-          value="support@shobdk.app"
+          value={supportContacts.email}
           onPress={() => handleContact('email')}
+          isLast={!supportContacts.phone}
         />
-        <ContactRow
-          icon="logo-whatsapp"
-          label="واتساب"
-          value="+963 999 999 999"
-          onPress={() => handleContact('whatsapp')}
-        />
-        <ContactRow
-          icon="call-outline"
-          label="الهاتف"
-          value="+963 999 999 999"
-          onPress={() => handleContact('phone')}
-          isLast
-        />
+        {supportContacts.phone ? (
+          <ContactRow
+            icon="call-outline"
+            label="الهاتف"
+            value={supportContacts.phone}
+            onPress={() => handleContact('phone')}
+            isLast
+          />
+        ) : null}
       </AppCard>
 
       {/* FAQ */}
@@ -216,7 +221,7 @@ function FAQItem({
   );
 }
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
