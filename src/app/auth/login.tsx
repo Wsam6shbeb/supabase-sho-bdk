@@ -20,11 +20,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { LoginDto } from '@/types/auth';
+import { getSupportContacts, type SupportContacts } from '@/services/support';
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
-    Image, ScrollView, StyleSheet, Text,
+    Image, Linking, ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
 
@@ -44,6 +45,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [supportContacts, setSupportContacts] = useState<SupportContacts>({ email: 'shobdkhelpcenter@gmail.com', phone: '' });
+
+  useEffect(() => {
+    let active = true;
+    void getSupportContacts().then((contacts) => {
+      if (active) setSupportContacts(contacts);
+    });
+    return () => { active = false; };
+  }, []);
 
   const lastErrorMsg = lastError?.message ?? null;
   const formLevelError = errors.form ?? lastErrorMsg;
@@ -165,6 +175,28 @@ export default function LoginScreen() {
                 <Text style={[styles.errorBoxText, { color: scheme.danger }]}>
 {formLevelError}
                 </Text>
+              </View>
+            ) : null}
+
+            {lastError?.code === 'ACCOUNT_SUSPENDED' ? (
+              <View style={[styles.errorBox, { backgroundColor: scheme.backgroundElevated, marginTop: Spacing.two }]}>
+                <Text style={[styles.errorBoxText, { color: scheme.text, marginBottom: Spacing.two }]}>
+                  للتواصل مع الإدارة:
+                </Text>
+                <Text
+                  onPress={() => void Linking.openURL(`mailto:${supportContacts.email}`)}
+                  style={[styles.errorBoxText, { color: scheme.primary, marginBottom: supportContacts.phone ? Spacing.two : 0 }]}
+                >
+                  البريد الإلكتروني: {supportContacts.email}
+                </Text>
+                {supportContacts.phone ? (
+                  <Text
+                    onPress={() => void Linking.openURL(`tel:${supportContacts.phone}`)}
+                    style={[styles.errorBoxText, { color: scheme.primary }]}
+                  >
+                    الهاتف: {supportContacts.phone}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
 
