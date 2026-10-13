@@ -87,8 +87,8 @@ export default function OrdersTab() {
 // [شرح الدالة: handleViewDetails] يفتح تفاصيل الطلب المحدد.
   const handleViewDetails = (orderId: string) => {
     router.push({
-      pathname: '/orders/rate',
-      params: { order_id: orderId, readonly: 'true' },
+      pathname: '/orders/details',
+      params: { order_id: orderId },
     });
   };
 
