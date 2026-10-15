@@ -85,7 +85,7 @@ def main():
 
     # Retain the newest 30 backups created by this automation.
     files = drive.files().list(
-        q=f"'{folder_id}' in parents and trashed = false",
+        q=f"'{folder_id}' in parents and trashed = false and name contains '.dump.enc'",
         spaces="drive",
         pageSize=1000,
         fields="files(id,name,createdTime)",
