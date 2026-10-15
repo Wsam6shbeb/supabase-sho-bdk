@@ -23,7 +23,7 @@ jobs:
       - name: Install PostgreSQL client and OpenSSL
         run: |
           sudo apt-get update
-          sudo apt-get install --yes postgresql-client openssl
+          sudo apt-get install --yes postgresql-client-17 openssl
 
       - name: Set up Python
         uses: actions/setup-python@v5
