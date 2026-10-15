@@ -64,7 +64,7 @@ def main():
         encrypted_path = os.path.join(temp_dir, filename)
 
         subprocess.run(
-            ["pg_dump", "--format=custom", "--no-owner", "--no-acl", "--file", dump_path, database_url],
+            ["/usr/lib/postgresql/17/bin/pg_dump", "--format=custom", "--no-owner", "--no-acl", "--file", dump_path, database_url],
             check=True,
         )
         subprocess.run(
