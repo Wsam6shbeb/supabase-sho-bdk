@@ -6,6 +6,8 @@
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { PhoneSharePanel } from '@/components/orders/PhoneSharePanel';
+import { formatRating } from '@/domain/rating';
+import { fetchCounterpartyRating, type CounterpartyRating } from '@/services/orderActions';
 import { ProviderOrderActions } from '@/components/orders/ProviderOrderActions';
 import { WrongAccountNotice } from '@/components/orders/WrongAccountNotice';
 import { AppButton } from '@/components/ui/AppButton';
@@ -140,6 +142,19 @@ export default function ConversationScreen() {
     ratingStatus?.request_state === 'completed' ||
     Boolean(ratingStatus?.has_non_execution_report && ratingStatus?.request_state === 'cancelled');
   const iAmProvider = agreement?.provider_id === myId;
+
+  // تقييم الزبون العام يظهر للمزود قبل أن يوافق (شارة "جديد" إن لم يُقيَّم بعد)
+  const [counterpartyRating, setCounterpartyRating] = useState<CounterpartyRating | null>(null);
+  useEffect(() => {
+    if (!conversationId || !iAmProvider) return;
+    let alive = true;
+    void fetchCounterpartyRating(conversationId).then((r) => {
+      if (alive) setCounterpartyRating(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [conversationId, iAmProvider]);
   // القاعدة من السيرفر: بعد اكتمال الطلب، أو بعد أن أنهى المزود الخدمة، أو بعد أن أبلغ عن مشكلة
   const canRateCustomer = !!ratingStatus && ratingStatus.can_rate && !ratingStatus.i_rated && iAmProvider;
 
@@ -282,6 +297,13 @@ export default function ConversationScreen() {
                 {iAmProvider ? 'قيّمت الزبون' : 'قيّمت مقدم الخدمة'} بـ {ratingStatus.my_score} من 5 نجوم.
               </Text>
             ) : pendingForMe ? (
+              <>
+              {counterpartyRating ? (
+                <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
+                  تقييم الزبون: {formatRating(counterpartyRating.avg, counterpartyRating.count)}
+                  {counterpartyRating.count > 0 ? ` (${counterpartyRating.count} تقييم)` : ' (زبون جديد)'}
+                </Text>
+              ) : null}
               <AgreementBubble
                 customerName={otherName}
                 agreedPrice={pendingForMe.price != null ? Number(pendingForMe.price) : null}
@@ -291,6 +313,7 @@ export default function ConversationScreen() {
                 onReject={() => respond(false)}
                 onSharePhoneChange={setSharePhone}
               />
+              </>
             ) : null
           }
         />

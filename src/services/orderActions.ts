@@ -22,6 +22,18 @@ function friendly(message: string): string {
   return 'تعذر إكمال العملية الآن. حاول مرة ثانية بعد قليل.';
 }
 
+export interface CounterpartyRating {
+  avg: number;
+  count: number;
+}
+
+/** التقييم العام للطرف الآخر في المحادثة (مثلاً ليرى المزود تقييم الزبون قبل أن يوافق). */
+export async function fetchCounterpartyRating(conversationId: string): Promise<CounterpartyRating | null> {
+  const { data, error } = await rpc('get_counterparty_rating', { p_conversation_id: conversationId });
+  if (error || !data) return null;
+  return data as CounterpartyRating;
+}
+
 /** المزود: "أنهيت الخدمة" (يصل الزبون إشعار، ويُعتمد الطلب تلقائياً إن لم يرد خلال المهلة). */
 export async function providerFinishService(requestId: string): Promise<Result> {
   const { error } = await rpc('provider_finish_service', { p_request_id: requestId });
