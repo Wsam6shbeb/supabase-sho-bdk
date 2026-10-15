@@ -9,6 +9,7 @@
 // مكون بطاقة بروفايل مقدم الخدمة (قابل لإعادة الاستخدام)
 // ═══════════════════════════════════════════════════════════
 
+import { formatRating } from '@/domain/rating';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import {
@@ -106,10 +107,10 @@ export function ProviderProfileCard({
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={16} color={scheme.warning} />
               <Text style={[styles.rating, { color: scheme.text }]}>
-                {provider.rating}
+                {formatRating(provider.rating, provider.rating_count)}
               </Text>
               <Text style={[styles.ratingCount, { color: scheme.textSecondary }]}>
-                ({provider.total_orders} تقييم)
+                ({provider.rating_count ?? 0} تقييم)
               </Text>
             </View>
             <View style={styles.regionRow}>

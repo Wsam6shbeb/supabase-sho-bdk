@@ -100,6 +100,7 @@ export default function SearchingScreen() {
           providersData = (candidateRows ?? []).map((row: any) => ({
             user_id: row.provider_id,
             rating_avg: row.rating_avg,
+            rating_count: row.rating_count,
             completed_services_count: row.completed_services_count,
             preliminary_score: Number(row.preliminary_score) || 0,
             services: Array.isArray(row.services) ? row.services : [],
@@ -125,7 +126,7 @@ export default function SearchingScreen() {
         const { data: fallbackProviders, error: fallbackError } = await supabase
           .from('provider_profiles')
           .select(
-            'user_id, rating_avg, completed_services_count, users!provider_profiles_user_id_fkey(id, full_name, avatar_url, region, verification_status)',
+            'user_id, rating_avg, rating_count, completed_services_count, users!provider_profiles_user_id_fkey(id, full_name, avatar_url, region, verification_status)',
           )
           .eq('is_available', true)
           .limit(10);
@@ -253,6 +254,7 @@ export default function SearchingScreen() {
           skills: buildProviderServiceInfo(p.services).skills,
           services: buildProviderServiceInfo(p.services).services,
           rating: Number(p.rating_avg) || 0,
+          rating_count: Number(p.rating_count ?? 0),
           total_orders: p.completed_services_count ?? 0,
           completion_rate: 0,
           response_time_minutes: 0,

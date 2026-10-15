@@ -9,6 +9,7 @@
 // شاشة طلب الخدمة مرة أخرى
 // ═══════════════════════════════════════════════════════════
 
+import { formatRating } from '@/domain/rating';
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
@@ -136,7 +137,7 @@ export default function RequestAgainScreen() {
                   {provider.name}
                 </Text>
                 <Text style={[styles.providerMeta, { color: scheme.textSecondary }]}>
-                  {provider.region.name_ar} • ⭐ {provider.rating}
+                  {provider.region.name_ar} • ⭐ {formatRating(provider.rating, provider.rating_count)}
                 </Text>
               </View>
             </View>
