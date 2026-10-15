@@ -6,13 +6,35 @@ import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchAdminReports, resolveAdminReport, type AdminReport } from '@/services/adminReports';
+import {
+  fetchAdminReportCase,
+  fetchAdminReports,
+  resolveAdminReport,
+  type AdminCase,
+  type AdminReport,
+} from '@/services/adminReports';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 const REASON_LABELS: Record<string, string> = {
   non_execution: 'لم تُنفّذ الخدمة',
+  problem: 'إبلاغ عن مشكلة',
 };
+
+function fmt(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleString('ar') : '—';
+}
 
 const STATUS_LABELS: Record<string, string> = {
   open: 'مفتوح',
@@ -30,6 +52,27 @@ export default function AdminReportsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [openCaseId, setOpenCaseId] = useState<string | null>(null);
+  const [caseData, setCaseData] = useState<AdminCase | null>(null);
+  const [caseLoading, setCaseLoading] = useState(false);
+
+  const toggleCase = async (reportId: string) => {
+    if (openCaseId === reportId) {
+      setOpenCaseId(null);
+      setCaseData(null);
+      return;
+    }
+    setOpenCaseId(reportId);
+    setCaseData(null);
+    setCaseLoading(true);
+    const result = await fetchAdminReportCase(reportId);
+    setCaseLoading(false);
+    if (result.ok) setCaseData(result.data);
+    else {
+      Alert.alert('', result.error);
+      setOpenCaseId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,6 +166,65 @@ export default function AdminReportsScreen() {
           <Text style={[styles.line, { color: scheme.textSecondary }]}>ملاحظة الأدمن: {item.resolution_note}</Text>
         ) : null}
 
+        <Pressable onPress={() => void toggleCase(item.id)} hitSlop={8}>
+          <Text style={[styles.link, { color: scheme.primary }]}>
+            {openCaseId === item.id ? 'إخفاء تفاصيل الحالة' : 'عرض تفاصيل الحالة (المحادثة والأرقام)'}
+          </Text>
+        </Pressable>
+
+        {openCaseId === item.id ? (
+          caseLoading || !caseData ? (
+            <ActivityIndicator color={scheme.primary} />
+          ) : (
+            <View style={styles.caseBox}>
+              {caseData.parties.map((p) => (
+                <View key={p.id} style={styles.party}>
+                  <Text style={[styles.line, { color: scheme.text, fontWeight: FontWeights.bold }]}>
+                    {p.name} {p.role ? `(${p.role})` : ''} {p.is_reporter ? '· المُبلِّغ' : '· المُبلَّغ عليه'}
+                  </Text>
+                  {p.phone ? (
+                    <Pressable onPress={() => void Linking.openURL(`tel:${p.phone}`)} hitSlop={6}>
+                      <Text style={[styles.line, { color: scheme.primary }]}>{p.phone}</Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={[styles.line, { color: scheme.textSecondary }]}>لا يوجد رقم هاتف</Text>
+                  )}
+                  <Text style={[styles.line, { color: scheme.textSecondary }]}>
+                    التقييم العام: {p.rating_avg} ({p.rating_count} تقييم) · بلاغات سابقة ضده: {p.reports_against} ·{' '}
+                    {p.shared_phone ? 'شارك رقمه مع الطرف الآخر' : 'لم يشارك رقمه'}
+                  </Text>
+                </View>
+              ))}
+
+              <Text style={[styles.line, { color: scheme.textSecondary }]}>
+                الأوقات: طلب الاتفاق {fmt(caseData.timeline.agreement_created_at)} · الموافقة{' '}
+                {fmt(caseData.timeline.agreement_responded_at)} · إنهاء المزود {fmt(caseData.timeline.provider_finished_at)} ·
+                الاكتمال {fmt(caseData.timeline.completed_at)} · البلاغ {fmt(caseData.timeline.report_created_at)}
+              </Text>
+
+              {caseData.ratings.length > 0 ? (
+                <Text style={[styles.line, { color: scheme.textSecondary }]}>
+                  التقييمات:{' '}
+                  {caseData.ratings
+                    .map((r) => `${r.from_name} ← ${r.to_name}: ${r.score}/5${r.comment ? ` («${r.comment}»)` : ''}`)
+                    .join(' | ')}
+                </Text>
+              ) : null}
+
+              <Text style={[styles.line, { color: scheme.text, fontWeight: FontWeights.bold }]}>
+                المحادثة ({caseData.messages.length} رسالة):
+              </Text>
+              <ScrollView style={styles.chatBox} nestedScrollEnabled>
+                {caseData.messages.map((m, i) => (
+                  <Text key={i} style={[styles.chatLine, { color: m.is_system ? scheme.textSecondary : scheme.text }]}>
+                    [{fmt(m.created_at)}] {m.sender}: {m.body}
+                  </Text>
+                ))}
+              </ScrollView>
+            </View>
+          )
+        ) : null}
+
         {isOpen ? (
           <View style={styles.actions}>
             {canRefund ? (
@@ -198,5 +300,10 @@ const styles = StyleSheet.create({
   badge: { fontSize: FontSizes.sm, fontWeight: FontWeights.bold },
   line: { fontSize: FontSizes.sm, lineHeight: 22 },
   actions: { gap: Spacing.two, marginTop: Spacing.two },
+  link: { fontSize: FontSizes.sm, textDecorationLine: 'underline' },
+  caseBox: { gap: Spacing.two, marginTop: Spacing.one },
+  party: { gap: 2 },
+  chatBox: { maxHeight: 260 },
+  chatLine: { fontSize: FontSizes.sm, lineHeight: 22, marginBottom: 4 },
   empty: { textAlign: 'center', fontSize: FontSizes.base, marginTop: Spacing.five },
 });

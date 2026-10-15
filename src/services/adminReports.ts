@@ -32,6 +32,42 @@ export interface AdminReport {
   commission_refunded: boolean;
 }
 
+export interface AdminCaseParty {
+  id: string;
+  name: string;
+  phone: string | null;
+  role: string | null;
+  is_reporter: boolean;
+  rating_avg: number;
+  rating_count: number;
+  shared_phone: boolean;
+  reports_against: number;
+}
+
+export interface AdminCase {
+  report_id: string;
+  parties: AdminCaseParty[];
+  timeline: {
+    agreement_created_at: string | null;
+    agreement_responded_at: string | null;
+    provider_finished_at: string | null;
+    completed_at: string | null;
+    report_created_at: string;
+    request_state: string | null;
+  };
+  ratings: { from_name: string; to_name: string; score: number; comment: string | null; created_at: string }[];
+  messages: { sender: string; body: string; created_at: string; is_system: boolean }[];
+}
+
+/** ملف الحالة الكامل: الطرفان (مع الأرقام)، الأوقات، التقييمات، والمحادثة (آخر 80 رسالة). */
+export async function fetchAdminReportCase(
+  reportId: string,
+): Promise<{ ok: true; data: AdminCase } | { ok: false; error: string }> {
+  const { data, error } = await rpc('admin_get_report_case', { p_report_id: reportId });
+  if (error) return { ok: false, error: 'تعذر تحميل تفاصيل الحالة.' };
+  return { ok: true, data: data as AdminCase };
+}
+
 export async function fetchAdminReports(
   status: 'open' | 'all',
 ): Promise<{ ok: true; reports: AdminReport[] } | { ok: false; error: string }> {
