@@ -25,6 +25,7 @@ export type NotificationType =
   | 'welcome_bonus'
   | 'rating_reminder'
   | 'rating_auto_approved'
+  | 'provider_finished'
     | 'ai_unavailable';   // ← ضيف هاد السطر
 
 

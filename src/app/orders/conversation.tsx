@@ -6,6 +6,7 @@
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { PhoneSharePanel } from '@/components/orders/PhoneSharePanel';
+import { ProviderOrderActions } from '@/components/orders/ProviderOrderActions';
 import { WrongAccountNotice } from '@/components/orders/WrongAccountNotice';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
@@ -139,7 +140,8 @@ export default function ConversationScreen() {
     ratingStatus?.request_state === 'completed' ||
     Boolean(ratingStatus?.has_non_execution_report && ratingStatus?.request_state === 'cancelled');
   const iAmProvider = agreement?.provider_id === myId;
-  const canRateCustomer = !!ratingStatus && orderFinished && !ratingStatus.i_rated && iAmProvider;
+  // القاعدة من السيرفر: بعد اكتمال الطلب، أو بعد أن أنهى المزود الخدمة، أو بعد أن أبلغ عن مشكلة
+  const canRateCustomer = !!ratingStatus && ratingStatus.can_rate && !ratingStatus.i_rated && iAmProvider;
 
   const handleRateCustomer = async () => {
     if (!ratingStatus || stars < 1) return;
@@ -228,6 +230,13 @@ export default function ConversationScreen() {
         </View>
 
         <PhoneSharePanel conversationId={conversationId} refreshKey={lastSystemMessageId} />
+        <ProviderOrderActions
+          status={ratingStatus}
+          onChanged={() => {
+            void loadRatingStatus();
+            void refreshOrderHistory();
+          }}
+        />
 
         <FlatList
           ref={listRef}
@@ -268,7 +277,7 @@ export default function ConversationScreen() {
               <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
                 اكتملت الخدمة وتم تقييم الطرفين.
               </Text>
-            ) : ratingStatus?.i_rated && orderFinished ? (
+            ) : ratingStatus?.i_rated ? (
               <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
                 {iAmProvider ? 'قيّمت الزبون' : 'قيّمت مقدم الخدمة'} بـ {ratingStatus.my_score} من 5 نجوم.
               </Text>
