@@ -105,7 +105,7 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
     const [profilesResult, servicesResult] = await Promise.all([
       supabase
         .from('provider_profiles')
-        .select('user_id, rating_avg, completed_services_count, is_available')
+        .select('user_id, rating_avg, rating_count, completed_services_count, is_available')
         .in('user_id', providerIds),
       supabase
         .from('provider_services')
@@ -171,6 +171,7 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
         skills: info.skills,
         services: info.services,
         rating: Number(profile?.rating_avg ?? 0),
+        rating_count: Number(profile?.rating_count ?? 0),
         total_orders: Number(profile?.completed_services_count ?? 0),
         completion_rate: 0,
         response_time_minutes: 0,

@@ -47,9 +47,9 @@ export default function ActiveOrderScreen() {
     router.push({ pathname: '/orders/chat', params: { provider_id: currentOrder.provider_id! } });
   };
 
-// [شرح الدالة: reportNotExecuted] يسجل أن الخدمة لم تُنفذ وينقل المستخدم إلى الإجراء المرتبط بذلك.
+// [شرح الدالة: reportNotExecuted] ينقل الزبون إلى شاشة "إبلاغ عن مشكلة" (لا يلغي الطلب؛ يصل للأدمن).
   const reportNotExecuted = () => {
-    router.push({ pathname: '/orders/not-executed', params: { order_id: currentOrder.id, provider_id: currentOrder.provider_id!, provider_name: provider?.name ?? currentOrder.provider_name ?? 'مقدم الخدمة' } });
+    router.push({ pathname: '/orders/report-problem', params: { request_id: currentOrder.id } });
   };
 
 // [شرح الدالة: finishService] ينفذ خطوة إنهاء الخدمة/الطلب.
@@ -126,6 +126,7 @@ export default function ActiveOrderScreen() {
         </View>
 
         {/* بلاغ "لم تُنفّذ الخدمة": رابط صغير وهادئ عمداً (قرار حساس تراجعه الإدارة يدوياً) */}
+        <Text style={[styles.reportHint, { color: scheme.textSecondary }]}>{t('orders.active.reportHint')}</Text>
         <Pressable onPress={reportNotExecuted} hitSlop={10} style={styles.reportLink}>
           <Text style={[styles.reportLinkText, { color: scheme.textSecondary }]}>
             {t('orders.active.reportNotExecuted')}
@@ -139,6 +140,7 @@ export default function ActiveOrderScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   reportLink: { alignSelf: 'center', marginTop: Spacing.four, paddingVertical: Spacing.one },
+  reportHint: { fontSize: FontSizes.xs, textAlign: 'center', marginTop: Spacing.four, opacity: 0.7 },
   reportLinkText: { fontSize: FontSizes.xs, textDecorationLine: 'underline', opacity: 0.7 },
   header: {
     flexDirection: 'row',

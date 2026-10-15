@@ -450,6 +450,7 @@ export type Database = {
           created_at: string
           is_available: boolean
           rating_avg: number
+          rating_count: number
           response_speed_avg_sec: number | null
           updated_at: string
           user_id: string
@@ -462,6 +463,7 @@ export type Database = {
           created_at?: string
           is_available?: boolean
           rating_avg?: number
+          rating_count?: number
           response_speed_avg_sec?: number | null
           updated_at?: string
           user_id: string
@@ -474,6 +476,7 @@ export type Database = {
           created_at?: string
           is_available?: boolean
           rating_avg?: number
+          rating_count?: number
           response_speed_avg_sec?: number | null
           updated_at?: string
           user_id?: string
@@ -698,6 +701,7 @@ export type Database = {
           id: string
           matched_at: string | null
           needs_clarification: boolean
+          provider_finished_at: string | null
           raw_text: string
           service_area: string | null
           additional_info: string | null
@@ -717,6 +721,7 @@ export type Database = {
           id?: string
           matched_at?: string | null
           needs_clarification?: boolean
+          provider_finished_at?: string | null
           raw_text: string
           service_area?: string | null
           additional_info?: string | null
@@ -736,6 +741,7 @@ export type Database = {
           id?: string
           matched_at?: string | null
           needs_clarification?: boolean
+          provider_finished_at?: string | null
           raw_text?: string
           service_area?: string | null
           additional_info?: string | null
@@ -775,11 +781,15 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          deleted_at: string | null
           full_name: string
           id: string
           is_admin: boolean
           is_provider: boolean
           phone: string | null
+          phone_verified_at: string | null
+          rating_avg: number
+          rating_count: number
           region: string | null
           status: string
           updated_at: string
@@ -788,11 +798,15 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           full_name: string
           id: string
           is_admin?: boolean
           is_provider?: boolean
           phone?: string | null
+          phone_verified_at?: string | null
+          rating_avg?: number
+          rating_count?: number
           region?: string | null
           status?: string
           updated_at?: string
@@ -801,11 +815,15 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string
           id?: string
           is_admin?: boolean
           is_provider?: boolean
           phone?: string | null
+          phone_verified_at?: string | null
+          rating_avg?: number
+          rating_count?: number
           region?: string | null
           status?: string
           updated_at?: string

@@ -114,6 +114,7 @@ function RootStack() {
         <Stack.Screen name="orders/chat" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/conversation" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="orders/rate" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="orders/report-problem" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/become-provider" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="orders/welcome-bonus" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="orders/edit-provider-profile" options={{ headerShown: false, animation: 'slide_from_bottom' }} />

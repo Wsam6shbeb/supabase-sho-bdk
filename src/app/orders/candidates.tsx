@@ -25,6 +25,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { ChatStatus } from '@/types/common';
 import { buildProviderServiceInfo } from '@/domain/providerServices';
+import { formatRating } from '@/domain/rating';
 import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -79,6 +80,7 @@ export default function CandidatesScreen() {
         provider_profiles: {
           user_id: row.provider_id,
           rating_avg: row.rating_avg,
+          rating_count: row.rating_count,
           completed_services_count: row.completed_services_count,
           users: {
             id: row.provider_id,
@@ -191,6 +193,7 @@ export default function CandidatesScreen() {
               providerServices.map((sv: any) => sv.structured_data ?? { service: sv.description }),
             ).services,
             rating: Number(profile.rating_avg) || 0,
+            rating_count: Number(profile.rating_count ?? 0),
             total_orders: Number(profile.completed_services_count) || 0,
             completion_rate: 0,
             response_time_minutes: 0,
@@ -227,6 +230,7 @@ export default function CandidatesScreen() {
               avatar_url: databaseProvider.avatar_url ?? provider.avatar_url,
               region: databaseProvider.region,
               rating: databaseProvider.rating,
+              rating_count: databaseProvider.rating_count,
               total_orders: databaseProvider.total_orders,
               skills: databaseProvider.skills.length ? databaseProvider.skills : provider.skills,
               services: databaseProvider.services?.length ? databaseProvider.services : provider.services,
@@ -331,7 +335,7 @@ export default function CandidatesScreen() {
               </Text>
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={14} color={scheme.warning} />
-                <Text style={[styles.rating, { color: scheme.text }]}>{item.rating}</Text>
+                <Text style={[styles.rating, { color: scheme.text }]}>{formatRating(item.rating, item.rating_count)}</Text>
               </View>
             </View>
 

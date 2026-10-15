@@ -30,6 +30,8 @@ export interface ServiceProvider {
   /** تفاصيل الخدمات: المنطقة والمعلومات الاختيارية وطريقة التقديم. */
   services?: ProviderServiceInfo[];
   rating: number;
+  /** عدد التقييمات الحقيقية (0 = مقدم خدمة جديد). */
+  rating_count?: number;
   total_orders: number;
   completion_rate: number;
   response_time_minutes: number;

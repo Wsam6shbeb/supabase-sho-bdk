@@ -123,7 +123,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
       avatar_url: data.avatar_url ?? fallback.avatar_url,
       has_provider_profile: data.is_provider,
       is_admin: Boolean(data.is_admin),
-      status: data.deleted_at ? 'deleted' : (data.status ?? 'active'),
+      status: data.deleted_at ? 'deleted' : ((data.status ?? 'active') as 'active' | 'suspended' | 'deleted'),
       verification_status: data.verification_status as VerificationStatus,
       created_at: data.created_at,
     };

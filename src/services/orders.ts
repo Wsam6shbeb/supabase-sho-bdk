@@ -130,6 +130,16 @@ export interface ConversationRatingStatus {
   /** هل قيّم الطرفان؟ (عندها تنتهي دعوات التقييم وتظهر رسالة اكتمال الخدمة) */
   both_rated: boolean;
   has_non_execution_report: boolean;
+  /** أنا مقدم الخدمة في هذا الاتفاق؟ */
+  is_provider: boolean;
+  /** هل أعلن المزود إنهاء الخدمة؟ */
+  provider_finished: boolean;
+  /** هل أبلغتُ عن مشكلة في هذا الطلب؟ */
+  i_reported: boolean;
+  /** القواعد من السيرفر: ماذا أستطيع الآن؟ */
+  can_rate: boolean;
+  can_report: boolean;
+  can_finish: boolean;
 }
 
 /** حالة الطلب في هذه المحادثة وهل قيّمتُ الطرف الآخر (لبطاقة تقييم مقدم الخدمة). */
