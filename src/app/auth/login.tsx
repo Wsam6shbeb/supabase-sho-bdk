@@ -25,7 +25,7 @@ import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
-    Image, Linking, ScrollView, StyleSheet, Text,
+    Image, Linking, Pressable, ScrollView, StyleSheet, Text,
     View
 } from 'react-native';
 
@@ -45,6 +45,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [supportContacts, setSupportContacts] = useState<SupportContacts>({ email: 'shobdkhelpcenter@gmail.com', phone: '' });
 
   useEffect(() => {
@@ -97,6 +98,10 @@ export default function LoginScreen() {
 // [شرح الدالة: handleGoogle] يعالج بدء تسجيل الدخول عبر Google وإكمال نتيجته داخل التطبيق.
   const handleGoogle = async () => {
     if (submitting || isLoading) return;
+    if (!privacyAccepted) {
+      setErrors({ form: 'يرجى الموافقة على سياسة الخصوصية قبل تسجيل الدخول.' });
+      return;
+    }
     clearError();
     setErrors({});
     setSubmitting(true);
@@ -221,6 +226,30 @@ export default function LoginScreen() {
               </>
             ) : null}
 
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: privacyAccepted }}
+              onPress={() => {
+                setPrivacyAccepted((accepted) => !accepted);
+                setErrors((prev) => ({ ...prev, form: null }));
+              }}
+              style={styles.privacyRow}
+            >
+              <Text style={[styles.privacyCheckbox, { color: scheme.primary }]}>
+                {privacyAccepted ? '☑' : '☐'}
+              </Text>
+              <Text style={[styles.privacyText, { color: scheme.text }]}>
+                أوافق على سياسة الخصوصية
+              </Text>
+            </Pressable>
+            <Text
+              onPress={() => void Linking.openURL('https://ho-bdk-policy.abo-majd85.workers.dev/')}
+              accessibilityRole="link"
+              style={[styles.privacyLink, { color: scheme.primary }]}
+            >
+              قراءة سياسة الخصوصية
+            </Text>
+
             <GoogleButton
               onPress={handleGoogle}
               loading={submitting}
@@ -275,6 +304,26 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: Spacing.six,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.four,
+    gap: Spacing.two,
+  },
+  privacyCheckbox: {
+    fontSize: FontSizes.xl,
+  },
+  privacyText: {
+    fontSize: FontSizes.sm,
+  },
+  privacyLink: {
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    textDecorationLine: 'underline',
+    marginTop: Spacing.two,
+    marginBottom: Spacing.three,
   },
   forgotRow: {
     flexDirection: 'row',
