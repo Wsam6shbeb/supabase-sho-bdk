@@ -80,11 +80,23 @@ export default function MyJobsScreen() {
     } else if (statsResult.status === 'rejected') {
       console.error('[jobs] تعذّر تحميل الإحصائيات:', statsResult.reason);
     }
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
-    void load();
-    return subscribeToMyJobs(() => void load());
+    let active = true;
+    const unsubscribe = subscribeToMyJobs(() => {
+      if (active) void load();
+    });
+
+    // Defer the initial load so state updates happen after the effect setup.
+    void Promise.resolve().then(() => {
+      if (active) void load();
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [load]);
 
   const onRefresh = async () => {
