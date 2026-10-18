@@ -54,14 +54,32 @@ export default function MyJobsScreen() {
   const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user?.id) return;
-    const [list, mine] = await Promise.all([fetchMyProviderJobs(), fetchMyProviderStats(user.id)]);
-    if (list === null) setLoadFailed(true);
-    else {
-      setLoadFailed(false);
-      setJobs(list);
+    if (!user?.id) {
+      setLoadFailed(true);
+      return;
     }
-    if (mine) setStats(mine);
+
+    const [jobsResult, statsResult] = await Promise.allSettled([
+      fetchMyProviderJobs(),
+      fetchMyProviderStats(user.id),
+    ]);
+
+    if (jobsResult.status === 'fulfilled' && jobsResult.value !== null) {
+      setJobs(jobsResult.value);
+      setLoadFailed(false);
+    } else {
+      console.error(
+        '[jobs] تعذّر تحميل قائمة أعمالي:',
+        jobsResult.status === 'rejected' ? jobsResult.reason : 'تعذّر جلب البيانات',
+      );
+      setLoadFailed(true);
+    }
+
+    if (statsResult.status === 'fulfilled' && statsResult.value) {
+      setStats(statsResult.value);
+    } else if (statsResult.status === 'rejected') {
+      console.error('[jobs] تعذّر تحميل الإحصائيات:', statsResult.reason);
+    }
   }, [user?.id]);
 
   useEffect(() => {
@@ -71,8 +89,11 @@ export default function MyJobsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const commissionsPaid = useMemo(
