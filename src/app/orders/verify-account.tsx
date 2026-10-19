@@ -51,14 +51,15 @@ export default function VerifyAccountScreen() {
 // [شرح الدالة: pickImage] يفتح اختيار الصورة لإرفاقها ضمن عملية التحقق.
   const pickImage = async (target: 'id' | 'selfie') => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('صلاحيات', 'الرجاء السماح بالوصول للصور');
+        Alert.alert('صلاحية الكاميرا', 'يرجى السماح باستخدام الكاميرا من إعدادات الهاتف ثم المحاولة مجدداً.');
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        cameraType: target === 'selfie' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back,
         allowsEditing: true,
         aspect: target === 'selfie' ? [1, 1] : [4, 3],
         quality: 0.7,
@@ -70,7 +71,7 @@ export default function VerifyAccountScreen() {
         else setSelfie(uri);
       }
     } catch {
-      Alert.alert('خطأ', 'تعذّر فتح المعرض');
+      Alert.alert('خطأ', 'تعذّر فتح الكاميرا');
     }
   };
 
