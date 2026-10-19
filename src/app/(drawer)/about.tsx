@@ -18,8 +18,9 @@ import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getSupportContacts, type SupportContacts } from '@/services/support';
+import { supabase } from '@/services/supabase';
 
-const FAQ_ITEMS = [
+const getFaqItems = (minimumBalance: number) => [
   {
     q: 'كيف أطلب خدمة؟',
     a: 'من الصفحة الرئيسية، اضغط "اطلب خدمة"، اكتب طلبك بلغتك العادية، وبعدها اختر من المرشحين.',
@@ -34,7 +35,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'ليش ما بظهر بالبحث؟',
-    a: 'إذا رصيدك أقل من الحد الأدنى (50 ل.س)، ما رح تظهر بالبحث. أضف رصيداً من صفحة الرصيد.',
+    a: `إذا رصيدك أقل من الحد الأدنى (${minimumBalance} ل.س)، ما رح تظهر بالبحث. أضف رصيداً من صفحة الرصيد.`,
   },
   {
     q: 'كيف تنكشف أرقام الهواتف؟',
@@ -48,6 +49,18 @@ export default function AboutScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const [supportContacts, setSupportContacts] = useState<SupportContacts>({ email: 'shobdkhelpcenter@gmail.com', phone: '' });
+  const [minimumProviderBalance, setMinimumProviderBalance] = useState(50);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.from('app_settings').select('value').eq('key', 'commission_max').maybeSingle().then(({ data, error }) => {
+      if (active && !error && data?.value != null) {
+        const amount = Number(data.value);
+        if (Number.isFinite(amount) && amount >= 0) setMinimumProviderBalance(amount);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -114,7 +127,7 @@ export default function AboutScreen() {
         <Text style={[styles.sectionTitle, { color: scheme.text }]}>
           الأسئلة الشائعة
         </Text>
-        {FAQ_ITEMS.map((item, index) => (
+        {getFaqItems(minimumProviderBalance).map((item, index) => (
           <FAQItem
             key={index}
             question={item.q}
