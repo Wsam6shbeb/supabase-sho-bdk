@@ -170,7 +170,7 @@ export default function RateOrderScreen() {
   // ═══════════════════════════════════════════════════════════
   // شاشة العرض (readonly)
   // ═══════════════════════════════════════════════════════════
-  const otherPartyName = order.other_user_name ?? order.provider_name ?? (order.my_role === 'provider' ? 'الزبون' : 'مقدم الخدمة');
+  const otherPartyName = order.other_user_name ?? order.provider_name ?? (order.my_role === 'provider' ? 'العميل' : 'مقدم الخدمة');
   const isReadonly = readonly || !!order.customer_rating;
 
   return (
