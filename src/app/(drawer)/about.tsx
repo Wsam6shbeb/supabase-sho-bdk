@@ -16,7 +16,7 @@ import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { getSupportContacts, type SupportContacts } from '@/services/support';
 import { supabase } from '@/services/supabase';
 
@@ -141,7 +141,10 @@ export default function AboutScreen() {
       <AppCard padding="four" elevation="sm" style={styles.section}>
         <Pressable
           onPress={() => {
-            // TODO: Share API
+            void Share.share({
+              message: 'جرّب تطبيق شو بدك؟ لطلب الخدمات والتواصل مع مقدميها في سوريا.',
+              title: 'شارك تطبيق شو بدك؟',
+            });
           }}
           style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.6 : 1 }]}
         >
