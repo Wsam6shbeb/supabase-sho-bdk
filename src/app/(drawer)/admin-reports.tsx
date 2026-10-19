@@ -74,8 +74,8 @@ export default function AdminReportsScreen() {
     }
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const result = await fetchAdminReports(tab);
     if (result.ok) {
       setReports(result.reports);
@@ -87,7 +87,7 @@ export default function AdminReportsScreen() {
   }, [tab]);
 
   useEffect(() => {
-    if (user?.is_admin) void load();
+    if (user?.is_admin) void load(false);
   }, [load, user?.is_admin]);
 
   if (!user?.is_admin) {
