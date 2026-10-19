@@ -660,29 +660,6 @@ additional_info:
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    if (!approvalDeadline) {
-      setApprovalRemainingSeconds(0);
-      return;
-    }
-
-    const tick = () => {
-      const remaining = Math.max(0, Math.floor((approvalDeadline - Date.now()) / 1000));
-      setApprovalRemainingSeconds(remaining);
-      if (remaining <= 0) {
-        handleTimeoutExpired();
-      }
-    };
-
-    tick();
-    intervalRef.current = setInterval(tick, 1000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approvalDeadline]);
-
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -748,6 +725,33 @@ additional_info:
     setActiveChats((prev) => reopenNegotiations(prev).map((thread) => ({ ...thread, updated_at: new Date().toISOString() })));
 
   }, [clearTimer]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!approvalDeadline) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) setApprovalRemainingSeconds(0);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((approvalDeadline - Date.now()) / 1000));
+      setApprovalRemainingSeconds(remaining);
+      if (remaining <= 0) handleTimeoutExpired();
+    };
+
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+
+    return () => {
+      cancelled = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [approvalDeadline, handleTimeoutExpired]);
 
   // ═══════════════════════════════════════════════════════════
   // مزامنة حالة الطلب/المحادثات/الاتفاق مع Supabase (مصدر الحقيقة)
