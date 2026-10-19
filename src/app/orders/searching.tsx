@@ -36,8 +36,8 @@ export default function SearchingScreen() {
   const [isSearching, setIsSearching] = useState(true);
   const [showAiBanner, setShowAiBanner] = useState(false);
 
-  const bannerOpacity = useRef(new Animated.Value(0)).current;
-  const bannerTranslateY = useRef(new Animated.Value(20)).current;
+  const [bannerOpacity] = useState(() => new Animated.Value(0));
+  const [bannerTranslateY] = useState(() => new Animated.Value(20));
 
   // يترك هذا الملف مسؤولية جلب مقدمي الخدمة فقط؛ المطابقة الفعلية تتم عبر Edge Function
   // التي تستخدم الذكاء الاصطناعي لمقارنة البيانات المنظمة بالمعنى وليس بالكلمات فقط.
