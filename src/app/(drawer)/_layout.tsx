@@ -4,7 +4,6 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights } from '@/constants/theme';
-import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -44,7 +43,6 @@ function DrawerContent(props: any) {
   const theme = useTheme();
   const scheme = Colors[theme];
   const { logout, user } = useAuth();
-  const { myProviderProfile } = useOrder();
   const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
