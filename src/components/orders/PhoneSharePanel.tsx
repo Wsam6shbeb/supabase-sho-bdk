@@ -115,7 +115,7 @@ export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
       {canShareNow ? (
         <View style={styles.shareRow}>
           <Text style={[styles.note, { color: scheme.textSecondary }]}>
-            الاتفاق مؤكد. تقدر تشارك رقمك مع الطرف الآخر للتنسيق.
+            تم تأكيد الاتفاق. يمكنك مشاركة رقم هاتفك مع الطرف الآخر للتنسيق.
           </Text>
           <AppButton
             title="شارك رقمي"
