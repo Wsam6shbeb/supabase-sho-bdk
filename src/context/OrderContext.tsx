@@ -547,6 +547,54 @@ additional_info:
   const [verificationRequest, setVerificationRequest] =
     useState<VerificationRequest | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setVerificationRequest(null);
+      setVerificationStatus('not_verified');
+      return;
+    }
+
+    void (async () => {
+      const { data, error } = await supabase
+        .from('verifications')
+        .select('id,user_id,status,rejection_reason,created_at,id_document_url,selfie_url')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.warn('[Verification] Could not restore verification status:', error.message);
+        return;
+      }
+      if (!data) {
+        setVerificationRequest(null);
+        setVerificationStatus('not_verified');
+        return;
+      }
+
+      const status: VerificationStatusType =
+        data.status === 'approved' ? 'verified' :
+        data.status === 'rejected' ? 'rejected' : 'under_review';
+      setVerificationRequest({
+        id: data.id,
+        user_id: data.user_id,
+        status,
+        submitted_at: data.created_at,
+        id_photo_uri: data.id_document_url || '',
+        selfie_photo_uri: data.selfie_url || '',
+        rejection_reason: data.rejection_reason,
+      });
+      setVerificationStatus(status);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const {
     notifications,
     unreadNotificationsCount,
