@@ -16,7 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,8 +31,8 @@ export default function WelcomeBonusScreen() {
   const bonusAmount = bonusTransaction?.amount ?? 0;
 
   // أنيميشن
-  const scale = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [scale] = useState(() => new Animated.Value(0));
+  const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.sequence([
