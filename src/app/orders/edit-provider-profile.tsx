@@ -65,18 +65,25 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!profile) return;
-   setSkillCities(
-  Object.fromEntries(
-    profile.skills.map((skill) => [skill.id, skill.city ?? DEFAULT_CITY]),
-  ),
-);
-setSkillAreas(
-  Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.area ?? ''])),
-);
-    setSkillNames(
-      Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.name])),
-    );
-  }, [profile?.skills]);
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      setSkillCities(
+        Object.fromEntries(
+          profile.skills.map((skill) => [skill.id, skill.city ?? DEFAULT_CITY]),
+        ),
+      );
+      setSkillAreas(
+        Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.area ?? ''])),
+      );
+      setSkillNames(
+        Object.fromEntries(profile.skills.map((skill) => [skill.id, skill.name])),
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile]);
 
   // Guard
   if (!profile) {
