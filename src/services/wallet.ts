@@ -12,7 +12,7 @@ export function walletErrorMessage(code: string | null): string {
     case 'INVALID_AMOUNT':
       return 'المبلغ غير صحيح.';
     case 'NOT_A_PROVIDER':
-      return 'لازم تسجّل خدمة أولاً لتحصل على المكافأة.';
+      return 'يجب أن تسجّل خدمة أولاً لتحصل على المكافأة.';
     default:
       return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
   }
