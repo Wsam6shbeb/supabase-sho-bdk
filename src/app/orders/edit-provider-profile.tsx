@@ -87,7 +87,7 @@ setSkillAreas(
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
-            ما عندك بروفايل مقدم خدمة بعد
+            لم تنشئ ملفاً شخصياً لمقدم الخدمة بعد
           </Text>
           <AppButton
             title={t('home.becomeProvider.title')}
