@@ -31,7 +31,6 @@ export default function MessagesTab() {
     activeChats,
     allProviders,
     orderHistory,
-    hasCompletedOrderWith,
   } = useOrder();
 
   // المحادثات الواردة: التي أنا فيها مقدم الخدمة (من Supabase مع تحديث لحظي)
