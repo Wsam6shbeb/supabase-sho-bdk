@@ -59,7 +59,7 @@ export default function ReportProblemScreen() {
     setRatingBusy(false);
     if (!result.ok) {
       setRatingError(
-        result.error?.includes('ALREADY_RATED') ? 'سبق وقيّمت هذا الطلب.' : 'تعذر إرسال التقييم الآن. حاول مرة ثانية.',
+        result.error?.includes('ALREADY_RATED') ? 'لقد قيّمت هذا الطلب مسبقاً.' : 'تعذر إرسال التقييم الآن. حاول مرة أخرى.',
       );
       return;
     }
