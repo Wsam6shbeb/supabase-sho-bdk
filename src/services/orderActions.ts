@@ -15,7 +15,7 @@ function friendly(message: string): string {
   if (message.includes('REPORT_WINDOW_CLOSED')) return 'انتهت مهلة الإبلاغ عن هذا الطلب.';
   if (message.includes('DETAILS_REQUIRED')) return 'اكتب وصفاً مختصراً للمشكلة.';
   if (message.includes('INVALID_STATE')) return 'لا يمكن تنفيذ هذا الإجراء في الحالة الحالية للطلب.';
-  if (message.includes('FORBIDDEN')) return 'لا تملك صلاحية على هذا الطلب.';
+  if (message.includes('FORBIDDEN')) return 'لا تملك صلاحية الوصول إلى هذا الطلب.';
   if (message.includes('PHONE_NUMBER_NOT_ALLOWED')) {
     return 'لا يمكن كتابة أرقام الهاتف هنا. يمكنك مشاركة رقمك بعد تأكيد الاتفاق عبر خانة «شارك رقم هاتفي».';
   }
