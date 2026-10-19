@@ -50,12 +50,18 @@ export function useOrderNotifications(userId?: string | null) {
 
   // ---------- تحميل + اشتراك لحظي بإشعارات السيرفر ----------
   useEffect(() => {
-    if (!userId) {
-      setServerNotifications([]);
-      setLocalNotifications([]);
-      return;
-    }
     let cancelled = false;
+    if (!userId) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) {
+          setServerNotifications([]);
+          setLocalNotifications([]);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const load = async () => {
       const { data, error } = await supabase
