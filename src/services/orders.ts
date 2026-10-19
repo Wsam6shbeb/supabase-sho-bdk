@@ -10,9 +10,9 @@ import type { Order } from '@/types/orders';
 export function orderErrorMessage(code: string | null): string {
   switch (code) {
     case 'INVALID_STATE':
-      return 'ما بقدر تنفّذ هالإجراء بحالة الطلب الحالية.';
+      return 'لا يمكنك تنفيذ هذا الإجراء في حالة الطلب الحالية.';
     case 'NO_ACTIVE_AGREEMENT':
-      return 'ما في اتفاق فعّال على هالطلب.';
+      return 'لا يوجد اتفاق فعّال لهذا الطلب.';
     case 'REQUEST_NOT_FOUND':
       return 'ما لقينا هالطلب.';
     case 'ALREADY_RATED':
@@ -20,11 +20,11 @@ export function orderErrorMessage(code: string | null): string {
     case 'INVALID_SCORE':
       return 'التقييم لازم يكون من 1 لـ 5 نجوم.';
     case 'FORBIDDEN':
-      return 'ما عندك صلاحية لهالإجراء.';
+      return 'ليست لديك صلاحية لتنفيذ هذا الإجراء.';
     case 'REASON_REQUIRED':
       return 'اكتب سبب البلاغ.';
     default:
-      return 'صار خطأ بالاتصال. جرّب مرة ثانية.';
+      return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
   }
 }
 
