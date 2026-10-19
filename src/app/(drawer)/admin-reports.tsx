@@ -155,7 +155,7 @@ export default function AdminReportsScreen() {
         ) : null}
         {item.agreement_id ? (
           <Text style={[styles.line, { color: scheme.textSecondary }]}>
-            الزبون: {item.requester_name} · المزود: {item.provider_name} · السعر: {item.price} · العمولة:{' '}
+            العميل: {item.requester_name} · مقدم الخدمة: {item.provider_name} · السعر: {item.price} · العمولة:{' '}
             {item.commission_amount} {item.currency}
             {item.commission_refunded ? ' (رُدّت)' : item.commission_charged ? ' (مخصومة)' : ' (غير مخصومة)'}
           </Text>
