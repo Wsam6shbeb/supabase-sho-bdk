@@ -628,7 +628,9 @@ additional_info:
       }, 300);
     };
 
-    void refreshWallet();
+    void Promise.resolve().then(() => {
+      if (!cancelled) void refreshWallet();
+    });
 
     const channel = supabase
       .channel(`wallet:${userId}`)
