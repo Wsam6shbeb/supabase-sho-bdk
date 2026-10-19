@@ -161,7 +161,7 @@ export const ar = {
   orders: {
     create: {
       title: 'طلب خدمة جديدة',
-      subtitle: 'اكتب طلبك بلغتك العادية، الذكاء الاصطناعي سيفهمك',
+      subtitle: 'اكتب طلبك بلغتك المعتادة، وسيفهمه الذكاء الاصطناعي',
       placeholder: 'مثال: أحتاج سباك لإصلاح تسرب في المطبخ',
       urgentToggle: 'طلب مستعجل',
       urgentDescription: 'سيظهر طلبك بوضوح لمقدمي الخدمة القريبين',
@@ -197,7 +197,7 @@ export const ar = {
       lockedBadge: 'مقفلة — لم يتم اختيارك',
     },
     providerProfile: {
-      title: 'بروفايل مقدم الخدمة',
+      title: 'الملف الشخصي لمقدم الخدمة',
       basicInfo: 'المعلومات الأساسية',
       skills: 'المهارات',
       serviceDetails: 'تفاصيل الخدمة',
@@ -210,7 +210,7 @@ export const ar = {
       responseTime: 'سرعة الرد',
       cancellationRate: 'نسبة الإلغاء',
       close: 'إغلاق',
-      requestAgain: 'اطلب هذه الخدمة من مقدم الخدمة مرة أخرى',
+      requestAgain: 'اطلب خدمة من مقدم الخدمة مرة أخرى',
       verified: 'موثّق',
       notVerified: 'غير موثّق',
       underReview: 'قيد المراجعة',
