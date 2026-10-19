@@ -95,7 +95,7 @@ export default function CreateOrderScreen() {
             [previous, `توضيح المستخدم: ${answer.trim()}`].filter(Boolean).join('\n'),
           );
         }
-        setClarificationQuestion(analysis.clarification_question || 'ممكن توضح أكثر شو الخدمة التي تحتاجها تحديداً؟');
+        setClarificationQuestion(analysis.clarification_question || 'هل يمكنك توضيح نوع الخدمة التي تحتاج إليها تحديداً؟');
         setClarificationAnswer('');
         setShowClarification(true);
         return;
@@ -214,9 +214,9 @@ export default function CreateOrderScreen() {
           </View>
 
           <AppCard padding="four" elevation="sm">
-            <Text style={[styles.fieldLabel, { color: scheme.text }]}>شو الخدمة اللي بدك ياها؟</Text>
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>ما الخدمة التي تحتاج إليها؟</Text>
             <AppTextInput
-              placeholder="مثال: بدي معقب معاملات"
+              placeholder="مثال: أحتاج إلى معقّب معاملات"
               value={description}
               onChangeText={(val) => {
                 setDescription(val);
@@ -227,7 +227,7 @@ export default function CreateOrderScreen() {
               containerStyle={styles.textInput}
             />
 
-            <Text style={[styles.fieldLabel, { color: scheme.text }]}>بأي مدينة بدك الخدمة؟</Text>
+            <Text style={[styles.fieldLabel, { color: scheme.text }]}>في أي مدينة تحتاج إلى الخدمة؟</Text>
             <AppTextInput
               placeholder="مثال: اللاذقية"
               value={city}
@@ -253,7 +253,7 @@ export default function CreateOrderScreen() {
 
             <Text style={[styles.fieldLabel, { color: scheme.text }]}>معلومات إضافية (اختياري)</Text>
             <AppTextInput
-              placeholder="مثال: بدي متابعة معاملة تسجيل عقار"
+              placeholder="مثال: أحتاج إلى متابعة معاملة تسجيل عقار"
               value={additionalInfo}
               onChangeText={setAdditionalInfo}
               multiline
