@@ -190,6 +190,11 @@ export default function VerifyAccountScreen() {
           <Text style={[styles.centerSubtitle, { color: scheme.textSecondary }]}>
             {t('verification.rejectedSubtitle')}
           </Text>
+          {verificationRequest?.rejection_reason ? (
+            <Text style={[styles.centerSubtitle, { color: scheme.danger, marginTop: Spacing.three }]}>
+              سبب الرفض: {verificationRequest.rejection_reason}
+            </Text>
+          ) : null}
           <AppButton
             title={t('verification.retryBtn')}
             variant="primary"
