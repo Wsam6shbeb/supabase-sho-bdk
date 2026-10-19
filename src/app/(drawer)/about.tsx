@@ -142,7 +142,8 @@ export default function AboutScreen() {
         <Pressable
           onPress={() => {
             void Share.share({
-              message: 'جرّب تطبيق شو بدك؟ لطلب الخدمات والتواصل مع مقدميها في سوريا.',
+              message: 'جرّب تطبيق شو بدك؟ لطلب الخدمات والتواصل مع مقدميها في سوريا.\n\nحمّل التطبيق من هنا:\nhttps://sho-bdk-download.pages.dev/',
+              url: 'https://sho-bdk-download.pages.dev/',
               title: 'شارك تطبيق شو بدك؟',
             });
           }}
