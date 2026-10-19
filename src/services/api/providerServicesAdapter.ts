@@ -146,7 +146,7 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     additional_info: input.additional_info?.trim() ?? '',
   });
   if (!analysis) {
-    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إضافة الخدمة حالياً، يبدو أن الخدمة مشغولة. حاول مرة ثانية بعد قليل.' } };
+    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إضافة الخدمة حالياً بسبب انشغال مؤقت. حاول مرة أخرى بعد قليل.' } };
   }
   const structuredData = normalizeAnalysis(analysis, description);
 
