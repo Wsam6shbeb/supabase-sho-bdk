@@ -178,7 +178,7 @@ export default function BecomeProviderScreen() {
 
             <AppTextInput
               label="معلومات إضافية (اختياري)"
-              placeholder="مثال: بجي لعند الزبون، تركيب وصيانة، خبرة 10 سنوات..."
+              placeholder="مثال: أقدم الخدمة في موقع العميل، أو أعمل في التركيب والصيانة، ولدي خبرة 10 سنوات..."
               value={additionalInfo}
               onChangeText={setAdditionalInfo}
               multiline
