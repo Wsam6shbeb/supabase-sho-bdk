@@ -348,11 +348,6 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(drawer)/(tabs)/messages')}
           />
           <SettingsRow
-            icon="settings-outline"
-            label="الإعدادات"
-            onPress={() => console.log('Settings')}
-          />
-          <SettingsRow
             icon="log-out-outline"
             label={t('auth.logout')}
             danger
