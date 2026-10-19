@@ -13,7 +13,7 @@ function friendlyError(message: string): string {
   if (message.includes('INVALID_PHONE')) return INVALID_PHONE_MESSAGE;
   if (message.includes('PHONE_REQUIRED')) return 'أضف رقم هاتفك أولاً من الملف الشخصي.';
   if (message.includes('NO_ACTIVE_AGREEMENT')) return 'المشاركة متاحة بعد تأكيد الاتفاق فقط.';
-  return 'تعذر إكمال العملية الآن. حاول مرة ثانية بعد قليل.';
+  return 'تعذر إكمال العملية الآن. حاول مرة أخرى بعد قليل.';
 }
 
 /** يحفظ رقم المستخدم (يتحقق منه ويوحّد صيغته في السيرفر) ويرجع الرقم بالصيغة الدولية. */
