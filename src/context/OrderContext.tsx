@@ -606,9 +606,16 @@ additional_info:
   useEffect(() => {
     if (!user?.id) {
       balanceRef.current = null;
-      setBalance(0);
-      setTransactions([]);
-      return;
+      let alive = true;
+      void Promise.resolve().then(() => {
+        if (alive) {
+          setBalance(0);
+          setTransactions([]);
+        }
+      });
+      return () => {
+        alive = false;
+      };
     }
     const userId = user.id;
     let cancelled = false;
