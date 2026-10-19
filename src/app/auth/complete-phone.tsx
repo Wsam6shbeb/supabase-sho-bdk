@@ -70,7 +70,7 @@ export default function CompletePhoneScreen() {
           </Text>
           <Text style={[styles.subtitle, { color: scheme.textSecondary }]}>
             نحتاج رقمك ليتواصل معك الطرف الآخر عندما تقرر أنت مشاركته. رقمك لا يظهر لأحد إلا إذا
-            ضغطت زر "شارك رقمي" داخل محادثة بعد تأكيد الاتفاق.
+            ضغطت زر &quot;شارك رقمي&quot; داخل محادثة بعد تأكيد الاتفاق.
           </Text>
 
           <AppTextInput
