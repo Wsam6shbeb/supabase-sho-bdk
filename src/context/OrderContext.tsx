@@ -1370,7 +1370,9 @@ additional_info:
         cancelled = true;
       };
     }
-    void refreshOrderHistory();
+    void Promise.resolve().then(() => {
+      if (!cancelled) void refreshOrderHistory();
+    });
     return () => {
       cancelled = true;
     };
