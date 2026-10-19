@@ -14,7 +14,7 @@ export function walletErrorMessage(code: string | null): string {
     case 'NOT_A_PROVIDER':
       return 'لازم تسجّل خدمة أولاً لتحصل على المكافأة.';
     default:
-      return 'صار خطأ بالاتصال. جرّب مرة ثانية.';
+      return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
   }
 }
 
