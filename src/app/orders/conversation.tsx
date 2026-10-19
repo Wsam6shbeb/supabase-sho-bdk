@@ -133,7 +133,7 @@ export default function ConversationScreen() {
   const lastSystemMessageId = [...messages].reverse().find((m) => m.is_system)?.id ?? null;
   useEffect(() => {
     if (!lastSystemMessageId) return;
-    void loadRatingStatus();
+    void Promise.resolve().then(loadRatingStatus);
     void refreshOrderHistory();
   }, [lastSystemMessageId, loadRatingStatus, refreshOrderHistory]);
 
@@ -177,10 +177,7 @@ export default function ConversationScreen() {
 
   // العدّ التنازلي لمهلة الموافقة؛ عند انتهائها نسأل السيرفر لينهي الاتفاق
   useEffect(() => {
-    if (!pendingForMe) {
-      setRemainingSeconds(0);
-      return;
-    }
+    if (!pendingForMe) return;
     const expiresAt = new Date(pendingForMe.expires_at).getTime();
     let expiryChecked = false;
     const tick = () => {
@@ -194,7 +191,7 @@ export default function ConversationScreen() {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [pendingForMe?.id, pendingForMe?.expires_at, loadAgreement]);
+  }, [pendingForMe, loadAgreement]);
 
   const respond = async (approve: boolean): Promise<boolean> => {
     if (!pendingForMe) return false;
@@ -308,7 +305,7 @@ export default function ConversationScreen() {
                 customerName={otherName}
                 agreedPrice={pendingForMe.price != null ? Number(pendingForMe.price) : null}
                 commissionAmount={Number(pendingForMe.commission_amount)}
-                remainingSeconds={remainingSeconds}
+                remainingSeconds={pendingForMe ? remainingSeconds : 0}
                 onApprove={() => respond(true)}
                 onReject={() => respond(false)}
                 onSharePhoneChange={setSharePhone}
