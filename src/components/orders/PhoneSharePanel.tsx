@@ -22,7 +22,8 @@ interface Props {
 export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const [status, setStatus] = useState<PhoneShareStatus | null>(null);
+  const [loadedStatus, setLoadedStatus] = useState<{ conversationId: string; status: PhoneShareStatus } | null>(null);
+  const status = loadedStatus?.conversationId === conversationId ? loadedStatus.status : null;
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
@@ -30,17 +31,14 @@ export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
       setStatus(null);
       return;
     }
-    setStatus(await fetchPhoneShareStatus(conversationId));
+    setLoadedStatus({ conversationId, status: await fetchPhoneShareStatus(conversationId) });
   }, [conversationId]);
 
   useEffect(() => {
     let alive = true;
-    if (!conversationId) {
-      setStatus(null);
-      return;
-    }
+    if (!conversationId) return;
     void fetchPhoneShareStatus(conversationId).then((s) => {
-      if (alive) setStatus(s);
+      if (alive) setLoadedStatus({ conversationId, status: s });
     });
     return () => {
       alive = false;
