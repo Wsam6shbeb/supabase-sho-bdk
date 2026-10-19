@@ -284,7 +284,7 @@ export const ar = {
       emptyActive: 'لا توجد طلبات نشطة حالياً',
       emptyAwaiting: 'لا توجد طلبات بانتظار التقييم',
       emptyPrevious: 'لا توجد طلبات سابقة',
-      emptyHint: 'اطلب خدمة لتبدأ',
+      emptyHint: 'ابدأ بطلب خدمة',
       orderNumber: 'طلب رقم',
       urgentBadge: 'مستعجل',
       activeBadge: 'نشطة',
@@ -331,7 +331,7 @@ export const ar = {
         commentPlaceholder: 'اكتب تجربتك...',
         submitBtn: 'إرسال التقييم',
         successTitle: 'شكراً لتقييمك!',
-        successBody: 'تقييمك يساعدنا نحسّن جودة الخدمات.',
+        successBody: 'يساعدنا تقييمك على تحسين جودة الخدمات.',
         backToOrders: 'العودة لطلباتي',
       backBtn: 'العودة للصفحة السابقة',
         customerTags: {
@@ -429,7 +429,7 @@ export const ar = {
   },
   reports: {
     title: 'الإبلاغ عن مشكلة',
-    subtitle: 'ساعدنا نحسّن جودة الخدمة',
+    subtitle: 'ساعدنا على تحسين جودة الخدمة',
     reportedUser: 'المُبلَّغ عنه',
     categoryLabel: 'نوع المشكلة',
     descriptionLabel: 'تفاصيل المشكلة',
