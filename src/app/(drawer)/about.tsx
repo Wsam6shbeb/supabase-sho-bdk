@@ -132,7 +132,7 @@ export default function AboutScreen() {
             key={index}
             question={item.q}
             answer={item.a}
-            isLast={index === FAQ_ITEMS.length - 1}
+            isLast={index === getFaqItems(minimumProviderBalance).length - 1}
           />
         ))}
       </AppCard>
