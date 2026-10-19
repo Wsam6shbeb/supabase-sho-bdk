@@ -27,3 +27,13 @@ using (
   bucket_id = 'verification-documents'
   and (storage.foldername(name))[1] = (select auth.uid())::text
 );
+
+-- Allow the signed-in owner to clean up their own failed upload attempt.
+create policy "verification_documents_owner_delete"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'verification-documents'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
