@@ -19,7 +19,7 @@ function friendly(message: string): string {
   if (message.includes('PHONE_NUMBER_NOT_ALLOWED')) {
     return 'لا يمكن كتابة أرقام الهاتف هنا. يمكنك مشاركة رقمك بعد تأكيد الاتفاق عبر خانة «شارك رقم هاتفي».';
   }
-  return 'تعذر إكمال العملية الآن. حاول مرة ثانية بعد قليل.';
+  return 'تعذر إكمال العملية الآن. حاول مرة أخرى بعد قليل.';
 }
 
 export interface CounterpartyRating {
