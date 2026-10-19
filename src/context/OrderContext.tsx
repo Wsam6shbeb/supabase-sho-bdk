@@ -1180,7 +1180,7 @@ additional_info:
       }
       return { ok: true };
     },
-    [pendingAgreementId, clearTimer, refreshWallet, user?.id, applyServerState],
+    [pendingAgreementId, clearTimer, refreshWallet, user, applyServerState],
   );
 
   const customerCancelsAgreement = useCallback(async () => {
@@ -1361,11 +1361,19 @@ additional_info:
   );
 
   useEffect(() => {
+    let cancelled = false;
     if (!user?.id) {
-      setOrderHistory([]);
-      return;
+      void Promise.resolve().then(() => {
+        if (!cancelled) setOrderHistory([]);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
     void refreshOrderHistory();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, refreshOrderHistory]);
 
   // رسائل النظام (إنهاء الخدمة / تقييم الطرفين / اعتماد الطلب) تعني أن حالة طلب تغيّرت عند الطرف الآخر:
@@ -1485,7 +1493,7 @@ additional_info: skill.additional_info?.trim() || '',
       }
       return { welcomeBonus };
     },
-    [myProviderProfile, refreshWallet, pushNotification, loadMyProviderProfile, user?.id],
+    [myProviderProfile, refreshWallet, pushNotification, loadMyProviderProfile, user],
   );
 
   const removeProviderSkill = useCallback(async (skillId: string): Promise<{ ok: boolean; error?: string }> => {
@@ -1538,7 +1546,7 @@ additional_info: skill.additional_info?.trim() || '',
 
       return { ...prev, ...patch };
     });
-  }, [user?.id]);
+  }, [user]);
 
   const toggleAvailability = useCallback(() => {
     setMyProviderProfile((prev) => {
@@ -1560,7 +1568,7 @@ additional_info: skill.additional_info?.trim() || '',
 
       return { ...prev, is_available: nextAvailable };
     });
-  }, [user?.id]);
+  }, [user]);
 
   const estimateCommission = useCallback(
     (messages: ChatMessage[]) => estimateCommissionFromChat(messages),
