@@ -87,8 +87,24 @@ export default function AdminReportsScreen() {
   }, [tab]);
 
   useEffect(() => {
-    if (user?.is_admin) void load(false);
-  }, [load, user?.is_admin]);
+    if (!user?.is_admin) return;
+
+    let cancelled = false;
+    void fetchAdminReports(tab).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setReports(result.reports);
+        setError(null);
+      } else {
+        setError(result.error);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, user?.is_admin]);
 
   if (!user?.is_admin) {
     return (
