@@ -190,7 +190,7 @@ export interface OrderContextValue {
   /** يشحن الرصيد عبر السيرفر (مغلق افتراضياً حتى تتوفر بوابة دفع). */
   topUp: (amount: number, method: string) => Promise<{ ok: boolean; error?: string }>;
 
-  submitVerification: (idPhotoUri: string, selfieUri: string) => void;
+  submitVerification: (idPhotoUri: string, selfieUri: string) => Promise<void>;
   resetVerification: () => void;
 
   /** يحفظ البلاغ في السيرفر؛ ok=false مع رسالة عند الفشل. */
@@ -687,18 +687,65 @@ additional_info:
     [refreshWallet],
   );
 
-  const submitVerification = useCallback((idPhotoUri: string, selfieUri: string) => {
-    const req: VerificationRequest = {
-      id: api.randomId('ver'),
-      user_id: 'me',
-      status: 'under_review',
-      submitted_at: new Date().toISOString(),
-      id_photo_uri: idPhotoUri,
-      selfie_photo_uri: selfieUri,
+  const submitVerification = useCallback(async (idPhotoUri: string, selfieUri: string) => {
+    if (!user?.id) {
+      throw new Error('يرجى تسجيل الدخول مجدداً ثم إعادة إرسال طلب التوثيق.');
+    }
+
+    const bucket = 'verification-documents';
+    const requestKey = api.randomId('verification').replace(/[^a-zA-Z0-9-]/g, '');
+    const extensionFor = (uri: string) => {
+      const extension = uri.split('?')[0]?.split('.').pop()?.toLowerCase();
+      return extension && ['jpg', 'jpeg', 'png', 'webp'].includes(extension) ? extension : 'jpg';
     };
-    setVerificationRequest(req);
-    setVerificationStatus('under_review');
-  }, []);
+    const contentTypeFor = (extension: string) =>
+      extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+    const idExtension = extensionFor(idPhotoUri);
+    const selfieExtension = extensionFor(selfieUri);
+    const idPath = `${user.id}/${requestKey}-id.${idExtension}`;
+    const selfiePath = `${user.id}/${requestKey}-selfie.${selfieExtension}`;
+
+    const uploadLocalImage = async (uri: string, path: string, extension: string) => {
+      const response = await fetch(uri);
+      if (!response.ok) throw new Error('تعذّر قراءة إحدى الصور من الهاتف.');
+      const bytes = await response.arrayBuffer();
+      const { error } = await supabase.storage.from(bucket).upload(path, bytes, {
+        contentType: contentTypeFor(extension),
+        upsert: false,
+      });
+      if (error) throw error;
+    };
+
+    try {
+      await uploadLocalImage(idPhotoUri, idPath, idExtension);
+      await uploadLocalImage(selfieUri, selfiePath, selfieExtension);
+
+      const { error: insertError } = await supabase.from('verifications').insert({
+        user_id: user.id,
+        id_document_url: idPath,
+        selfie_url: selfiePath,
+        status: 'pending',
+      });
+      if (insertError) throw insertError;
+
+      const submittedAt = new Date().toISOString();
+      const req: VerificationRequest = {
+        id: requestKey,
+        user_id: user.id,
+        status: 'under_review',
+        submitted_at: submittedAt,
+        id_photo_uri: idPath,
+        selfie_photo_uri: selfiePath,
+      };
+      setVerificationRequest(req);
+      setVerificationStatus('under_review');
+    } catch (error) {
+      // Best-effort cleanup: don't leave orphaned private photos after a failed submission.
+      await supabase.storage.from(bucket).remove([idPath, selfiePath]).catch(() => undefined);
+      console.error('[Verification] Submission failed:', error);
+      throw new Error('لم نتمكن من إرسال طلب التوثيق. تأكد من الاتصال ثم حاول مجدداً.');
+    }
+  }, [user?.id]);
 
   const resetVerification = useCallback(() => {
     setVerificationRequest(null);
