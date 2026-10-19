@@ -12,8 +12,8 @@ export async function deleteMyAccount(): Promise<{ ok: true } | { ok: false; err
   if (error.message.includes('ACTIVE_WORK_IN_PROGRESS')) {
     return {
       ok: false,
-      error: 'عندك اتفاق أو خدمة جارية مع شخص آخر. أنهِها أو ألغِها أولاً، ثم أعد محاولة حذف الحساب.',
+      error: 'لديك اتفاق أو خدمة جارية مع مستخدم آخر. أنهِها أو ألغِها أولاً، ثم أعد محاولة حذف الحساب.',
     };
   }
-  return { ok: false, error: 'تعذر حذف الحساب الآن. حاول مرة ثانية بعد قليل.' };
+  return { ok: false, error: 'تعذر حذف الحساب الآن. حاول مرة أخرى بعد قليل.' };
 }
