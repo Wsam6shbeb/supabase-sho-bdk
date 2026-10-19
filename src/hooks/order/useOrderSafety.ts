@@ -21,12 +21,18 @@ export function useOrderSafety(userId?: string | null) {
 
   // استعادة قائمة المحظورين وبلاغاتي من السيرفر عند الدخول
   useEffect(() => {
-    if (!userId) {
-      setReports([]);
-      setBlockedProviderIds([]);
-      return;
-    }
     let cancelled = false;
+    if (!userId) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) {
+          setReports([]);
+          setBlockedProviderIds([]);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void (async () => {
       const [blocksResult, reportsResult] = await Promise.all([
