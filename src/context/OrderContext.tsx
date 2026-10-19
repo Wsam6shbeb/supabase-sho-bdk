@@ -530,9 +530,14 @@ additional_info:
   }, []);
 
   useEffect(() => {
+    let alive = true;
     if (!user?.id) {
-      setMyProviderProfile(null);
-      return;
+      void Promise.resolve().then(() => {
+        if (alive) setMyProviderProfile(null);
+      });
+      return () => {
+        alive = false;
+      };
     }
     void (async () => {
       await loadMyProviderProfile(user.id);
@@ -540,6 +545,9 @@ additional_info:
       const repaired = await api.providerServices.repairIncomplete();
       if (repaired) await loadMyProviderProfile(user.id);
     })();
+    return () => {
+      alive = false;
+    };
   }, [user?.id, loadMyProviderProfile]);
 
   const [verificationStatus, setVerificationStatus] =
