@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Dimensions,
     StyleSheet,
@@ -84,15 +84,19 @@ export default function HomeTab() {
     }
   };
 
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
         setCurrentTipIndex(viewableItems[0].index);
       }
     },
-  ).current;
+    [],
+  );
 
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const viewabilityConfig = useMemo(
+    () => ({ itemVisiblePercentThreshold: 50 }),
+    [],
+  );
 
   return (
     <SafeAreaView
