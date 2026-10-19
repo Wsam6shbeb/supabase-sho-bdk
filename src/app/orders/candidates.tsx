@@ -385,7 +385,7 @@ export default function CandidatesScreen() {
                 textAlign: 'right',
               }}
             >
-              {item.match_reason ?? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة. اسأل مقدم الخدمة قبل الاتفاق.'}
+              {item.match_reason ?? 'بديل محلي مقترح؛ لم يظهر تطابق قوي مع نوع الخدمة. استفسر من مقدم الخدمة قبل إبرام الاتفاق.'}
             </Text>
           </View>
         )}
