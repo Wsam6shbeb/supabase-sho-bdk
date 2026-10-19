@@ -22,13 +22,13 @@ interface Props {
 export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const [loadedStatus, setLoadedStatus] = useState<{ conversationId: string; status: PhoneShareStatus } | null>(null);
-  const status = loadedStatus?.conversationId === conversationId ? loadedStatus.status : null;
+  const [loadedStatus, setLoadedStatus] = useState<{ conversationId: string; status: PhoneShareStatus | null } | null>(null);
+  const status = loadedStatus && loadedStatus.conversationId === conversationId ? loadedStatus.status : null;
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
     if (!conversationId) {
-      setStatus(null);
+      setLoadedStatus(null);
       return;
     }
     setLoadedStatus({ conversationId, status: await fetchPhoneShareStatus(conversationId) });
