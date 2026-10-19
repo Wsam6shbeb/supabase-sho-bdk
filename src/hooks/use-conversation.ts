@@ -39,9 +39,12 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
   const [writeStatus, setWriteStatus] = useState<WriteStatus | null>(null);
 
   const myIdRef = useRef(myId);
-  myIdRef.current = myId;
   const convRef = useRef(conversationId);
-  convRef.current = conversationId;
+
+  useEffect(() => {
+    myIdRef.current = myId;
+    convRef.current = conversationId;
+  }, [myId, conversationId]);
 
   // هل أستطيع الكتابة؟ (حظر من أحد الطرفين، أو محادثة مغلقة). السيرفر هو مصدر الحقيقة.
   const refreshWriteStatus = useCallback(async (): Promise<WriteStatus | null> => {
@@ -100,13 +103,20 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
 
   // ---------- التحميل + الريال تايم ----------
   useEffect(() => {
-    setMessages([]);
-    setPartnerTyping(false);
-    setLoadFailed(false);
-    setWriteStatus(null);
-    if (!conversationId || !myId) return;
-
     let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) {
+        setMessages([]);
+        setPartnerTyping(false);
+        setLoadFailed(false);
+        setWriteStatus(null);
+      }
+    });
+    if (!conversationId || !myId) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const sync = async () => {
       void refreshWriteStatus();
