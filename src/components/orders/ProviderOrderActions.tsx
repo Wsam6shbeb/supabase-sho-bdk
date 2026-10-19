@@ -34,7 +34,7 @@ export function ProviderOrderActions({ status, onChanged }: Props) {
     if (busy) return;
     Alert.alert(
       'إنهاء الخدمة',
-      'هل أنهيت الخدمة فعلاً؟ سيصل الزبون إشعار لتأكيدها، وإن لم يرد يُعتمد الطلب تلقائياً بعد المهلة.',
+      'هل أنهيت الخدمة فعلاً؟ سيصل إشعار إلى العميل لتأكيدها، وإن لم يرد يُعتمد الطلب تلقائياً بعد المهلة.',
       [
         { text: 'إلغاء', style: 'cancel' },
         {
@@ -64,7 +64,7 @@ export function ProviderOrderActions({ status, onChanged }: Props) {
 
       {waitingCustomer ? (
         <Text style={[styles.note, { color: scheme.textSecondary }]}>
-          أنهيت الخدمة. بانتظار تأكيد الزبون، ويُعتمد الطلب تلقائياً إن لم يرد.
+          أنهيت الخدمة. بانتظار تأكيد العميل، ويُعتمد الطلب تلقائياً إن لم يرد.
         </Text>
       ) : null}
 
