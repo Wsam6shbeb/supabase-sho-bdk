@@ -133,21 +133,21 @@ export function agreementErrorMessage(code: string | null): string {
     case 'INSUFFICIENT_BALANCE':
       return 'رصيدك غير كافٍ لخصم العمولة. اشحن رصيدك ثم وافق على الاتفاق.';
     case 'INVALID_STATE':
-      return 'ما بقدر تبدأ اتفاق بهالمرحلة من المحادثة.';
+      return 'لا يمكنك بدء اتفاق في هذه المرحلة من المحادثة.';
     case 'ALREADY_AGREED':
       return 'في اتفاق قائم بالفعل على هالطلب.';
     case 'BLOCKED':
-      return 'ما بقدر تتفق مع شخص حاظره. ألغِ الحظر أولاً.';
+      return 'لا يمكنك إبرام اتفاق مع مستخدم حظرته. ألغِ الحظر أولاً.';
     case 'AGREED_PRICE_REQUIRED':
       return 'لا يمكن تثبيت الاتفاق قبل تحديد السعر النهائي بوضوح.';
     case 'AGREEMENT_UNAVAILABLE':
       return 'هالاتفاق غير متاح حالياً.';
     case 'FORBIDDEN':
-      return 'ما عندك صلاحية لهالإجراء.';
+      return 'ليست لديك صلاحية لتنفيذ هذا الإجراء.';
     case 'AGREEMENT_NOT_FOUND':
     case 'CONVERSATION_NOT_FOUND':
       return 'ما لقينا هالاتفاق. جرّب تحدّث الشاشة.';
     default:
-      return 'صار خطأ بالاتصال. جرّب مرة ثانية.';
+      return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
   }
 }
