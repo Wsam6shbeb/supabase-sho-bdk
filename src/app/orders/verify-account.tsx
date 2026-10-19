@@ -79,17 +79,23 @@ export default function VerifyAccountScreen() {
   // إرسال
   // ═══════════════════════════════════════════════════════════
 // [شرح الدالة: handleSubmit] يعالج إرسال النموذج الحالي بعد التحقق من البيانات وتنفيذ العملية المطلوبة.
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!idPhoto || !selfie) {
       Alert.alert('مطلوب', t('verification.requiredPhotos'));
       return;
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      submitVerification(idPhoto, selfie);
+    try {
+      await submitVerification(idPhoto, selfie);
+    } catch (error) {
+      Alert.alert(
+        'تعذّر إرسال التوثيق',
+        error instanceof Error ? error.message : 'حدث خطأ أثناء إرسال الصور. حاول مجدداً.',
+      );
+    } finally {
       setSubmitting(false);
-    }, 800);
+    }
   };
 
   // ═══════════════════════════════════════════════════════════
