@@ -821,11 +821,15 @@ additional_info:
 
   // عند تسجيل الدخول/فتح التطبيق: استعادة آخر طلب مفتوح ومحادثاته واتفاقه
   useEffect(() => {
-    if (!user?.id) {
-      setKnownProviders([]);
-      return;
-    }
     let cancelled = false;
+    if (!user?.id) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) setKnownProviders([]);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void loadMyConversations(user.id).then((result) => {
       if (cancelled || !result) return;
