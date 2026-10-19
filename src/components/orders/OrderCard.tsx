@@ -177,7 +177,7 @@ export function OrderCard({
               style={[styles.ratingComment, { color: scheme.textSecondary }]}
               numberOfLines={1}
             >
-              "{order.customer_comment}"
+              &quot;{order.customer_comment}&quot;
             </Text>
           )}
         </View>
