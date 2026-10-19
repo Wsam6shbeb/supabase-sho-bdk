@@ -140,7 +140,7 @@ export default function ChatScreen() {
     const result = await customerAgrees(
       thread.id,
       provider.id,
-      user?.name ?? 'الزبون',
+      user?.name ?? 'العميل',
       currentMessages,
       sharePhone,
     );
