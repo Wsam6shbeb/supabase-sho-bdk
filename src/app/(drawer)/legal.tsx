@@ -42,7 +42,7 @@ export default function LegalScreen() {
           الشروط والأحكام
         </Text>
         <Text style={[styles.body, { color: scheme.textSecondary }]}>
-          باستخدامك لتطبيق "شو بدك؟"، أنت توافق على الشروط التالية:
+          باستخدام تطبيق «شو بدك؟»، فإنك توافق على الشروط التالية:
           {'\n\n'}
           <Text style={styles.bold}>1. التسجيل:</Text>
           {'\n'}
