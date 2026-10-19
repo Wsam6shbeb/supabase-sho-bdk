@@ -14,11 +14,11 @@ export function orderErrorMessage(code: string | null): string {
     case 'NO_ACTIVE_AGREEMENT':
       return 'لا يوجد اتفاق فعّال لهذا الطلب.';
     case 'REQUEST_NOT_FOUND':
-      return 'ما لقينا هالطلب.';
+      return 'لم نعثر على هذا الطلب.';
     case 'ALREADY_RATED':
-      return 'سبق وقيّمت هالطلب.';
+      return 'لقد قيّمت هذا الطلب مسبقاً.';
     case 'INVALID_SCORE':
-      return 'التقييم لازم يكون من 1 لـ 5 نجوم.';
+      return 'يجب أن يكون التقييم من نجمة واحدة إلى خمس نجوم.';
     case 'FORBIDDEN':
       return 'ليست لديك صلاحية لتنفيذ هذا الإجراء.';
     case 'REASON_REQUIRED':
