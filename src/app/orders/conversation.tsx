@@ -294,14 +294,14 @@ export default function ConversationScreen() {
               </Text>
             ) : ratingStatus?.i_rated ? (
               <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
-                {iAmProvider ? 'قيّمت الزبون' : 'قيّمت مقدم الخدمة'} بـ {ratingStatus.my_score} من 5 نجوم.
+                {iAmProvider ? 'قيّمت العميل' : 'قيّمت مقدم الخدمة'} بـ {ratingStatus.my_score} من 5 نجوم.
               </Text>
             ) : pendingForMe ? (
               <>
               {counterpartyRating ? (
                 <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
-                  تقييم الزبون: {formatRating(counterpartyRating.avg, counterpartyRating.count)}
-                  {counterpartyRating.count > 0 ? ` (${counterpartyRating.count} تقييم)` : ' (زبون جديد)'}
+                  تقييم العميل: {formatRating(counterpartyRating.avg, counterpartyRating.count)}
+                  {counterpartyRating.count > 0 ? ` (${counterpartyRating.count} تقييم)` : ' (عميل جديد)'}
                 </Text>
               ) : null}
               <AgreementBubble
