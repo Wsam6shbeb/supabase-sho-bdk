@@ -16,6 +16,7 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { formatPhoneForDisplay } from '@/domain/phone';
 import { useAuth } from '@/hooks/use-auth';
+import { useMyVerification } from '@/hooks/use-my-verification';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -33,9 +34,8 @@ export default function ProfileScreen() {
     welcomeBonusReceived,
     balance,
     isCriticalBalance,
-    verificationStatus,
-    isVerified,
   } = useOrder();
+  const { status: verificationStatus, isVerified } = useMyVerification();
 
 // [شرح الدالة: handleLogout] ينفذ تسجيل خروج المستخدم وإنهاء الجلسة الحالية.
   const handleLogout = () => {
