@@ -177,39 +177,6 @@ export default function ProfileScreen() {
           )}
         </AppCard>
 
-        {/* زر التوثيق */}
-        {!isVerified && verificationStatus !== 'under_review' && (
-          <Pressable
-            onPress={handleVerify}
-            style={({ pressed }) => [
-              styles.verifyBanner,
-              {
-                backgroundColor: `${scheme.primary}10`,
-                borderColor: `${scheme.primary}40`,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.verifyIcon,
-                { backgroundColor: `${scheme.primary}20` },
-              ]}
-            >
-              <Ionicons name="shield-checkmark" size={28} color={scheme.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.verifyTitle, { color: scheme.primary }]}>
-                {t('verification.notVerifiedTitle')}
-              </Text>
-              <Text style={[styles.verifySubtitle, { color: scheme.textSecondary }]}>
-                {t('verification.notVerifiedSubtitle')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-back" size={20} color={scheme.primary} />
-          </Pressable>
-        )}
-
         {/* الرصيد */}
         <AppCard padding="four" elevation="sm" style={styles.section}>
           <Pressable
@@ -241,13 +208,16 @@ export default function ProfileScreen() {
           </Pressable>
         </AppCard>
 
+
+
+
         {/* Provider Section */}
         {hasProviderProfile ? (
           <AppCard padding="four" elevation="sm" style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="briefcase" size={20} color={scheme.primary} />
               <Text style={[styles.sectionTitle, { color: scheme.text }]}>
-                كمقدم خدمة
+                استطيع ان اقدم للناس
               </Text>
             </View>
 
@@ -340,8 +310,44 @@ export default function ProfileScreen() {
           </AppCard>
         )}
 
+
+
+        {/* زر التوثيق */}
+        {!isVerified && verificationStatus !== 'under_review' && (
+          <Pressable
+            onPress={handleVerify}
+            style={({ pressed }) => [
+              styles.verifyBanner,
+              {
+                backgroundColor: `${scheme.primary}10`,
+                borderColor: `${scheme.primary}40`,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.verifyIcon,
+                { backgroundColor: `${scheme.primary}20` },
+              ]}
+            >
+              <Ionicons name="shield-checkmark" size={28} color={scheme.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.verifyTitle, { color: scheme.primary }]}>
+                {t('verification.notVerifiedTitle')}
+              </Text>
+              <Text style={[styles.verifySubtitle, { color: scheme.textSecondary }]}>
+                {t('verification.notVerifiedSubtitle')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-back" size={20} color={scheme.primary} />
+          </Pressable>
+        )}
+
+
         {/* Settings List */}
-        <AppCard padding="four" elevation="sm" style={styles.section}>
+        {/* <AppCard padding="four" elevation="sm" style={styles.section}>
           <SettingsRow
             icon="chatbubble-outline"
             label={t('tabs.messages')}
@@ -354,7 +360,7 @@ export default function ProfileScreen() {
             onPress={handleLogout}
             isLast
           />
-        </AppCard>
+        </AppCard> */}
       </ScrollView>
     </ScreenSafeArea>
   );

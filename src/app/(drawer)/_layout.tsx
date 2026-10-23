@@ -77,11 +77,11 @@ function DrawerContent(props: any) {
     ...(user?.is_admin
       ? [{ name: 'admin-reports', label: 'مراجعة البلاغات', icon: 'flag-outline' as const }]
       : []),
-    { name: 'notifications', label: 'الإشعارات', icon: 'notifications-outline' as const },
-    { name: 'settings', label: 'الإعدادات', icon: 'settings-outline' as const },
-    { name: 'about', label: 'عن التطبيق', icon: 'information-circle-outline' as const },
-    { name: 'legal', label: 'الشروط والأحكام', icon: 'document-text-outline' as const },
-    { name: 'blocked-list', label: t('blocking.blockedListTitle'), icon: 'ban-outline' as const },
+      { name: 'settings', label: 'الإعدادات', icon: 'settings-outline' as const },
+      { name: 'blocked-list', label: t('blocking.blockedListTitle'), icon: 'ban-outline' as const },
+      // { name: 'notifications', label: 'الإشعارات', icon: 'notifications-outline' as const },
+      { name: 'legal', label: 'الشروط والأحكام', icon: 'document-text-outline' as const },
+      { name: 'about', label: 'عن التطبيق', icon: 'information-circle-outline' as const },
   ];
 
   return (

@@ -124,7 +124,7 @@ export const ar = {
       continueBtn: 'متابعة',
     },
     editProfile: {
-      title: 'ملفي الشخصي كمقدم خدمة',
+      title: 'تعديل خدماتي التي أقدمها',
       skillsSection: 'المهارات',
       addSkillBtn: 'إضافة مهارة',
       removeSkill: 'حذف',
