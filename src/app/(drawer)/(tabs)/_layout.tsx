@@ -54,6 +54,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="orders" options={{ title: t('tabs.orders') }} />
       <Tabs.Screen name="messages" options={{ title: t('tabs.messages') }} />
       <Tabs.Screen name="wallet" options={{ title: t('tabs.wallet') }} />
+      <Tabs.Screen name="notifications" options={{ title: 'الإشعارات', tabBarLabel: 'الإشعارات',
+  }}
+/>
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
