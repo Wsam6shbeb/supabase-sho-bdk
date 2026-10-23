@@ -32,6 +32,9 @@ const TYPING_REFRESH_MS = 2500;
 const TYPING_IDLE_MS = 3000;
 const PARTNER_TYPING_TIMEOUT_MS = 4500;
 
+// نص رسالة طلب التوثيق المخزّن في قاعدة البيانات.
+const VERIFICATION_REQUEST_BODY = 'طُلب من الطرف الآخر توثيق حسابه لزيادة الأمان.';
+
 export function useConversation({ conversationId, myId, ensureConversationId }: Options) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [partnerTyping, setPartnerTyping] = useState(false);
@@ -61,12 +64,18 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
     const mine = m.sender_id === myIdRef.current;
     let status: MessageStatus | undefined;
     if (mine) status = m.read_at ? 'read' : m.delivered_at ? 'delivered' : 'sent';
+    const content =
+      m.message_type === 'system' && m.body === VERIFICATION_REQUEST_BODY
+        ? mine
+          ? 'طلبنا من الطرف الآخر أن يوثّق حسابه.'
+          : 'طلب الطرف الآخر أن توثّق حسابك.'
+        : m.body;
     return {
       id: m.id,
       order_id: '',
       sender_id: m.message_type === 'system' ? 'system' : mine ? 'me' : m.sender_id,
       receiver_id: '',
-      content: m.body,
+      content,
       is_system: m.message_type === 'system',
       created_at: m.created_at,
       delivered_at: m.delivered_at,
