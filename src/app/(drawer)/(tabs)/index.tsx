@@ -48,6 +48,7 @@ export default function HomeTab() {
       t('home.tip3'),
       t('home.tip4'),
       t('home.tip5'),
+      t('home.tip6'),
     ];
   }, []);
 
