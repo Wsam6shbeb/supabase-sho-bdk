@@ -67,9 +67,7 @@ function mapOrderStatus(state: string): OrderStatus {
 }
 
 function mapVerification(status: string | null): ServiceProvider['verification_status'] {
-  if (status === 'approved') return 'verified';
-  if (status === 'pending') return 'under_review';
-  return 'not_verified';
+  return status === 'approved' ? 'verified' : 'not_verified';
 }
 
 /** يرجع null إذا لا توجد محادثات مفتوحة لاستعادتها (أو عند الفشل). */
