@@ -261,7 +261,15 @@ export default function ConversationScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ChatBubble message={item} isMine={item.sender_id === 'me'} onRetry={retry} />
+            <ChatBubble
+              message={
+                !iAmProvider && item.is_system && item.content === 'طلب من الطرف الآخر توثيق حسابه لزيادة الأمان'
+                  ? { ...item, content: 'طلب الطرف الآخر توثيق حسابك لزيادة الأمان' }
+                  : item
+              }
+              isMine={item.sender_id === 'me'}
+              onRetry={retry}
+            />
           )}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
