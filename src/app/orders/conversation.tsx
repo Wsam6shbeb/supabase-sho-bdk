@@ -244,7 +244,9 @@ export default function ConversationScreen() {
           <View style={styles.backBtn} />
         </View>
 
-        <VerificationBar state={verification} otherName={otherName} />
+        {!(ratingStatus?.request_state === 'completed' && ratingStatus.both_rated) ? (
+          <VerificationBar state={verification} otherName={otherName} />
+        ) : null}
         <PhoneSharePanel conversationId={conversationId} refreshKey={lastSystemMessageId} />
         <ProviderOrderActions
           status={ratingStatus}
