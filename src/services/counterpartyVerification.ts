@@ -24,10 +24,35 @@ export async function fetchCounterpartyVerification(
     const { data, error } = await db.rpc('get_counterparty_verification', {
       p_conversation_id: conversationId,
     });
-    if (error || !data) return null;
+    if (error) {
+      // Temporary diagnostics: never log conversation IDs, returned data, or credentials.
+      if (__DEV__) {
+        console.warn('[verification] get_counterparty_verification RPC error', {
+          code: error.code,
+          message: error.message,
+        });
+      }
+      return null;
+    }
+
+    if (data == null || (Array.isArray(data) && data.length === 0)) {
+      if (__DEV__) {
+        console.info('[verification] get_counterparty_verification returned no result');
+      }
+      return null;
+    }
+
+    if (__DEV__) {
+      console.info('[verification] get_counterparty_verification succeeded');
+    }
     const row = data as { verified?: boolean; requested_by_me?: boolean };
     return { verified: Boolean(row.verified), requestedByMe: Boolean(row.requested_by_me) };
-  } catch {
+  } catch (err) {
+    if (__DEV__) {
+      console.warn('[verification] get_counterparty_verification unexpected failure', {
+        errorType: err instanceof Error ? err.name : 'UnknownError',
+      });
+    }
     return null;
   }
 }
