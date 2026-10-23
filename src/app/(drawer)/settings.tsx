@@ -1,8 +1,10 @@
 // ===============================================================
 // شرح الملف: هذا صفحة الإعدادات.
-// الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: SettingsScreen، handleDeleteAccount، handleBlockedList، SettingRow، SettingToggle.
-// ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
+// الدوال/الوظائف المعرّفة هنا: SettingsScreen، handleNotificationsToggle،
+// handleSoundToggle، handleDarkModeToggle، handleDeleteAccount، handleBlockedList،
+// SettingRow، SettingToggle.
+// الأزرار هنا حقيقية: الإشعارات والصوت والمظهر تُحفظ على الجهاز (services/preferences)،
+// وحالة التوثيق تأتي من قاعدة البيانات (useMyVerification).
 // ===============================================================
 
 // ═══════════════════════════════════════════════════════════
@@ -14,12 +16,26 @@ import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
+import { useMyVerification } from '@/hooks/use-my-verification';
+import { usePreferences } from '@/hooks/use-preferences';
 import { deleteMyAccount } from '@/services/account';
+import { setSoundEnabled, setThemePreference } from '@/services/preferences';
+import { setPushNotificationsEnabled } from '@/services/push';
 import { useTheme } from '@/hooks/use-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 
 // [شرح الدالة: SettingsScreen] يعرض إعدادات التطبيق والحساب والإجراءات الخاصة بها.
 export default function SettingsScreen() {
@@ -27,7 +43,70 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const { logout } = useAuth();
-  const { isVerified, blockedProviderIds } = useOrder();
+  const { blockedProviderIds } = useOrder();
+  const verification = useMyVerification();
+  const { prefs, refresh } = usePreferences();
+
+  // إذن الإشعارات على مستوى نظام الهاتف (قد يسحبه المستخدم من إعدادات الهاتف)
+  const [osGranted, setOsGranted] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      refresh();
+      Notifications.getPermissionsAsync()
+        .then(({ status }) => {
+          if (active) setOsGranted(status === 'granted');
+        })
+        .catch(() => {
+          // على الويب/المحاكي قد لا يتوفر؛ نعتبر الإذن غير معروف
+        });
+      return () => {
+        active = false;
+      };
+    }, [refresh]),
+  );
+
+  // الزر يظهر "مفعّل" فقط إذا فعّله المستخدم وإذن الهاتف ممنوح
+  const notificationsOn = prefs.notificationsEnabled && osGranted !== false;
+
+// [شرح الدالة: handleNotificationsToggle] يشغّل/يوقف وصول إشعارات Push لهذا الجهاز.
+  const handleNotificationsToggle = async (next: boolean) => {
+    if (busy) return;
+    setBusy(true);
+    const result = await setPushNotificationsEnabled(next);
+    setBusy(false);
+    refresh();
+
+    if (result.ok) {
+      if (next) setOsGranted(true);
+      return;
+    }
+    if (result.reason === 'permission_denied') {
+      Alert.alert(
+        'الإشعارات غير مسموحة',
+        'فعّل إذن الإشعارات لهذا التطبيق من إعدادات الهاتف، ثم ارجع وشغّل الزر.',
+        [
+          { text: 'إلغاء', style: 'cancel' },
+          { text: 'فتح الإعدادات', onPress: () => void Linking.openSettings() },
+        ],
+      );
+      return;
+    }
+    Alert.alert('', 'تعذّر تغيير الإعداد. تحقق من الاتصال وحاول مجدداً.');
+  };
+
+// [شرح الدالة: handleSoundToggle] يحفظ تفضيل صوت الإشعارات على هذا الجهاز.
+  const handleSoundToggle = async (next: boolean) => {
+    await setSoundEnabled(next);
+    refresh();
+  };
+
+// [شرح الدالة: handleDarkModeToggle] يبدّل مظهر التطبيق بين الفاتح والداكن ويحفظه.
+  const handleDarkModeToggle = (next: boolean) => {
+    void setThemePreference(next ? 'dark' : 'light');
+  };
 
 // [شرح الدالة: handleDeleteAccount] يبدأ عملية حذف الحساب بعد التحقق من الإجراء المطلوب.
   const handleDeleteAccount = () => {
@@ -63,6 +142,16 @@ export default function SettingsScreen() {
     router.push('/(drawer)/blocked-list');
   };
 
+  const verificationLabel =
+    verification.status === 'verified'
+      ? 'موثّق ✓'
+      : verification.status === 'under_review'
+        ? 'قيد المراجعة'
+        : 'غير موثّق';
+  // الضغط يفتح شاشة التوثيق إلا إذا كان الحساب موثّقاً أو الطلب قيد المراجعة
+  const canOpenVerification =
+    verification.status === 'not_verified' || verification.status === 'rejected';
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: scheme.background }]}
@@ -73,12 +162,16 @@ export default function SettingsScreen() {
         <SettingToggle
           icon="notifications-outline"
           label="الإشعارات"
-          defaultValue={true}
+          value={notificationsOn}
+          disabled={busy}
+          onValueChange={(next) => void handleNotificationsToggle(next)}
         />
         <SettingToggle
           icon="volume-high-outline"
           label="صوت الإشعارات"
-          defaultValue={true}
+          value={prefs.soundEnabled}
+          disabled={!notificationsOn}
+          onValueChange={(next) => void handleSoundToggle(next)}
           isLast
         />
       </AppCard>
@@ -88,21 +181,11 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: scheme.textSecondary }]}>
           التطبيق
         </Text>
-        <SettingRow
-          icon="language-outline"
-          label="اللغة"
-          value="العربية"
-          onPress={() => Alert.alert('اللغة', 'العربية فقط حالياً')}
-        />
         <SettingToggle
           icon="moon-outline"
           label="الوضع الليلي"
-          defaultValue={false}
-        />
-        <SettingRow
-          icon="lock-closed-outline"
-          label="تغيير كلمة المرور"
-          onPress={() => Alert.alert('قريباً', 'سيتم تفعيل تغيير كلمة المرور قريباً')}
+          value={theme === 'dark'}
+          onValueChange={handleDarkModeToggle}
           isLast
         />
       </AppCard>
@@ -115,8 +198,11 @@ export default function SettingsScreen() {
         <SettingRow
           icon="shield-checkmark-outline"
           label="حالة التوثيق"
-          value={isVerified ? 'موثّق ✓' : 'غير موثّق'}
-          valueColor={isVerified ? scheme.success : scheme.textSecondary}
+          value={verificationLabel}
+          valueColor={
+            verification.status === 'verified' ? scheme.success : scheme.textSecondary
+          }
+          onPress={canOpenVerification ? () => router.push('/orders/verify-account') : undefined}
         />
         <SettingRow
           icon="ban-outline"
@@ -168,7 +254,7 @@ interface SettingRowProps {
   isLast?: boolean;
 }
 
-// [شرح الدالة: SettingRow] تنفذ الدالة «SettingRow» المهمة البرمجية المرتبطة بهذا الملف وتعيد النتيجة التي يعتمد عليها باقي الكود.
+// [شرح الدالة: SettingRow] يعرض صفاً في الإعدادات (نص وقيمة وسهم اختياري عند وجود إجراء).
 function SettingRow({
   icon,
   label,
@@ -218,21 +304,23 @@ function SettingRow({
 interface SettingToggleProps {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  defaultValue?: boolean;
+  value: boolean;
+  onValueChange: (next: boolean) => void;
+  disabled?: boolean;
   isLast?: boolean;
 }
 
-// [شرح الدالة: SettingToggle] يعرض إعدادًا من نوع تشغيل/إيقاف ويتعامل مع تغيير قيمته.
-function SettingToggle({ icon, label, defaultValue, isLast }: SettingToggleProps) {
+// [شرح الدالة: SettingToggle] يعرض إعداد تشغيل/إيقاف تتحكم بقيمته الشاشة (controlled).
+function SettingToggle({ icon, label, value, onValueChange, disabled, isLast }: SettingToggleProps) {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const [value, setValue] = useState(defaultValue ?? false);
 
   return (
     <View
       style={[
         styles.row,
         !isLast && { borderBottomColor: scheme.border, borderBottomWidth: 1 },
+        disabled && { opacity: 0.5 },
       ]}
     >
       <View style={styles.rowLeft}>
@@ -241,7 +329,8 @@ function SettingToggle({ icon, label, defaultValue, isLast }: SettingToggleProps
       </View>
       <Switch
         value={value}
-        onValueChange={setValue}
+        onValueChange={onValueChange}
+        disabled={disabled}
         trackColor={{ false: scheme.border, true: scheme.primary }}
         thumbColor="#FFFFFF"
       />
