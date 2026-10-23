@@ -19,6 +19,11 @@ export function useCounterpartyVerification(conversationId: string | null) {
   const refresh = useCallback(async () => {
     if (!conversationId) return;
     const result = await fetchCounterpartyVerification(conversationId);
+    if (__DEV__) {
+      console.info('[verification] hook result', result
+        ? { received: true, verified: result.verified, requestedByMe: result.requestedByMe }
+        : { received: false });
+    }
     if (result) setData(result);
   }, [conversationId]);
 
