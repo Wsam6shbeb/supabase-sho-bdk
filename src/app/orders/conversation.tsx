@@ -21,6 +21,8 @@ import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useConversation } from '@/hooks/use-conversation';
+import { useCounterpartyVerification } from '@/hooks/use-counterparty-verification';
+import { VerificationBar } from '@/components/orders/VerificationBar';
 import {
   checkConversationAccess,
   getConversationRatingStatus,
@@ -60,6 +62,7 @@ export default function ConversationScreen() {
   const conversationId = typeof params.conversation_id === 'string' ? params.conversation_id : '';
   const otherName = typeof params.name === 'string' && params.name ? params.name : 'محادثة';
   const myId = user?.id ?? null;
+  const verification = useCounterpartyVerification(conversationId || null);
 
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
@@ -241,6 +244,7 @@ export default function ConversationScreen() {
           <View style={styles.backBtn} />
         </View>
 
+        <VerificationBar state={verification} otherName={otherName} />
         <PhoneSharePanel conversationId={conversationId} refreshKey={lastSystemMessageId} />
         <ProviderOrderActions
           status={ratingStatus}
@@ -299,6 +303,11 @@ export default function ConversationScreen() {
                 <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
                   تقييم العميل: {formatRating(counterpartyRating.avg, counterpartyRating.count)}
                   {counterpartyRating.count > 0 ? ` (${counterpartyRating.count} تقييم)` : ' (عميل جديد)'}
+                </Text>
+              ) : null}
+              {verification.data ? (
+                <Text style={[styles.statusText, { color: scheme.textSecondary }]}>
+                  توثيق العميل: {verification.data.verified ? 'موثّق ✓' : 'غير موثّق'}
                 </Text>
               ) : null}
               <AgreementBubble
