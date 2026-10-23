@@ -19,6 +19,13 @@ interface VerificationBarProps {
 export function VerificationBar({ state, otherName }: VerificationBarProps) {
   const scheme = Colors[useTheme()];
   const { data, requesting, request } = state;
+  if (__DEV__) {
+    console.info('[verification] bar render', {
+      hasData: Boolean(data),
+      verified: data?.verified ?? null,
+      requestedByMe: data?.requestedByMe ?? null,
+    });
+  }
   if (!data) return null;
 
   const color = data.verified ? scheme.success : scheme.textSecondary;
