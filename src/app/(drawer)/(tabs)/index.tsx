@@ -227,10 +227,10 @@ export default function HomeTab() {
               />
             </View>
             <Text style={[styles.actionTitle, { color: '#FFFFFF' }]}>
-              {hasProviderProfile ? 'إدارة خدماتي' : t('home.provideServiceBtn')}
+              {hasProviderProfile ? 'خدماتي التي أقدمها' : t('home.provideServiceBtn')}
             </Text>
             <Text style={[styles.actionSubtitle, { color: 'rgba(255,255,255,0.85)' }]}>
-              {hasProviderProfile ? 'عدّل مهاراتك وتوفرك' : t('home.provideServiceBtnSubtitle')}
+              {hasProviderProfile ? 'إضافة أو حذف أو تعديل الخدمات التي تقدمها للآخرين' : t('home.provideServiceBtnSubtitle')}
             </Text>
           </Pressable>
         </View>
