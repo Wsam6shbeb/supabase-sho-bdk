@@ -263,7 +263,7 @@ export default function ConversationScreen() {
           renderItem={({ item }) => (
             <ChatBubble
               message={
-                !iAmProvider && item.is_system && item.content === 'طلب من الطرف الآخر توثيق حسابه لزيادة الأمان'
+                !iAmProvider && item.is_system && item.content.includes('الطرف الآخر توثيق حسابه لزيادة الأمان')
                   ? { ...item, content: 'طلب الطرف الآخر توثيق حسابك لزيادة الأمان' }
                   : item
               }
