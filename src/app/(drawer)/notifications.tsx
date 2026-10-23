@@ -143,7 +143,10 @@ function NotificationCard({
 }) {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const config = NOTIFICATION_CONFIG[notification.type];
+  const config = NOTIFICATION_CONFIG[notification.type] ?? {
+    icon: 'notifications-outline' as const,
+    colorKey: 'primary' as const,
+  };
   const color = scheme[config.colorKey];
 
   const date = new Date(notification.created_at).toLocaleString('ar-SY', {

@@ -200,12 +200,7 @@ export default function CandidatesScreen() {
             cancellation_rate: 0,
             balance: 0,
             is_available: true,
-            verification_status:
-              user.verification_status === 'verified'
-                ? 'verified'
-                : user.verification_status === 'under_review'
-                  ? 'under_review'
-                  : 'not_verified',
+            verification_status: user.verification_status === 'approved' ? 'verified' : 'not_verified',
             card_color: '#3B82F6',
             service_request_id: requestId,
           } satisfies ServiceProvider;
