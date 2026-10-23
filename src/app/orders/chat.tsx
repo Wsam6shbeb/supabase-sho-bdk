@@ -27,6 +27,8 @@ import { t } from '@/i18n/ar';
 import { openConversation } from '@/services/chat';
 import { extractPriceFromChat } from '@/domain/commission';
 import { useConversation } from '@/hooks/use-conversation';
+import { useCounterpartyVerification } from '@/hooks/use-counterparty-verification';
+import { VerificationBar } from '@/components/orders/VerificationBar';
 import { ChatStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -84,6 +86,7 @@ export default function ChatScreen() {
     ? (thread.conversation_id ?? fallbackConversationIds[thread.id] ?? null)
     : null;
   const myId = user?.id ?? null;
+  const verification = useCounterpartyVerification(conversationId);
 
   // إذا لم تُفتح المحادثة بعد في قاعدة البيانات نفتحها عند أول إرسال
   const ensureConversationId = useCallback(async () => {
@@ -308,6 +311,7 @@ export default function ChatScreen() {
           )}
         </View>
 
+        <VerificationBar state={verification} otherName={provider.name} />
         <ChatStatusBar status={thread.status} />
 
         <ProviderSwitcher
