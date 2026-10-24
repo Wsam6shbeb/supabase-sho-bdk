@@ -126,6 +126,8 @@ export async function markAllMyMessagesDelivered(): Promise<void> {
  * اشتراك لحظي برسائل المحادثة: الجديدة (INSERT) وتغيّر حالتها (UPDATE: وصلت/قُرئت).
  * onSubscribed يُستدعى عند كل اتصال/إعادة اتصال لنعيد مزامنة ما فاتنا.
  */
+let messagesChannelCounter = 0;
+
 export function subscribeToMessages(
   conversationId: string,
   handlers: {
@@ -136,7 +138,7 @@ export function subscribeToMessages(
 ): () => void {
   const filter = `conversation_id=eq.${conversationId}`;
   const channel = supabase
-    .channel(`messages:${conversationId}`)
+    .channel(`messages:${conversationId}:${++messagesChannelCounter}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter },
