@@ -19,7 +19,6 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
-import { api } from '@/services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -37,10 +36,11 @@ export default function RequestAgainScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
-  const { requestProviderAgain, isProviderBlocked, hasAcceptedDisclaimer } = useOrder();
+  const { requestProviderAgain, isProviderBlocked, hasAcceptedDisclaimer, getProviderById } = useOrder();
+
 
   const providerId = params.provider_id as string;
-  const provider = api.providers.getProviderById(providerId);
+   const provider = getProviderById(providerId);
 
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);

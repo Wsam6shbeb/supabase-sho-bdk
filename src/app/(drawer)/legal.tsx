@@ -8,6 +8,8 @@ import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ScrollView, StyleSheet, Text } from 'react-native';
+import { Directions } from 'react-native-gesture-handler';
+import { FadeInRight } from 'react-native-reanimated';
 
 export default function LegalScreen() {
   const insets = useSafeAreaInsets();
@@ -155,14 +157,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold,
-    writingDirection: 'rtl',
     marginBottom: Spacing.three,
   },
   body: {
     fontSize: FontSizes.sm,
     lineHeight: FontSizes.base + 6,
-    writingDirection: 'rtl',
-    textAlign: 'right',
   },
   bold: {
     fontWeight: FontWeights.bold,
@@ -172,6 +171,5 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     textAlign: 'center',
     marginTop: Spacing.four,
-    writingDirection: 'rtl',
   },
 });

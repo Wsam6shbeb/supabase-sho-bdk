@@ -1,7 +1,7 @@
 // ===============================================================
 // شرح الملف: هذا مكوّن مرتبط بالطلبات/المحادثات (ChatBubble).
 // الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: ChatBubble.
+// الدوال/الوظائف المعرّفة هنا: StatusTick، renderSystemText، ChatBubble.
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
@@ -9,7 +9,8 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useTheme } from '@/hooks/use-theme';
 import type { ChatMessage, MessageStatus } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 
 interface ChatBubbleProps {
   message: ChatMessage;
@@ -39,6 +40,20 @@ function StatusTick({ status, muted }: { status?: MessageStatus; muted: string }
   }
 }
 
+// [شرح الدالة: renderSystemText] رسائل النظام فقط (يولّدها التطبيق/السيرفر، لا يكتبها المستخدمون):
+// النص بين **نجمتين** يُعرض بخط عريض. أي نص بلا علامات يُعرض كما هو.
+function renderSystemText(content: string, boldStyle: TextStyle): ReactNode[] {
+  return content.split(/\*\*(.+?)\*\*/g).map((part, index) =>
+    index % 2 === 1 ? (
+      <Text key={index} style={boldStyle}>
+        {part}
+      </Text>
+    ) : (
+      part
+    ),
+  );
+}
+
 // [شرح الدالة: ChatBubble] يعرض رسالة واحدة داخل المحادثة مع تنسيقها بحسب صاحب الرسالة وحالتها.
 export function ChatBubble({ message, isMine, onRetry }: ChatBubbleProps) {
   const theme = useTheme();
@@ -54,7 +69,7 @@ export function ChatBubble({ message, isMine, onRetry }: ChatBubbleProps) {
           ]}
         >
           <Text style={[styles.systemText, { color: scheme.textSecondary }]}>
-            {message.content}
+            {renderSystemText(message.content, { fontWeight: FontWeights.bold, color: scheme.text })}
           </Text>
         </View>
       </View>

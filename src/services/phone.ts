@@ -13,6 +13,7 @@ function friendlyError(message: string): string {
   if (message.includes('INVALID_PHONE')) return INVALID_PHONE_MESSAGE;
   if (message.includes('PHONE_REQUIRED')) return 'أضف رقم هاتفك أولاً من الملف الشخصي.';
   if (message.includes('NO_ACTIVE_AGREEMENT')) return 'المشاركة متاحة بعد تأكيد الاتفاق فقط.';
+  if (message.includes('CONVERSATION_CLOSED')) return 'انتهت هذه المحادثة، ولا يمكن مشاركة الرقم الآن.';
   return 'تعذر إكمال العملية الآن. حاول مرة أخرى بعد قليل.';
 }
 
@@ -41,6 +42,10 @@ export interface PhoneShareStatus {
   other_phone: string | null;
   other_name: string | null;
   i_have_phone: boolean;
+  /** حالة المحادثة (read_only بعد انتهاء الخدمة). غير موجودة في الإصدارات القديمة من السيرفر. */
+  conversation_state?: string;
+  /** السيرفر يقرر: هل يُعرض زر "شارك رقمي" الآن؟ غير موجود في الإصدارات القديمة من السيرفر. */
+  can_share?: boolean;
 }
 
 export async function fetchPhoneShareStatus(conversationId: string): Promise<PhoneShareStatus | null> {

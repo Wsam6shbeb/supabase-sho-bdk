@@ -1,7 +1,8 @@
 // ===============================================================
 // بطاقة مشاركة الرقم داخل المحادثة.
 //  - خانة "شارك رقمي" وقت الاتفاق تسجّل القرار مسبقاً.
-//  - بعد تأكيد الاتفاق (أي بعد خصم العمولة) يظهر زر "شارك رقمي" لمن لم يشارك بعد.
+//  - بعد تأكيد الاتفاق (أي بعد خصم العمولة) يظهر زر "شارك رقمي" لمن لم يشارك بعد،
+//    وما دامت المحادثة فعّالة فقط: بعد إنهاء الخدمة (محادثة read_only) يختفي الزر.
 //  - رقم الطرف الآخر يظهر فقط إذا شاركه والاتفاق فعّال (مع اتصال/واتساب).
 // ===============================================================
 import { AppButton } from '@/components/ui/AppButton';
@@ -49,8 +50,10 @@ export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
 
   const isActive = status.agreement_state === 'active';
   const otherPhone = status.other_shared ? status.other_phone : null;
-  // الزر يظهر فقط بعد تأكيد الاتفاق (العمولة تُخصم عند موافقة مقدم الخدمة)
-  const canShareNow = isActive && !status.i_shared;
+  // الزر يظهر فقط بعد تأكيد الاتفاق (العمولة تُخصم عند موافقة مقدم الخدمة)،
+  // وما دامت المحادثة فعّالة: السيرفر يرسل can_share=false بعد انتهاء الخدمة.
+  // إن لم يرسله (سيرفر أقدم) نبقى على السلوك السابق.
+  const canShareNow = isActive && !status.i_shared && (status.can_share ?? true);
 
   if (!otherPhone && !status.i_shared && !canShareNow) return null;
 
@@ -67,6 +70,8 @@ export function PhoneSharePanel({ conversationId, refreshKey }: Props) {
             setBusy(false);
             if (!result.ok) {
               Alert.alert('', result.error ?? 'تعذرت مشاركة الرقم.');
+              // قد تكون المحادثة انتهت للتو: نحدّث الحالة ليختفي الزر
+              await reload();
               return;
             }
             await reload();
