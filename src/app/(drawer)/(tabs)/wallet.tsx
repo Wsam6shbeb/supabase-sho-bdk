@@ -64,9 +64,10 @@ export default function WalletTab() {
       edges={['top']}
     >
       <View style={styles.header}>
-        <Pressable onPress={() => router.replace('/(drawer)/profile')} hitSlop={8} style={styles.backBtn}>
+        {/* التعليق لزر رجوع يعيدنا الى صفحة البروفايل */}
+        {/* <Pressable onPress={() => router.replace('/(drawer)/profile')} hitSlop={8} style={styles.backBtn}>
           <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-        </Pressable>
+        </Pressable> */}
         <Text style={[styles.title, { color: scheme.text }]}>
           {t('wallet.title')}
         </Text>
