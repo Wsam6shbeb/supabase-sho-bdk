@@ -16,7 +16,7 @@ import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getSupportContacts, type SupportContacts } from '@/services/support';
 import { supabase } from '@/services/supabase';
 
@@ -135,26 +135,6 @@ export default function AboutScreen() {
             isLast={index === getFaqItems(minimumProviderBalance).length - 1}
           />
         ))}
-      </AppCard>
-
-      {/* Share */}
-      <AppCard padding="four" elevation="sm" style={styles.section}>
-        <Pressable
-          onPress={() => {
-            void Share.share({
-              message: 'جرّب تطبيق شو بدك؟ لطلب الخدمات والتواصل مع مقدميها في سوريا.\n\nحمّل التطبيق من هنا:\nhttps://sho-bdk-download.pages.dev/',
-              url: 'https://sho-bdk-download.pages.dev/',
-              title: 'شارك تطبيق شو بدك؟',
-            });
-          }}
-          style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.6 : 1 }]}
-        >
-          <Ionicons name="share-social-outline" size={22} color={scheme.primary} />
-          <Text style={[styles.actionLabel, { color: scheme.primary }]}>
-            شارك التطبيق
-          </Text>
-          <Ionicons name="chevron-back" size={20} color={scheme.textTertiary} />
-        </Pressable>
       </AppCard>
     </ScrollView>
   );
@@ -324,17 +304,5 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     marginTop: Spacing.two,
     textAlign: 'right',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  actionLabel: {
-    flex: 1,
-    fontSize: FontSizes.base,
-    fontWeight: FontWeights.medium,
-    writingDirection: 'rtl',
   },
 });

@@ -11,7 +11,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer, DrawerToggleButton } from 'expo-router/drawer';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Share, Text, View } from 'react-native';
+
+// رابط تحميل التطبيق ونص المشاركة (زر "شارك التطبيق" في القائمة الجانبية).
+const SHARE_URL = 'https://sho-bdk-download.pages.dev/';
+const SHARE_MESSAGE =
+  'جرّب تطبيق شو بدك؟ لطلب الخدمات والتواصل مع مقدميها في سوريا.\n\nحمّل التطبيق من هنا:\n' + SHARE_URL;
 
 // زر الرجوع الموحد داخل صفحات الـ Drawer.
 function BackButton() {
@@ -68,6 +73,19 @@ function DrawerContent(props: any) {
         },
       },
     ]);
+  };
+
+  // مشاركة رابط تحميل التطبيق عبر نافذة المشاركة في النظام (ليست شاشة، بل إجراء).
+  const handleShareApp = () => {
+    props.navigation.closeDrawer();
+    void (async () => {
+      try {
+        await Share.share({ message: SHARE_MESSAGE, url: SHARE_URL, title: 'شارك تطبيق شو بدك؟' });
+      } catch (err) {
+        // على الويب قد لا تتوفر المشاركة في المتصفح؛ لا نريد انهيار التطبيق
+        console.error('[share] تعذرت مشاركة التطبيق:', (err as { message?: string })?.message);
+      }
+    })();
   };
 
   const items = [
@@ -136,6 +154,36 @@ function DrawerContent(props: any) {
             </Pressable>
           );
         })}
+
+        {/* شارك التطبيق: إجراء وليس شاشة، فلا يكون "نشطاً" أبداً */}
+        <Pressable
+          onPress={handleShareApp}
+          accessibilityRole="button"
+          accessibilityLabel="شارك التطبيق"
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            borderRadius: 12,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            marginHorizontal: 8,
+          }}
+        >
+          <Ionicons name="share-social-outline" size={22} color={scheme.textSecondary} />
+          <Text
+            style={{
+              flex: 1,
+              marginEnd: 12,
+              color: scheme.textSecondary,
+              fontSize: FontSizes.base,
+              fontWeight: FontWeights.medium,
+              writingDirection: 'rtl',
+              textAlign: 'right',
+            }}
+          >
+            شارك التطبيق
+          </Text>
+        </Pressable>
       </View>
 
       <Pressable
