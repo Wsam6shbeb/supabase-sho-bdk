@@ -5,6 +5,7 @@
 // ===============================================================
 
 import { supabase } from '@/services/supabase';
+import { createRealtimeChannel } from '@/services/realtime';
 
 export interface DbMessage {
   id: string;
@@ -135,8 +136,7 @@ export function subscribeToMessages(
   },
 ): () => void {
   const filter = `conversation_id=eq.${conversationId}`;
-  const channel = supabase
-    .channel(`messages:${conversationId}`)
+  const channel = createRealtimeChannel(`messages:${conversationId}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter },
@@ -162,8 +162,7 @@ export function createTypingChannel(
   myId: string,
   onPartnerTyping: (typing: boolean) => void,
 ) {
-  const channel = supabase
-    .channel(`typing:${conversationId}`)
+  const channel = createRealtimeChannel(`typing:${conversationId}`)
     .on('broadcast', { event: 'typing' }, ({ payload }) => {
       if (payload?.user_id && payload.user_id !== myId) onPartnerTyping(!!payload.typing);
     })
@@ -191,8 +190,7 @@ export async function fetchMyConversations(): Promise<InboxConversation[]> {
 
 /** اشتراك لحظي بأي رسالة جديدة أو تغيّر حالة تخصني (لتحديث صندوق الوارد والعدّاد). */
 export function subscribeToInbox(onChange: () => void): () => void {
-  const channel = supabase
-    .channel(`inbox:${Date.now()}-${Math.random().toString(36).slice(2)}`)
+  const channel = createRealtimeChannel(`inbox:${Date.now()}-${Math.random().toString(36).slice(2)}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => onChange())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => onChange())
     .subscribe();
