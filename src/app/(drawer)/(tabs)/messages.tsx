@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppButton } from '@/components/ui/AppButton';
+import { allowPress } from '@/utils/single-press';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -69,6 +70,7 @@ export default function MessagesTab() {
 
 // [شرح الدالة: handleOpenChat] يفتح المحادثة مع مقدم الخدمة المختار.
   const handleOpenChat = (providerId: string) => {
+    if (!allowPress()) return;
     router.push({
       pathname: '/orders/chat',
       params: { provider_id: providerId },
@@ -149,12 +151,13 @@ export default function MessagesTab() {
               const { conv } = item;
               return (
                 <Pressable
-                  onPress={() =>
+                  onPress={() => {
+                    if (!allowPress()) return;
                     router.push({
                       pathname: '/orders/conversation',
                       params: { conversation_id: conv.conversation_id, name: conv.other_name },
-                    })
-                  }
+                    });
+                  }}
                 >
                   <AppCard padding="three" elevation="sm" style={styles.card}>
                     <View style={styles.row}>
