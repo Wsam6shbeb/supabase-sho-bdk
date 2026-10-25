@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppButton } from '@/components/ui/AppButton';
+import { allowPress } from '@/utils/single-press';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -44,6 +45,7 @@ export default function ActiveOrderScreen() {
 
 // [شرح الدالة: openChat] يفتح محادثة الطلب مع الطرف المحدد.
   const openChat = () => {
+    if (!allowPress()) return;
     router.push({ pathname: '/orders/chat', params: { provider_id: currentOrder.provider_id! } });
   };
 

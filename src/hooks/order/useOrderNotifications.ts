@@ -7,6 +7,7 @@
 
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
+import { createRealtimeChannel } from '@/services/realtime';
 import type { AppNotification, NotificationType } from '@/types/notifications';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -89,8 +90,7 @@ export function useOrderNotifications(userId?: string | null) {
       });
     };
 
-    const channel = supabase
-      .channel(`notifications:${userId}`)
+    const channel = createRealtimeChannel(`notifications:${userId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },

@@ -6,6 +6,7 @@
 
 import { markAllMyMessagesDelivered, markMessagesDelivered } from '@/services/chat';
 import { supabase } from '@/services/supabase';
+import { createRealtimeChannel } from '@/services/realtime';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
@@ -16,8 +17,7 @@ export function useChatDelivery(userId: string | null | undefined) {
     void markAllMyMessagesDelivered();
 
     // RLS تضمن أننا لا نتلقى إلا رسائل محادثاتنا
-    const channel = supabase
-      .channel(`delivery:${userId}`)
+    const channel = createRealtimeChannel(`delivery:${userId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const row = payload.new as { sender_id: string; conversation_id: string };
         if (row.sender_id !== userId) void markMessagesDelivered(row.conversation_id);

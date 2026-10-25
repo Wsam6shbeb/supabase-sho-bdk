@@ -13,6 +13,7 @@ import { DEFAULT_CITY } from '@/config/location';
 import { sharePhone as shareMyPhone } from '@/services/phone';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
+import { createRealtimeChannel } from '@/services/realtime';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
 import { openConversation } from '@/services/chat';
 import {
@@ -631,8 +632,7 @@ additional_info:
       if (!cancelled) void refreshWallet();
     });
 
-    const channel = supabase
-      .channel(`wallet:${userId}`)
+    const channel = createRealtimeChannel(`wallet:${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${userId}` },
@@ -1382,8 +1382,7 @@ additional_info:
   useEffect(() => {
     if (!user?.id) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const channel = supabase
-      .channel(`order-state:${user.id}`)
+    const channel = createRealtimeChannel(`order-state:${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         if ((payload.new as { message_type?: string } | undefined)?.message_type !== 'system') return;
         if (timer) clearTimeout(timer);
