@@ -32,7 +32,7 @@ import { VerificationBar } from '@/components/orders/VerificationBar';
 import { ChatStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -49,6 +49,8 @@ export default function ChatScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
   const params = useLocalSearchParams();
+  const requestedConversationId = typeof params.conversation_id === 'string' ? params.conversation_id : '';
+  const redirectingToRequestedConversation = useRef(false);
   const { user } = useAuth();
   const {
     allProviders,
@@ -86,6 +88,17 @@ export default function ChatScreen() {
     ? (thread.conversation_id ?? fallbackConversationIds[thread.id] ?? null)
     : null;
   const myId = user?.id ?? null;
+  const opensOtherConversation = !!requestedConversationId && (!thread || conversationId !== requestedConversationId);
+
+  useEffect(() => {
+    if (!opensOtherConversation || !requestedConversationId || redirectingToRequestedConversation.current) return;
+    redirectingToRequestedConversation.current = true;
+    router.replace({
+      pathname: '/orders/conversation',
+      params: { conversation_id: requestedConversationId, name: provider?.name ?? 'محادثة' },
+    });
+  }, [opensOtherConversation, requestedConversationId, provider?.name]);
+
   const verification = useCounterpartyVerification(conversationId);
 
   // إذا لم تُفتح المحادثة بعد في قاعدة البيانات نفتحها عند أول إرسال
@@ -120,6 +133,8 @@ export default function ChatScreen() {
       : remoteMessages;
     return [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
   }, [remoteMessages, thread]);
+
+  if (opensOtherConversation) return null;
 
   if (!provider || !thread) {
     return (
