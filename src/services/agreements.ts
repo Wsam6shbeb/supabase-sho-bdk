@@ -7,6 +7,7 @@
 // ===============================================================
 
 import { supabase } from '@/services/supabase';
+import { createRealtimeChannel } from '@/services/realtime';
 import type { Database } from '@/types/database';
 
 export type DbAgreement = Database['public']['Tables']['agreements']['Row'];
@@ -106,8 +107,7 @@ export function subscribeToAgreementChanges(
     ? { filter: `id=eq.${options.conversationId}` }
     : {};
 
-  const channel = supabase
-    .channel(`agreements:${options?.conversationId ?? 'mine'}`)
+  const channel = createRealtimeChannel(`agreements:${options?.conversationId ?? 'mine'}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'agreements', ...agreementFilter },
