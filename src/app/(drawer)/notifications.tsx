@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { allowPress } from '@/utils/single-press';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -64,6 +65,8 @@ export default function NotificationsScreen() {
   const handlePress = (notif: AppNotification) => {
     markNotificationRead(notif.id);
     if (notif.route) {
+      const opensChat = notif.route.includes('/orders/chat') || notif.route.includes('/orders/conversation');
+      if (opensChat && !allowPress()) return;
       router.push(notif.route as any);
     }
   };
