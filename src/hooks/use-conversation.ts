@@ -5,6 +5,7 @@
 // إعادة المزامنة عند عودة الاتصال، وتعليم القراءة عندما تكون الشاشة مفتوحة.
 // ===============================================================
 
+import { useActiveConversation } from '@/hooks/use-active-conversation';
 import { api } from '@/services/api';
 import {
   createTypingChannel,
@@ -40,6 +41,8 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [writeStatus, setWriteStatus] = useState<WriteStatus | null>(null);
+
+  useActiveConversation(conversationId);
 
   const myIdRef = useRef(myId);
   const convRef = useRef(conversationId);
