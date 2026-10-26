@@ -15,21 +15,26 @@ import {
   loadPreferences,
   setNotificationsEnabled,
 } from '@/services/preferences';
+import { isMessageForOpenConversation } from '@/services/activeConversation';
 import { supabase } from '@/services/supabase';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-// إشعار يصل والتطبيق مفتوح: نعرضه بحسب تفضيلات الجهاز
+// إشعار يصل والتطبيق مفتوح: نعرضه بحسب تفضيلات الجهاز، مع كتم رسائل المحادثة المفتوحة.
 Notifications.setNotificationHandler({
-  handleNotification: async () => {
+  handleNotification: async (notification) => {
     await loadPreferences();
     const { notificationsEnabled, soundEnabled } = getPreferences();
+
+    const hide = isMessageForOpenConversation(notification.request.content.data);
+    const show = notificationsEnabled && !hide;
+
     return {
-      shouldShowBanner: notificationsEnabled,
-      shouldShowList: notificationsEnabled,
-      shouldPlaySound: notificationsEnabled && soundEnabled,
+      shouldShowBanner: show,
+      shouldShowList: show,
+      shouldPlaySound: show && soundEnabled,
       shouldSetBadge: false,
     };
   },
