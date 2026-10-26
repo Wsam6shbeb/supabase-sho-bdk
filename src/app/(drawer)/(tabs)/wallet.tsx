@@ -18,7 +18,7 @@ import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: WalletTab] يعرض رصيد المستخدم وحركات المحفظة والإجراءات المرتبطة بها.
@@ -54,8 +54,19 @@ export default function WalletTab() {
   };
 
 // [شرح الدالة: handleSupport] ينقل المستخدم إلى قناة الدعم المرتبطة بالمحفظة.
-  const handleSupport = () => {
-    Alert.alert('الدعم', 'سيتم التواصل معك قريباً');
+  const handleSupport = async () => {
+    const subject = encodeURIComponent('استفسار بخصوص الرصيد - تطبيق شو بدك');
+    const body = encodeURIComponent('مرحباً فريق دعم شو بدك،\n\nأرغب بالاستفسار بخصوص الرصيد.\n\n');
+    const emailUrl = `mailto:shobdkhelpcenter@gmail.com?subject=${subject}&body=${body}`;
+
+    try {
+      await Linking.openURL(emailUrl);
+    } catch {
+      Alert.alert(
+        'تعذر فتح البريد الإلكتروني',
+        'يمكنك مراسلتنا مباشرة على shobdkhelpcenter@gmail.com',
+      );
+    }
   };
 
   return (
