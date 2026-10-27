@@ -249,7 +249,9 @@ export default function ChatScreen() {
   const canProviderRespond = isProviderSide && thread.status === ChatStatus.AWAITING_APPROVAL;
   const canCustomerComplete = thread.status === ChatStatus.ACTIVE;
   const canSendMessage =
-    thread.status === ChatStatus.NEGOTIATING || thread.status === ChatStatus.ACTIVE;
+    thread.status === ChatStatus.NEGOTIATING ||
+    thread.status === ChatStatus.ACTIVE ||
+    (thread.status === ChatStatus.LOCKED_COMPLETED && writeStatus?.writable === true);
   // الحظر: من حظرتُه (فوري من الحالة المحلية) أو من حظرني (من السيرفر، بلا كشف أنه حظر)
   const blockReason: 'blocked_by_me' | 'unavailable' | null = isProviderBlocked(provider.id)
     ? 'blocked_by_me'
