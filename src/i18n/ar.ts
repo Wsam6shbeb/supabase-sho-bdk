@@ -15,6 +15,7 @@ export const ar = {
     loading: 'جارٍ التحميل...',
     somethingWentWrong: 'حدث خطأ غير متوقع',
     networkError: 'مشكلة في الاتصال، تحقّق من الإنترنت',
+    offline: 'انقطع الاتصال بالإنترنت. تأكد من الاتصال.',
     cancel: 'إلغاء',
     confirm: 'تأكيد',
     save: 'حفظ',
@@ -257,6 +258,7 @@ export const ar = {
       agreementClosedByCustomer: 'تم إلغاء الاتفاق من قبل العميل.',
       agreementRejectedByProvider: 'تم رفض الاتفاق من قبل مقدم الخدمة.',
       agreementTimedOut: 'انتهت المهلة دون رد من مقدم الخدمة.',
+      agreementUpdateFailed: 'تعذّر تحديث حالة الاتفاق. تحقق من الاتصال.',
     },
     active: {
       title: 'الخدمة النشطة',

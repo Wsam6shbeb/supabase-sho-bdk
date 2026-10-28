@@ -4,6 +4,7 @@
 // RLS على جداول conversations/messages تضمن أن الطرفين فقط يقرآن ويكتبان.
 // ===============================================================
 
+import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 import { createRealtimeChannel } from '@/services/realtime';
 
@@ -68,7 +69,7 @@ export async function fetchMessages(
     .limit(limit);
 
   if (error) {
-    console.error('[chat] فشل جلب الرسائل:', error.message);
+    logFetchFailure('chat', 'فشل جلب الرسائل', error);
     return null;
   }
   return (data ?? []) as DbMessage[];
@@ -106,7 +107,7 @@ export async function sendMessage(params: {
 /** تعليم رسائل الطرف الآخر في هذه المحادثة بأنها قُرئت. */
 export async function markMessagesRead(conversationId: string): Promise<void> {
   const { error } = await supabase.rpc('mark_messages_read', { p_conversation_id: conversationId });
-  if (error) console.error('[chat] فشل تعليم القراءة:', error.message);
+  if (error) logFetchFailure('chat', 'فشل تعليم القراءة', error);
 }
 
 /** تعليم رسائل الطرف الآخر في هذه المحادثة بأنها وصلت. */
@@ -114,13 +115,13 @@ export async function markMessagesDelivered(conversationId: string): Promise<voi
   const { error } = await supabase.rpc('mark_messages_delivered', {
     p_conversation_id: conversationId,
   });
-  if (error) console.error('[chat] فشل تعليم الاستلام:', error.message);
+  if (error) logFetchFailure('chat', 'فشل تعليم الاستلام', error);
 }
 
 /** عند فتح التطبيق: كل ما وصلني أثناء غيابي يصبح "وصلت". */
 export async function markAllMyMessagesDelivered(): Promise<void> {
   const { error } = await supabase.rpc('mark_all_my_messages_delivered');
-  if (error) console.error('[chat] فشل تعليم الاستلام الجماعي:', error.message);
+  if (error) logFetchFailure('chat', 'فشل تعليم الاستلام الجماعي', error);
 }
 
 /**
@@ -182,7 +183,7 @@ export function createTypingChannel(
 export async function fetchMyConversations(): Promise<InboxConversation[]> {
   const { data, error } = await supabase.rpc('get_my_conversations');
   if (error) {
-    console.error('[chat] فشل جلب المحادثات:', error.message);
+    logFetchFailure('chat', 'فشل جلب المحادثات', error);
     return [];
   }
   return (data ?? []) as InboxConversation[];

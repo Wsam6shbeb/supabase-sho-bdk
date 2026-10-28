@@ -7,6 +7,7 @@
 // ===============================================================
 
 import { supabase } from '@/services/supabase';
+import { logFetchFailure } from '@/services/networkStatus';
 import { createRealtimeChannel } from '@/services/realtime';
 import type { Database } from '@/types/database';
 
@@ -82,12 +83,12 @@ export async function getConversationAgreement(
       p_conversation_id: conversationId,
     });
     if (error) {
-      console.error('[agreements] فشل جلب الاتفاق:', error.message);
+      logFetchFailure('agreements', 'فشل جلب الاتفاق', error);
       return undefined; // undefined = فشل (نفرّقه عن "لا يوجد اتفاق")
     }
     return (data as DbAgreement[] | null)?.[0] ?? null;
   } catch (err) {
-    console.error('[agreements] خطأ غير متوقع:', err);
+    logFetchFailure('agreements', 'فشل جلب الاتفاق', err);
     return undefined;
   }
 }

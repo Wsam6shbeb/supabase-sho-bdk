@@ -1,6 +1,8 @@
 // ===============================================================
 // رقم هاتف المستخدم + مشاركته مع الطرف الآخر (كله عبر دوال آمنة في قاعدة البيانات).
 // ===============================================================
+import { t } from '@/i18n/ar';
+import { isConnectionError, isOffline } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 
 type RpcResult = Promise<{ data: unknown; error: { message: string } | null }>;
@@ -14,6 +16,8 @@ function friendlyError(message: string): string {
   if (message.includes('PHONE_REQUIRED')) return 'أضف رقم هاتفك أولاً من الملف الشخصي.';
   if (message.includes('NO_ACTIVE_AGREEMENT')) return 'المشاركة متاحة بعد تأكيد الاتفاق فقط.';
   if (message.includes('CONVERSATION_CLOSED')) return 'انتهت هذه المحادثة، ولا يمكن مشاركة الرقم الآن.';
+  // انقطاع الإنترنت ليس خطأ في العملية: نوضّح السبب الحقيقي بدل رسالة عامة
+  if (isOffline() || isConnectionError(message)) return t('common.offline');
   return 'تعذر إكمال العملية الآن. حاول مرة أخرى بعد قليل.';
 }
 

@@ -7,6 +7,7 @@
 import { buildProviderServiceInfo } from '@/domain/providerServices';
 import { getConversationAgreement, type DbAgreement } from '@/services/agreements';
 import { fetchMyConversations, type InboxConversation } from '@/services/chat';
+import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import type { ChatThread, Order, ServiceProvider } from '@/types/orders';
@@ -87,7 +88,7 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
       .in('id', requestIds);
 
     if (requestsError || !requests?.length) {
-      if (requestsError) console.error('[hydrate] فشل جلب الطلبات:', requestsError.message);
+      if (requestsError) logFetchFailure('hydrate', 'فشل جلب الطلبات', requestsError);
       return null;
     }
 
@@ -113,10 +114,10 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
     ]);
 
     if (profilesResult.error) {
-      console.error('[hydrate] فشل جلب ملفات مقدمي الخدمة:', profilesResult.error.message);
+      logFetchFailure('hydrate', 'فشل جلب ملفات مقدمي الخدمة', profilesResult.error);
     }
     if (servicesResult.error) {
-      console.error('[hydrate] فشل جلب خدمات مقدمي الخدمة:', servicesResult.error.message);
+      logFetchFailure('hydrate', 'فشل جلب خدمات مقدمي الخدمة', servicesResult.error);
     }
 
     // الاتفاق القائم للطلب (وإنهاء مهلته تلقائياً إذا انتهت)

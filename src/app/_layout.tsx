@@ -9,6 +9,7 @@
 // Layout الرئيسي للتطبيق
 // ═══════════════════════════════════════════════════════════
 
+import { ConnectionBanner } from '@/components/ui/ConnectionBanner';
 import { LoadingState } from '@/components/ui/LoadingState';
 import * as WebBrowser from 'expo-web-browser';
 import { Colors } from '@/constants/theme';
@@ -138,6 +139,7 @@ export default function RootLayout() {
         <AuthProvider>
           <OrderProvider>
             <RootStack />
+            <ConnectionBanner />
           </OrderProvider>
         </AuthProvider>
       </SafeAreaProvider>
