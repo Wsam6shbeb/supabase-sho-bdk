@@ -35,6 +35,9 @@ const PARTNER_TYPING_TIMEOUT_MS = 4500;
 
 // نص رسالة طلب التوثيق المخزّن في قاعدة البيانات.
 const VERIFICATION_REQUEST_BODY = 'طُلب من الطرف الآخر توثيق حسابه لزيادة الأمان.';
+// تحت VERIFICATION_REQUEST_BODY
+// موجّهة للزبون فقط ("أنهى مقدم الخدمة الخدمة. بانتظار تأكيدك…"): لا تُعرض لمن أرسلها (مقدم الخدمة)
+const PROVIDER_FINISHED_PREFIX = 'أنهى مقدم الخدمة الخدمة';
 
 export function useConversation({ conversationId, myId, ensureConversationId }: Options) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -95,6 +98,13 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
         for (const m of incoming) {
           // الرسالة المؤقتة تحمل id = clientKey، فنستبدلها بالحقيقية
           if (m.client_dedupe_key) byId.delete(m.client_dedupe_key);
+           if (
+  m.message_type === 'system' &&
+  m.sender_id === myIdRef.current &&
+  (m.body ?? '').startsWith(PROVIDER_FINISHED_PREFIX)
+) {
+  continue;
+}
           byId.set(m.id, toChat(m));
         }
         return Array.from(byId.values()).sort((a, b) => a.created_at.localeCompare(b.created_at));
