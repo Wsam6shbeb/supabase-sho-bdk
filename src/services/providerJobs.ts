@@ -2,6 +2,7 @@
 // خدمات قائمة المستخدمين المحظورين.
 // ===============================================================
 
+import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 
 export interface BlockedUser {
@@ -15,7 +16,7 @@ export interface BlockedUser {
 export async function fetchBlockedUsers(): Promise<BlockedUser[] | null> {
   const { data, error } = await supabase.rpc('get_my_blocked_users');
   if (error) {
-    console.error('[blocks] فشل جلب المحظورين:', error.message);
+    logFetchFailure('blocks', 'فشل جلب المحظورين', error);
     return null;
   }
   return data ?? [];

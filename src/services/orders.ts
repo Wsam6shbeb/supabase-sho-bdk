@@ -3,6 +3,7 @@
 // الحالة والتقييم والسمعة تُحسب كلها في السيرفر (لا يستطيع العميل تغييرها مباشرة).
 // ===============================================================
 
+import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 import { OrderStatus } from '@/types/common';
 import type { Order } from '@/types/orders';
@@ -63,7 +64,7 @@ export async function submitRating(params: {
 /** اعتماد الطلبات المتأخرة عن مهلة التقييم تلقائياً (آمن ومتكرر). */
 export async function finalizeOverdueRequests(): Promise<void> {
   const { error } = await supabase.rpc('finalize_overdue_requests');
-  if (error) console.error('[orders] فشل اعتماد الطلبات المتأخرة:', error.message);
+  if (error) logFetchFailure('orders', 'فشل اعتماد الطلبات المتأخرة', error);
 }
 
 function mapStatus(state: string): OrderStatus {
@@ -88,7 +89,7 @@ function mapStatus(state: string): OrderStatus {
 export async function fetchOrderHistory(): Promise<Order[] | null> {
   const { data, error } = await supabase.rpc('get_my_order_history_v2');
   if (error) {
-    console.error('[orders] فشل جلب سجل الطلبات:', error.message);
+    logFetchFailure('orders', 'فشل جلب سجل الطلبات', error);
     return null;
   }
   return (data ?? []).map((r) => ({

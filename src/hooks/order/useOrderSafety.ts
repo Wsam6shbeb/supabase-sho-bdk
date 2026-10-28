@@ -4,6 +4,7 @@
 // - reports: البلاغات تُحفظ لمراجعة الإدارة.
 // ===============================================================
 
+import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 import type { CreateReportDto, Report, ReportStatus } from '@/types/reports';
 import { useCallback, useEffect, useState } from 'react';
@@ -47,13 +48,13 @@ export function useOrderSafety(userId?: string | null) {
       if (cancelled) return;
 
       if (blocksResult.error) {
-        console.error('[safety] فشل جلب المحظورين:', blocksResult.error.message);
+        logFetchFailure('safety', 'فشل جلب المحظورين', blocksResult.error);
       } else {
         setBlockedProviderIds((blocksResult.data ?? []).map((b) => b.blocked_id));
       }
 
       if (reportsResult.error) {
-        console.error('[safety] فشل جلب البلاغات:', reportsResult.error.message);
+        logFetchFailure('safety', 'فشل جلب البلاغات', reportsResult.error);
       } else {
         setReports(
           (reportsResult.data ?? []).map((r) => ({
@@ -95,7 +96,7 @@ export function useOrderSafety(userId?: string | null) {
         .single();
 
       if (error || !data) {
-        console.error('[safety] فشل إرسال البلاغ:', error?.message);
+        logFetchFailure('safety', 'فشل إرسال البلاغ', error);
         return { ok: false, error: 'تعذر إرسال البلاغ. تحقق من الاتصال وحاول مرة أخرى.' };
       }
 
@@ -128,7 +129,7 @@ export function useOrderSafety(userId?: string | null) {
         .upsert({ blocker_id: userId, blocked_id: providerId }, { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true })
         .then(({ error }) => {
           if (error) {
-            console.error('[safety] فشل حفظ الحظر:', error.message);
+            logFetchFailure('safety', 'فشل حفظ الحظر', error);
             // نتراجع محلياً حتى لا تظهر الحالة محظورة وهي غير محفوظة
             setBlockedProviderIds((prev) => prev.filter((id) => id !== providerId));
           }
@@ -147,7 +148,7 @@ export function useOrderSafety(userId?: string | null) {
         .eq('blocker_id', userId)
         .eq('blocked_id', providerId);
       if (error) {
-        console.error('[safety] فشل إلغاء الحظر:', error.message);
+        logFetchFailure('safety', 'فشل إلغاء الحظر', error);
         setBlockedProviderIds((prev) => (prev.includes(providerId) ? prev : [...prev, providerId]));
       }
     },

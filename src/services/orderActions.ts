@@ -2,6 +2,8 @@
 // إجراءات ما بعد الاتفاق: المزود يعلن إنهاء الخدمة، وأي طرف يبلّغ عن مشكلة.
 // الإبلاغ لا يلغي الطلب؛ يُسجَّل للأدمن فقط (يراجعه يدوياً ويتصل بالطرفين).
 // ===============================================================
+import { t } from '@/i18n/ar';
+import { isConnectionError, isOffline } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 
 type RpcResult = Promise<{ data: unknown; error: { message: string } | null }>;
@@ -19,6 +21,8 @@ function friendly(message: string): string {
   if (message.includes('PHONE_NUMBER_NOT_ALLOWED')) {
     return 'لا يمكن كتابة أرقام الهاتف هنا. يمكنك مشاركة رقمك بعد تأكيد الاتفاق عبر خانة «شارك رقم هاتفي».';
   }
+  // انقطاع الإنترنت ليس خطأ في العملية: نوضّح السبب الحقيقي بدل رسالة عامة
+  if (isOffline() || isConnectionError(message)) return t('common.offline');
   return 'تعذر إكمال العملية الآن. حاول مرة أخرى بعد قليل.';
 }
 

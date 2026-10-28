@@ -38,6 +38,7 @@ import {
   type DbAgreement,
 } from '@/services/agreements';
 import type { ChatMessage } from '@/types/orders';
+import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -103,10 +104,14 @@ export default function ConversationScreen() {
   // ---------- الاتفاق: مقدم الخدمة يوافق/يرفض من هنا (كله عبر Supabase) ----------
   const [agreement, setAgreement] = useState<DbAgreement | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  // تعذّر جلب الاتفاق (انقطاع اتصال/خادم غير متاح) ≠ "لا يوجد اتفاق":
+  // نُبقي آخر حالة معروفة ونعرض تنبيهاً مؤقتاً مع إمكانية إعادة المحاولة.
+  const [agreementLoadFailed, setAgreementLoadFailed] = useState(false);
 
   const loadAgreement = useCallback(async () => {
     if (!conversationId) return;
     const result = await getConversationAgreement(conversationId);
+    setAgreementLoadFailed(result === undefined);
     if (result !== undefined) setAgreement(result);
   }, [conversationId]);
 
@@ -339,6 +344,18 @@ export default function ConversationScreen() {
             تعذر تحميل الرسائل. تحقق من الاتصال.
           </Text>
         )}
+        {agreementLoadFailed && (
+          <View style={styles.connectionNotice}>
+            <Text style={[styles.connectionNoticeText, { color: scheme.textSecondary }]}>
+              {t('orders.chat.agreementUpdateFailed')}
+            </Text>
+            <Pressable onPress={() => void loadAgreement()} hitSlop={8}>
+              <Text style={[styles.connectionNoticeRetry, { color: scheme.primary }]}>
+                {t('common.retry')}
+              </Text>
+            </Pressable>
+          </View>
+        )}
         {partnerTyping && (
           <Text style={[styles.statusText, { color: scheme.textSecondary }]}>يكتب الآن...</Text>
         )}
@@ -399,5 +416,25 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.one,
+  },
+  connectionNotice: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.one,
+  },
+  connectionNoticeText: {
+    flexShrink: 1,
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  connectionNoticeRetry: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.bold,
+    writingDirection: 'rtl',
+    textDecorationLine: 'underline',
   },
 });

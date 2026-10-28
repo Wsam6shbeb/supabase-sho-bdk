@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { api } from '@/services/api';
+import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 import { createRealtimeChannel } from '@/services/realtime';
 import type { AppNotification, NotificationType } from '@/types/notifications';
@@ -74,7 +75,7 @@ export function useOrderNotifications(userId?: string | null) {
         .limit(100);
       if (cancelled) return;
       if (error) {
-        console.error('[notifications] فشل جلب الإشعارات:', error.message);
+        logFetchFailure('notifications', 'فشل جلب الإشعارات', error);
         return;
       }
       setServerNotifications((data ?? []).map((r) => mapDbNotification(r as DbNotification)));
@@ -149,7 +150,7 @@ export function useOrderNotifications(userId?: string | null) {
           .update({ read_at: new Date().toISOString() })
           .eq('id', id)
           .then(({ error }) => {
-            if (error) console.error('[notifications] فشل تعليم القراءة:', error.message);
+            if (error) logFetchFailure('notifications', 'فشل تعليم القراءة', error);
           });
       } else {
         setLocalNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -168,7 +169,7 @@ export function useOrderNotifications(userId?: string | null) {
         .eq('user_id', userId)
         .is('read_at', null)
         .then(({ error }) => {
-          if (error) console.error('[notifications] فشل تعليم الكل كمقروء:', error.message);
+          if (error) logFetchFailure('notifications', 'فشل تعليم الكل كمقروء', error);
         });
     }
   }, [userId]);
@@ -179,7 +180,7 @@ export function useOrderNotifications(userId?: string | null) {
     if (filter.id) query = query.eq('id', filter.id);
     if (filter.userId) query = query.eq('user_id', filter.userId);
     const { error } = await query;
-    if (error) console.error('[notifications] فشل إخفاء الإشعار:', error.message);
+    if (error) logFetchFailure('notifications', 'فشل إخفاء الإشعار', error);
   }, []);
 
   const clearNotification = useCallback(
