@@ -12,15 +12,17 @@
 import { AppButton } from '@/components/ui/AppButton';
 import { allowPress } from '@/utils/single-press';
 import { AppCard } from '@/components/ui/AppCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { fetchMyConversations, subscribeToInbox, type InboxConversation } from '@/services/chat';
+import { isOffline, subscribeNetworkStatus } from '@/services/networkStatus';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,16 +36,56 @@ export default function MessagesTab() {
     orderHistory,
   } = useOrder();
 
-  // المحادثات الواردة: التي أنا فيها مقدم الخدمة (من Supabase مع تحديث لحظي)
-  const [incoming, setIncoming] = useState<InboxConversation[]>([]);
-  const loadInbox = useCallback(() => {
-    void fetchMyConversations().then((rows) =>
-      setIncoming(rows.filter((r) => r.my_role === 'provider')),
-    );
+  // كل محادثاتي من الخادم (كطالب خدمة أو كمقدم خدمة) مع تحديث لحظي
+  const [inbox, setInbox] = useState<InboxConversation[]>([]);
+  // فشل تحميل صندوق الوارد: نميّزه عن القائمة الفارغة فعلاً
+  const [inboxFailed, setInboxFailed] = useState(false);
+  const isMountedRef = useRef(true);
+  const inFlightRef = useRef(false);
+
+  const loadInbox = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    try {
+      // محاولات محدودة عند فشل الجلب (بلا طلبات متكررة بلا توقف)
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const rows = await fetchMyConversations();
+        if (!isMountedRef.current) return;
+        // نجاح: نحدّث القائمة ونصفّر حالة الفشل (حتى لو كانت القائمة فارغة فعلاً)
+        if (rows !== null) {
+          setInbox(rows);
+          setInboxFailed(false);
+          return;
+        }
+        // فشل: أثناء انقطاع الشبكة لا فائدة من إعادة المحاولة فوراً،
+        // ننتظر عودة الاتصال (انظر اشتراك subscribeNetworkStatus أدناه)
+        if (isOffline() || attempt === maxAttempts) {
+          setInboxFailed(true);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        if (!isMountedRef.current) return;
+      }
+      setInboxFailed(true);
+    } finally {
+      inFlightRef.current = false;
+    }
   }, []);
+
   useEffect(() => {
-    loadInbox();
-    return subscribeToInbox(loadInbox);
+    isMountedRef.current = true;
+    void loadInbox();
+    const unsubscribeInbox = subscribeToInbox(() => void loadInbox());
+    // إعادة الجلب تلقائياً عند عودة الاتصال دون الحاجة لإعادة تشغيل التطبيق
+    const unsubscribeNetwork = subscribeNetworkStatus((offline) => {
+      if (!offline) void loadInbox();
+    });
+    return () => {
+      isMountedRef.current = false;
+      unsubscribeInbox();
+      unsubscribeNetwork();
+    };
   }, [loadInbox]);
 
   // دمج المحادثات النشطة + المكتملة
@@ -67,6 +109,25 @@ export default function MessagesTab() {
       };
     })
     .filter((x) => x.provider !== undefined);
+
+  // محادثات الخادم التي نعرضها مباشرة (للطرفين)، بعد استثناء ما يظهر مسبقاً
+  // في القائمة المحلية (نشطة بحسب معرّف المحادثة، أو مكتملة بحسب معرّف الطلب)
+  const activeConversationIds = new Set(
+    activeChats
+      .map((thread) => thread.conversation_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0),
+  );
+  const completedRequestIds = new Set(
+    orderHistory.filter((o) => o.status === OrderStatus.COMPLETED).map((o) => o.id),
+  );
+  const inboxThreads = inbox.filter(
+    (conv) =>
+      !activeConversationIds.has(conv.conversation_id) && !completedRequestIds.has(conv.request_id),
+  );
+
+  // هل لدينا أي محادثة لعرضها فعلاً؟ (نشطة أو مكتملة أو من الخادم)
+  const hasConversations =
+    allThreads.length > 0 || completedProviders.length > 0 || inbox.length > 0;
 
 // [شرح الدالة: handleOpenChat] يفتح المحادثة مع مقدم الخدمة المختار.
   const handleOpenChat = (providerId: string) => {
@@ -117,7 +178,13 @@ export default function MessagesTab() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {allThreads.length === 0 && completedProviders.length === 0 && incoming.length === 0 ? (
+      {!hasConversations && inboxFailed ? (
+        <ErrorState
+          title={t('messages.loadFailedTitle')}
+          message={t('messages.loadFailedHint')}
+          onRetry={() => void loadInbox()}
+        />
+      ) : !hasConversations ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="chatbubbles-outline" size={64} color={scheme.textTertiary} />
           <Text style={[styles.emptyTitle, { color: scheme.text }]}>
@@ -130,8 +197,22 @@ export default function MessagesTab() {
       ) : (
         <FlatList
           removeClippedSubviews={false}
+          ListHeaderComponent={
+            inboxFailed ? (
+              <View style={styles.inboxNotice}>
+                <Text style={[styles.inboxNoticeText, { color: scheme.textSecondary }]}>
+                  {t('messages.refreshFailed')}
+                </Text>
+                <Pressable onPress={() => void loadInbox()} hitSlop={8}>
+                  <Text style={[styles.inboxNoticeRetry, { color: scheme.primary }]}>
+                    {t('common.retry')}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null
+          }
           data={[
-            ...incoming.map((conv) => ({ type: 'incoming' as const, conv })),
+            ...inboxThreads.map((conv) => ({ type: 'incoming' as const, conv })),
             ...allThreads.map((item) => ({ type: 'active' as const, ...item })),
             ...completedProviders.map((item) => ({
               type: 'completed' as const,
@@ -356,6 +437,25 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: Spacing.two,
+  },
+  inboxNotice: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  inboxNoticeText: {
+    flexShrink: 1,
+    fontSize: FontSizes.sm,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  inboxNoticeRetry: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.bold,
+    textDecorationLine: 'underline',
+    writingDirection: 'rtl',
   },
   row: {
     flexDirection: 'row',
