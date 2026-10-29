@@ -482,6 +482,9 @@ export const ar = {
   messages: {
     empty: 'لا توجد محادثات',
     emptyHint: 'ستظهر هنا محادثاتك مع مقدمي الخدمة',
+    loadFailedTitle: 'تعذّر تحميل المحادثات',
+    loadFailedHint: 'تأكد من اتصالك بالإنترنت، ثم أعد المحاولة.',
+    refreshFailed: 'تعذّر تحديث المحادثات. تحقق من الاتصال.',
   },
     // ⭐ Disclaimer
   disclaimer: {

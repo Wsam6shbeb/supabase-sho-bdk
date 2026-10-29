@@ -179,12 +179,15 @@ export function createTypingChannel(
   };
 }
 
-/** صندوق الوارد: كل المحادثات التي يشارك فيها المستخدم (كطالب خدمة أو كمقدم خدمة). */
-export async function fetchMyConversations(): Promise<InboxConversation[]> {
+/**
+ * صندوق الوارد: كل المحادثات التي يشارك فيها المستخدم (كطالب خدمة أو كمقدم خدمة).
+ * يرجع null عند فشل الجلب (انقطاع شبكة / تعذّر الوصول للخادم) لتمييزه عن القائمة الفارغة فعلاً.
+ */
+export async function fetchMyConversations(): Promise<InboxConversation[] | null> {
   const { data, error } = await supabase.rpc('get_my_conversations');
   if (error) {
     logFetchFailure('chat', 'فشل جلب المحادثات', error);
-    return [];
+    return null;
   }
   return (data ?? []) as InboxConversation[];
 }

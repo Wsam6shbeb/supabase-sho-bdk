@@ -78,6 +78,8 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
     // محادثات المستخدم بصفته الطرف الآخر تُفتح من صندوق الوارد عبر conversation_id الحقيقي،
     // ولا يجوز تحويل الطرف الآخر تلقائياً إلى مقدم خدمة داخل OrderContext.
     const allInbox = await fetchMyConversations();
+    // فشل الجلب (شبكة/خادم): نُرجع null كما هو عقد الدالة (لا نبني حالة محلية خاطئة)
+    if (!allInbox) return null;
     const inbox = allInbox.filter((conversation) => conversation.my_role === 'requester');
     if (inbox.length === 0) return null;
 
