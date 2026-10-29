@@ -159,6 +159,9 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
       onInsert: (row) => {
         if (cancelled) return;
         upsert([row]);
+        // رسالة نظام (إنهاء الخدمة/التقييم…) قد تُغلق المحادثة: نحدّث حالة الكتابة فوراً
+        // فيختفي حقل الكتابة بدون انتظار فشل رسالة
+        if (row.message_type === 'system') void refreshWriteStatus();
         if (row.sender_id !== myId) flushRead();
       },
       onUpdate: (row) => {
@@ -260,15 +263,15 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
           );
           return;
         }
-        console.error('[chat] فشل إرسال الرسالة:', error);
-        // إن كان السبب أن المحادثة لم تعد قابلة للكتابة (حظر/إغلاق) فلا فائدة من إعادة المحاولة:
-        // نزيل الرسالة المؤقتة وتظهر واجهة المنع بدلاً منها
+        // السبب غالباً أن المحادثة لم تعد قابلة للكتابة (حظر/إغلاق): هذا متوقع وليس عطلاً.
+        // نزيل الرسالة المؤقتة وتظهر واجهة المنع، بدون تسجيل خطأ
         const status = await refreshWriteStatus();
         if (status && !status.writable) {
           setMessages((prev) => prev.filter((m) => m.id !== clientKey));
-        } else {
-          setStatus(clientKey, 'failed');
+          return;
         }
+        console.error('[chat] فشل إرسال الرسالة:', error);
+        setStatus(clientKey, 'failed');
         return;
       }
       if (message) upsert([message]);
