@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radii.md,
+    borderRadius: Radii.sm,
   },
   archiveFooter: {
     minHeight: 54,
