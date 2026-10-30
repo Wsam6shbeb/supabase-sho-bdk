@@ -182,6 +182,20 @@ describe('MessagesTab — حالات تحميل صندوق الوارد', () => 
     await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
     expect(screen.queryByText('messages.loadFailedTitle')).toBeNull();
   });
+
+  it('يبقي المحادثات ظاهرة إذا فشل جلب الأرشيف', async () => {
+    fetchMyConversationsMock.mockResolvedValue([providerConversation]);
+    fetchMyArchivedConversationIdsMock.mockResolvedValue(null);
+
+    const screen = render(<MessagesTab />);
+
+    await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
+    expect(screen.queryByText('messages.loadFailedTitle')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('messages.archiveTitle'));
+    await waitFor(() => expect(screen.getByText('messages.loadFailedTitle')).toBeTruthy());
+  });
+
   it('ينقل المحادثة إلى الأرشيف عند الضغط على زر الأرشفة', async () => {
     fetchMyConversationsMock.mockResolvedValue([providerConversation]);
 
