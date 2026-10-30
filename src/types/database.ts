@@ -911,6 +911,39 @@ export type Database = {
           },
         ]
       }
+      conversation_user_archives: {
+        Row: {
+          archived_at: string
+          conversation_id: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string
+          conversation_id: string
+          user_id?: string
+        }
+        Update: {
+          archived_at?: string
+          conversation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_user_archives_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_user_archives_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
