@@ -70,9 +70,25 @@ export default function MessagesTab() {
       // تحميل المحادثات والأرشيف بشكل مستقل: فشل الأرشيف لا يحجب المحادثات.
       const maxAttempts = 3;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        // اعزل كل طلب عن الآخر: حتى الاستثناء غير المتوقع في طلب الأرشيف
+        // يجب ألا يمنع ظهور المحادثات التي نجح جلبها.
         const [rows, archivedIds] = await Promise.all([
-          fetchMyConversations(),
-          fetchMyArchivedConversationIds(),
+          (async () => {
+            try {
+              return (await fetchMyConversations()) ?? null;
+            } catch (error) {
+              console.error('[messages] تعذّر جلب المحادثات:', error);
+              return null;
+            }
+          })(),
+          (async () => {
+            try {
+              return (await fetchMyArchivedConversationIds()) ?? null;
+            } catch (error) {
+              console.error('[messages] تعذّر جلب الأرشيف:', error);
+              return null;
+            }
+          })(),
         ]);
         if (!isMountedRef.current) return;
 
