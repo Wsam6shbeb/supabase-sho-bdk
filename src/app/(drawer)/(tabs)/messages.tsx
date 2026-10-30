@@ -58,6 +58,7 @@ export default function MessagesTab() {
   const [showArchived, setShowArchived] = useState(false);
   // فشل تحميل صندوق الوارد: نميّزه عن القائمة الفارغة فعلاً
   const [inboxFailed, setInboxFailed] = useState(false);
+  const [archiveFailed, setArchiveFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const isMountedRef = useRef(true);
   const inFlightRef = useRef(false);
@@ -66,7 +67,7 @@ export default function MessagesTab() {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      // محاولات محدودة عند فشل الجلب (بلا طلبات متكررة بلا توقف)
+      // تحميل المحادثات والأرشيف بشكل مستقل: فشل الأرشيف لا يحجب المحادثات.
       const maxAttempts = 3;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         const [rows, archivedIds] = await Promise.all([
@@ -74,15 +75,21 @@ export default function MessagesTab() {
           fetchMyArchivedConversationIds(),
         ]);
         if (!isMountedRef.current) return;
-        // لا نعرض قائمة غير دقيقة إذا تعذّر تحميل حالة الأرشفة الشخصية.
-        if (rows !== null && archivedIds !== null) {
+
+        if (rows !== null) {
           setInbox(rows);
-          setArchivedConversationIds(archivedIds);
           setInboxFailed(false);
-          return;
         }
-        // فشل: أثناء انقطاع الشبكة لا فائدة من إعادة المحاولة فوراً،
-        // ننتظر عودة الاتصال (انظر اشتراك subscribeNetworkStatus أدناه)
+        if (archivedIds !== null) {
+          setArchivedConversationIds(archivedIds);
+          setArchiveFailed(false);
+        } else {
+          setArchiveFailed(true);
+        }
+
+        // لا نكرر الجلب إذا نجح صندوق المحادثات؛ تعذّر الأرشيف يظهر كحالة مستقلة.
+        if (rows !== null) return;
+
         if (isOffline() || attempt === maxAttempts) {
           setInboxFailed(true);
           return;
@@ -275,7 +282,7 @@ export default function MessagesTab() {
       <FlatList
           removeClippedSubviews={false}
           ListHeaderComponent={
-            inboxFailed ? (
+            inboxFailed || (showArchived && archiveFailed) ? (
               <View style={styles.inboxNotice}>
                 <Text style={[styles.inboxNoticeText, { color: scheme.textSecondary }]}>
                   {t('messages.refreshFailed')}
@@ -516,7 +523,7 @@ export default function MessagesTab() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             !hasConversations
-              ? inboxFailed
+              ? (inboxFailed || (showArchived && archiveFailed))
                 ? (
                     <ErrorState
                       title={t('messages.loadFailedTitle')}
