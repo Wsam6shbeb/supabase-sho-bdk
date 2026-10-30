@@ -67,56 +67,50 @@ export default function MessagesTab() {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      // تحميل المحادثات والأرشيف بشكل مستقل: فشل الأرشيف لا يحجب المحادثات.
+      // المحادثات أولاً وبشكل مستقل: انتظار الأرشيف أو تعليقه يجب ألا يُبقي القائمة فارغة.
       const maxAttempts = 3;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-        // اعزل كل طلب عن الآخر: حتى الاستثناء غير المتوقع في طلب الأرشيف
-        // يجب ألا يمنع ظهور المحادثات التي نجح جلبها.
-        const [rows, archivedIds] = await Promise.all([
-          (async () => {
-            try {
-              return (await fetchMyConversations()) ?? null;
-            } catch (error) {
-              console.error('[messages] تعذّر جلب المحادثات:', error);
-              return null;
-            }
-          })(),
-          (async () => {
-            try {
-              return (await fetchMyArchivedConversationIds()) ?? null;
-            } catch (error) {
-              console.error('[messages] تعذّر جلب الأرشيف:', error);
-              return null;
-            }
-          })(),
-        ]);
+        let rows: InboxConversation[] | null = null;
+        try {
+          rows = (await fetchMyConversations()) ?? null;
+        } catch (error) {
+          console.error('[messages] تعذّر جلب المحادثات:', error);
+          rows = null;
+        }
         if (!isMountedRef.current) return;
 
         if (rows !== null) {
           setInbox(rows);
           setInboxFailed(false);
+          break;
         }
+
+        if (isOffline() || attempt === maxAttempts) {
+          setInboxFailed(true);
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        if (!isMountedRef.current) return;
+      }
+    } finally {
+      inFlightRef.current = false;
+    }
+
+    void (async () => {
+      try {
+        const archivedIds = (await fetchMyArchivedConversationIds()) ?? null;
+        if (!isMountedRef.current) return;
         if (archivedIds !== null) {
           setArchivedConversationIds(archivedIds);
           setArchiveFailed(false);
         } else {
           setArchiveFailed(true);
         }
-
-        // لا نكرر الجلب إذا نجح صندوق المحادثات؛ تعذّر الأرشيف يظهر كحالة مستقلة.
-        if (rows !== null) return;
-
-        if (isOffline() || attempt === maxAttempts) {
-          setInboxFailed(true);
-          return;
-        }
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
-        if (!isMountedRef.current) return;
+      } catch (error) {
+        console.error('[messages] تعذّر جلب الأرشيف:', error);
+        if (isMountedRef.current) setArchiveFailed(true);
       }
-      setInboxFailed(true);
-    } finally {
-      inFlightRef.current = false;
-    }
+    })();
   }, []);
 
   useEffect(() => {
@@ -211,11 +205,12 @@ export default function MessagesTab() {
         )?.conversation_id ?? null,
     })),
   ];
+  const archivedIdSet = new Set(archivedConversationIds);
   const archivedItems = conversationItems.filter(
-    (item) => item.conversationId && archivedConversationIds.includes(item.conversationId),
+    (item) => item.conversationId != null && archivedIdSet.has(item.conversationId),
   );
   const activeItems = conversationItems.filter(
-    (item) => !item.conversationId || !archivedConversationIds.includes(item.conversationId),
+    (item) => item.conversationId == null || !archivedIdSet.has(item.conversationId),
   );
   const visibleItems = showArchived ? archivedItems : activeItems;
   const hasConversations = visibleItems.length > 0;
@@ -296,7 +291,9 @@ export default function MessagesTab() {
       </View>
 
       <FlatList
+          style={styles.list}
           removeClippedSubviews={false}
+          extraData={`${showArchived}:${archivedConversationIds.join(',')}`}
           ListHeaderComponent={
             inboxFailed || (showArchived && archiveFailed) ? (
               <View style={styles.inboxNotice}>
@@ -336,7 +333,7 @@ export default function MessagesTab() {
                       }}
                     >
                       <Ionicons name="chatbubble-ellipses" size={28} color={scheme.primary} />
-                      <View style={{ flex: 1, marginStart: Spacing.three }}>
+                      <View style={{ flex: 1, minWidth: 0, marginStart: Spacing.three }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
                           <Text style={[{ flex: 1, color: scheme.text, fontWeight: FontWeights.bold, fontSize: FontSizes.base }]} numberOfLines={1}>
                             {conv.other_name}
@@ -560,37 +557,37 @@ export default function MessagesTab() {
                   )
               : null
           }
-          ListFooterComponent={
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
-              style={styles.archiveFooter}
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setShowArchived((current) => !current);
-              }}
-            >
-              <Ionicons
-                name={showArchived ? 'chatbubbles-outline' : 'archive-outline'}
-                size={22}
-                color={scheme.primary}
-              />
-              <Text style={[styles.archiveFooterText, { color: scheme.primary }]}>
-                {t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
-              </Text>
-              {!showArchived && (
-                <Text style={[styles.archiveCount, { color: scheme.textSecondary }]}>
-                  {archivedItems.length}
-                </Text>
-              )}
-              <Ionicons name="chevron-back" size={18} color={scheme.textTertiary} />
-            </Pressable>
-          }
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
           }
           showsVerticalScrollIndicator={false}
         />
+      <View style={[styles.archiveBar, { borderTopColor: scheme.border, backgroundColor: scheme.background }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
+          style={styles.archiveFooter}
+          onPress={() => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setShowArchived((current) => !current);
+          }}
+        >
+          <Ionicons
+            name={showArchived ? 'chatbubbles-outline' : 'archive-outline'}
+            size={22}
+            color={scheme.primary}
+          />
+          <Text style={[styles.archiveFooterText, { color: scheme.primary }]}>
+            {t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
+          </Text>
+          {!showArchived && (
+            <Text style={[styles.archiveCount, { color: scheme.textSecondary }]}>
+              {archivedItems.length}
+            </Text>
+          )}
+          <Ionicons name="chevron-back" size={18} color={scheme.textTertiary} />
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -620,10 +617,13 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.bold,
     writingDirection: 'rtl',
   },
+  list: {
+    flex: 1,
+  },
   listContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.six,
+    paddingBottom: Spacing.four,
   },
   card: {
     marginBottom: Spacing.two,
@@ -651,14 +651,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+    width: '100%',
   },
   conversationMain: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
   },
   archiveAction: {
+    flexShrink: 0,
     minWidth: 72,
     height: 42,
     paddingHorizontal: Spacing.two,
@@ -673,9 +676,14 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.medium,
     writingDirection: 'rtl',
   },
+  archiveBar: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   archiveFooter: {
     minHeight: 54,
-    marginTop: Spacing.three,
     paddingHorizontal: Spacing.three,
     borderRadius: Radii.md,
     backgroundColor: 'rgba(128, 128, 128, 0.08)',
@@ -705,7 +713,7 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xl,
     fontWeight: FontWeights.bold,
   },
-  info: { flex: 1 },
+  info: { flex: 1, minWidth: 0 },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -738,10 +746,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.three,
   },
   emptyWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.six,
+    paddingVertical: Spacing.eight,
   },
   emptyTitle: {
     fontSize: FontSizes.lg,

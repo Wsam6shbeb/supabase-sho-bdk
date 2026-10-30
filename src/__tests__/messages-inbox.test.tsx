@@ -42,7 +42,15 @@ jest.mock('@/i18n/ar', () => ({ t: (key: string) => key }));
 
 jest.mock('@/hooks/use-theme', () => ({ useTheme: () => 'light' }));
 
-jest.mock('expo-router', () => ({ router: { push: jest.fn(), replace: jest.fn() } }));
+jest.mock('@/utils/single-press', () => ({ allowPress: () => true }));
+
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), replace: jest.fn() },
+  useFocusEffect: (effect: () => void) => {
+    const React = require('react') as typeof import('react');
+    React.useEffect(() => effect(), []);
+  },
+}));
 
 const fetchMyConversationsMock = fetchMyConversations as jest.MockedFunction<
   typeof fetchMyConversations
@@ -196,6 +204,16 @@ describe('MessagesTab — حالات تحميل صندوق الوارد', () => 
     await waitFor(() => expect(screen.getByText('messages.loadFailedTitle')).toBeTruthy());
   });
 
+  it('يعرض المحادثات حتى لو لم يكتمل جلب الأرشيف', async () => {
+    fetchMyConversationsMock.mockResolvedValue([providerConversation]);
+    fetchMyArchivedConversationIdsMock.mockImplementation(() => new Promise(() => {}));
+
+    const screen = render(<MessagesTab />);
+
+    await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
+    expect(screen.queryByText('messages.empty')).toBeNull();
+  });
+
   it('يبقي المحادثات ظاهرة إذا رمى طلب الأرشيف استثناءً', async () => {
     fetchMyConversationsMock.mockResolvedValue([providerConversation]);
     fetchMyArchivedConversationIdsMock.mockRejectedValue(new Error('archive request failed'));
@@ -229,6 +247,10 @@ describe('MessagesTab — حالات تحميل صندوق الوارد', () => 
     fetchMyArchivedConversationIdsMock.mockResolvedValue(['c1']);
 
     const screen = render(<MessagesTab />);
+    await waitFor(() => expect(screen.getByText('messages.empty')).toBeTruthy());
+    expect(screen.queryByText('أحمد')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('messages.archiveTitle'));
     await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
 
     fireEvent.press(screen.getByLabelText('messages.unarchive'));
