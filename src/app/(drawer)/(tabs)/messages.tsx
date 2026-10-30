@@ -21,9 +21,9 @@ import { fetchMyConversations, subscribeToInbox, type InboxConversation } from '
 import { isOffline, subscribeNetworkStatus } from '@/services/networkStatus';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: MessagesTab] يعرض قائمة المحادثات والرسائل المرتبطة بطلبات المستخدم.
@@ -40,6 +40,7 @@ export default function MessagesTab() {
   const [inbox, setInbox] = useState<InboxConversation[]>([]);
   // فشل تحميل صندوق الوارد: نميّزه عن القائمة الفارغة فعلاً
   const [inboxFailed, setInboxFailed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const isMountedRef = useRef(true);
   const inFlightRef = useRef(false);
 
@@ -75,7 +76,6 @@ export default function MessagesTab() {
 
   useEffect(() => {
     isMountedRef.current = true;
-    void loadInbox();
     const unsubscribeInbox = subscribeToInbox(() => void loadInbox());
     // إعادة الجلب تلقائياً عند عودة الاتصال دون الحاجة لإعادة تشغيل التطبيق
     const unsubscribeNetwork = subscribeNetworkStatus((offline) => {
@@ -86,6 +86,23 @@ export default function MessagesTab() {
       unsubscribeInbox();
       unsubscribeNetwork();
     };
+  }, [loadInbox]);
+
+  // تحديث القائمة كلما عاد المستخدم إلى صفحة الرسائل.
+  useFocusEffect(
+    useCallback(() => {
+      void loadInbox();
+    }, [loadInbox]),
+  );
+
+  const handleRefresh = useCallback(async () => {
+    if (inFlightRef.current) return;
+    setRefreshing(true);
+    try {
+      await loadInbox();
+    } finally {
+      setRefreshing(false);
+    }
   }, [loadInbox]);
 
   // دمج المحادثات النشطة + المكتملة
@@ -178,24 +195,7 @@ export default function MessagesTab() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {!hasConversations && inboxFailed ? (
-        <ErrorState
-          title={t('messages.loadFailedTitle')}
-          message={t('messages.loadFailedHint')}
-          onRetry={() => void loadInbox()}
-        />
-      ) : !hasConversations ? (
-        <View style={styles.emptyWrap}>
-          <Ionicons name="chatbubbles-outline" size={64} color={scheme.textTertiary} />
-          <Text style={[styles.emptyTitle, { color: scheme.text }]}>
-            {t('messages.empty')}
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: scheme.textSecondary }]}>
-            {t('messages.emptyHint')}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
+      <FlatList
           removeClippedSubviews={false}
           ListHeaderComponent={
             inboxFailed ? (
@@ -399,9 +399,34 @@ export default function MessagesTab() {
             );
           }}
           contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            !hasConversations
+              ? inboxFailed
+                ? (
+                    <ErrorState
+                      title={t('messages.loadFailedTitle')}
+                      message={t('messages.loadFailedHint')}
+                      onRetry={() => void loadInbox()}
+                    />
+                  )
+                : (
+                    <View style={styles.emptyWrap}>
+                      <Ionicons name="chatbubbles-outline" size={64} color={scheme.textTertiary} />
+                      <Text style={[styles.emptyTitle, { color: scheme.text }]}>
+                        {t('messages.empty')}
+                      </Text>
+                      <Text style={[styles.emptySubtitle, { color: scheme.textSecondary }]}>
+                        {t('messages.emptyHint')}
+                      </Text>
+                    </View>
+                  )
+              : null
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
+          }
           showsVerticalScrollIndicator={false}
         />
-      )}
     </SafeAreaView>
   );
 }
