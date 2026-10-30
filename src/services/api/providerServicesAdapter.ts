@@ -11,6 +11,7 @@
 
 import { supabase } from '@/services/supabase';
 import type { ApiResponse } from '@/types/common';
+import { logError } from '@/services/logger';
 
 export interface ProviderServiceRow {
   id: string;
@@ -76,14 +77,14 @@ async function analyzeProviderService(input: {
       });
 
       if (error) {
-        console.error(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
+        logError(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
       } else if (!data?.structured_data || typeof data.structured_data !== 'object') {
-        console.error(`[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة (محاولة ${attempt}).`);
+        logError(`[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة (محاولة ${attempt}).`);
       } else {
         return data.structured_data as ProviderServiceRow['structured_data'];
       }
     } catch (error) {
-      console.error(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
+      logError(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
     }
 
     if (attempt < AI_ANALYSIS_ATTEMPTS) {
@@ -339,7 +340,7 @@ async function repairIncomplete(): Promise<boolean> {
       .eq('provider_id', userId);
 
     if (error) {
-      console.error('[Supabase][providerServices] فشل إكمال بيانات الخدمة:', error.message);
+      logError('[Supabase][providerServices] فشل إكمال بيانات الخدمة:', error.message);
       continue;
     }
     changed = true;

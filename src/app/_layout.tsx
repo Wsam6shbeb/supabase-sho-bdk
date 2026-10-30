@@ -23,6 +23,9 @@ import { I18nManager, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+export { AppErrorBoundary as ErrorBoundary } from '@/components/ui/AppErrorBoundary';
+
+
 WebBrowser.maybeCompleteAuthSession();
 
 

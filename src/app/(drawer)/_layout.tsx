@@ -12,6 +12,7 @@ import { Drawer, DrawerToggleButton } from 'expo-router/drawer';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Alert, Platform, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { logError } from '@/services/logger';
 
 // رابط تحميل التطبيق ونص المشاركة (زر "شارك التطبيق" في القائمة الجانبية).
 const SHARE_URL = 'https://sho-bdk-download.pages.dev/';
@@ -83,7 +84,7 @@ function DrawerContent(props: any) {
         await Share.share({ message: SHARE_MESSAGE, url: SHARE_URL, title: 'شارك تطبيق شو بدك؟' });
       } catch (err) {
         // على الويب قد لا تتوفر المشاركة في المتصفح؛ لا نريد انهيار التطبيق
-        console.error('[share] تعذرت مشاركة التطبيق:', (err as { message?: string })?.message);
+        logError('[share] تعذرت مشاركة التطبيق:', (err as { message?: string })?.message);
       }
     })();
   };

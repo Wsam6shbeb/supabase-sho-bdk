@@ -6,6 +6,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Appearance, Platform } from 'react-native';
+import { logError } from '@/services/logger';
 
 export type ThemePreference = 'light' | 'dark';
 
@@ -31,7 +32,7 @@ function applyTheme(theme: ThemePreference | null) {
     // يغيّر مظهر التطبيق كله (useColorScheme يتحدّث تلقائياً في كل الشاشات)
     Appearance.setColorScheme(theme);
   } catch (err) {
-    console.error('[prefs] تعذّر تطبيق المظهر:', (err as { message?: string })?.message);
+    logError('[prefs] تعذّر تطبيق المظهر:', (err as { message?: string })?.message);
   }
 }
 
@@ -58,7 +59,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
         };
       } catch (err) {
         // نبقي القيم الافتراضية إن تعذّرت القراءة
-        console.error('[prefs] تعذّرت قراءة التفضيلات:', (err as { message?: string })?.message);
+        logError('[prefs] تعذّرت قراءة التفضيلات:', (err as { message?: string })?.message);
       }
       applyTheme(cache.theme);
     })();
@@ -71,7 +72,7 @@ async function save(key: string, value: string): Promise<void> {
   try {
     await AsyncStorage.setItem(key, value);
   } catch (err) {
-    console.error('[prefs] تعذّر حفظ التفضيل:', (err as { message?: string })?.message);
+    logError('[prefs] تعذّر حفظ التفضيل:', (err as { message?: string })?.message);
   }
 }
 

@@ -21,6 +21,7 @@ import type { ChatMessage, MessageStatus } from '@/types/orders';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
 import { containsPhoneNumber } from '@/domain/chatSafety';
+import { logError } from '@/services/logger';
 
 interface Options {
   conversationId: string | null;
@@ -270,7 +271,7 @@ export function useConversation({ conversationId, myId, ensureConversationId }: 
           setMessages((prev) => prev.filter((m) => m.id !== clientKey));
           return;
         }
-        console.error('[chat] فشل إرسال الرسالة:', error);
+        logError('[chat] فشل إرسال الرسالة:', error);
         setStatus(clientKey, 'failed');
         return;
       }

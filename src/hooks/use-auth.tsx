@@ -25,6 +25,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
+import { logError } from '@/services/logger';
 
 // يكمل نافذة OAuth على الويب عند رجوع Google إلى نفس التطبيق.
 WebBrowser.maybeCompleteAuthSession();
@@ -148,10 +149,10 @@ async function ensureUserProfile(sbUser: any) {
       { onConflict: 'id', ignoreDuplicates: true },
     );
     if (error) {
-      console.error('[Supabase][ensureUserProfile] فشل إنشاء صف المستخدم:', error.message);
+      logError('[Supabase][ensureUserProfile] فشل إنشاء صف المستخدم:', error.message);
     }
   } catch (err) {
-    console.error('[Supabase][ensureUserProfile] خطأ غير متوقع أثناء إنشاء صف المستخدم:', err);
+    logError('[Supabase][ensureUserProfile] خطأ غير متوقع أثناء إنشاء صف المستخدم:', err);
   }
 }
 
@@ -175,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
 
           if (refreshError || !refreshed.session) {
-            console.error(
+            logError(
               '[Supabase][Auth] فشل تجديد الجلسة المحفوظة:',
               refreshError?.message ?? 'لم تعد جلسة صالحة',
             );
@@ -526,10 +527,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut({ scope: 'local' });
 
       if (error) {
-        console.error('[Supabase][logout] فشل إنهاء جلسة Supabase المحلية:', error.message);
+        logError('[Supabase][logout] فشل إنهاء جلسة Supabase المحلية:', error.message);
       }
     } catch (error) {
-      console.error('[Supabase][logout] خطأ أثناء تسجيل الخروج:', error);
+      logError('[Supabase][logout] خطأ أثناء تسجيل الخروج:', error);
     }
 
     return true;

@@ -67,6 +67,7 @@ import {
     type ReactNode,
 } from 'react';
 import { Alert } from 'react-native';
+import { logError, logWarn } from '@/services/logger';
 
 // ═══════════════════════════════════════════════════════════
 // الثوابت
@@ -256,12 +257,12 @@ async function analyzeServiceRequest(input: {
     });
 
     if (error) {
-      console.error('[Supabase][startOrder] فشل تحليل طلب الخدمة بالذكاء الاصطناعي:', error.message);
+      logError('[Supabase][startOrder] فشل تحليل طلب الخدمة بالذكاء الاصطناعي:', error.message);
       return null;
     }
 
     if (!data?.structured_data) {
-      console.error('[Supabase][startOrder] تحليل طلب الخدمة لم يُرجع structured_data.');
+      logError('[Supabase][startOrder] تحليل طلب الخدمة لم يُرجع structured_data.');
       return null;
     }
 
@@ -275,7 +276,7 @@ async function analyzeServiceRequest(input: {
           : null,
     };
   } catch (err) {
-    console.error('[Supabase][startOrder] خطأ أثناء تحليل طلب الخدمة بالذكاء الاصطناعي:', err);
+    logError('[Supabase][startOrder] خطأ أثناء تحليل طلب الخدمة بالذكاء الاصطناعي:', err);
     return null;
   }
 }
@@ -309,7 +310,7 @@ async function createServiceRequestInSupabase(params: {
       .single();
 
     if (error) {
-      console.error('[Supabase][startOrder] فشل إنشاء طلب الخدمة:', error.message, params);
+      logError('[Supabase][startOrder] فشل إنشاء طلب الخدمة:', error.message, params);
       throw new Error('تعذر إنشاء طلب الخدمة في قاعدة البيانات. حاول مرة أخرى.');
     }
 
@@ -323,7 +324,7 @@ async function createServiceRequestInSupabase(params: {
 
     // ⭐ إذا فشل AI: نكمل بـ fallback بدون ما نوقف العملية
     if (!analysis) {
-      console.warn('[Supabase][startOrder] تحليل AI فشل، سيتم استخدام النص الخام كـ fallback.');
+      logWarn('[Supabase][startOrder] تحليل AI فشل، سيتم استخدام النص الخام كـ fallback.');
 
       const fallbackStructuredData: Json = {
         service: params.description,
@@ -354,7 +355,7 @@ async function createServiceRequestInSupabase(params: {
         .eq('requester_id', params.requesterId);
 
       if (fallbackUpdateError) {
-        console.error('[Supabase][startOrder] فشل حفظ fallback:', fallbackUpdateError.message);
+        logError('[Supabase][startOrder] فشل حفظ fallback:', fallbackUpdateError.message);
       } else {
         console.log('[Supabase][startOrder] تم حفظ fallback بدون AI:', data.id);
       }
@@ -375,7 +376,7 @@ async function createServiceRequestInSupabase(params: {
       .eq('requester_id', params.requesterId);
 
     if (updateError) {
-      console.error('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
+      logError('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
       throw new Error('تعذر حفظ تحليل طلب الخدمة. حاول مرة أخرى.');
     }
 
@@ -383,7 +384,7 @@ async function createServiceRequestInSupabase(params: {
 
     return { id: data.id, ai_failed: false };
   } catch (err) {
-    console.error('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
+    logError('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
     if (err instanceof Error && err.message.includes('تعذر إنشاء طلب الخدمة')) {
       throw err;
     }
@@ -399,14 +400,14 @@ async function syncOpenChatToSupabase(
 ): Promise<string | null> {
   try {
     if (!requesterId) {
-      console.error('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
+      logError('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
       return null;
     }
 
     const { id, error } = await openConversation(orderId, providerId);
 
     if (error || !id) {
-      console.error('[Supabase][openChat] فشل فتح المحادثة:', error, {
+      logError('[Supabase][openChat] فشل فتح المحادثة:', error, {
         threadId: thread.id,
         orderId,
         providerId,
@@ -417,7 +418,7 @@ async function syncOpenChatToSupabase(
     console.log('[Supabase][openChat] المحادثة جاهزة:', id);
     return id;
   } catch (err) {
-    console.error('[Supabase][openChat] خطأ غير متوقع أثناء فتح المحادثة:', err);
+    logError('[Supabase][openChat] خطأ غير متوقع أثناء فتح المحادثة:', err);
     return null;
   }
 }
@@ -466,12 +467,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (profileResult.error) {
-        console.error('[Supabase][providerProfile] فشل قراءة ملف مقدم الخدمة:', profileResult.error.message);
+        logError('[Supabase][providerProfile] فشل قراءة ملف مقدم الخدمة:', profileResult.error.message);
         return;
       }
 
       if (servicesResult.error) {
-        console.error('[Supabase][providerServices] فشل قراءة خدمات مقدم الخدمة:', servicesResult.error.message);
+        logError('[Supabase][providerServices] فشل قراءة خدمات مقدم الخدمة:', servicesResult.error.message);
         return;
       }
 
@@ -525,7 +526,7 @@ additional_info:
         welcome_bonus_received: false,
       });
     } catch (err) {
-      console.error('[Supabase][providerProfile] خطأ غير متوقع أثناء تحميل ملف مقدم الخدمة:', err);
+      logError('[Supabase][providerProfile] خطأ غير متوقع أثناء تحميل ملف مقدم الخدمة:', err);
     }
   }, []);
 
@@ -998,7 +999,7 @@ additional_info:
           });
         });
       } else {
-        console.error('[Supabase][requestProviderAgain] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة/المحادثة.');
+        logError('[Supabase][requestProviderAgain] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة/المحادثة.');
       }
 
       return order;
@@ -1100,14 +1101,14 @@ additional_info:
       // العمولة النهائية تُحسب في الخادم؛ السعر يُستخرج فقط من عبارات سعر صريحة.
       const { agreement, error } = await requestAgreement(conversationId, agreedPriceCandidate);
       if (error || !agreement) {
-        console.error('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
+        logError('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
         return { ok: false, error: agreementErrorMessage(error) };
       }
 
       // الزبون اختار "شارك رقمي": نسجّل ذلك؛ الطرف الآخر لا يراه إلا بعد موافقته على الاتفاق.
       if (shareMyPhoneWithProvider) {
         const shared = await shareMyPhone(conversationId);
-        if (!shared.ok) console.error('[Supabase][customerAgrees] تعذرت مشاركة الرقم:', shared.error);
+        if (!shared.ok) logError('[Supabase][customerAgrees] تعذرت مشاركة الرقم:', shared.error);
       }
 
       clearTimer();
@@ -1187,7 +1188,7 @@ additional_info:
     if (pendingAgreementId) {
       const { error } = await cancelAgreement(pendingAgreementId);
       if (error) {
-        console.error('[Supabase][cancelAgreement] فشل إلغاء الاتفاق:', error);
+        logError('[Supabase][cancelAgreement] فشل إلغاء الاتفاق:', error);
         Alert.alert('', agreementErrorMessage(error));
         return;
       }
@@ -1221,7 +1222,7 @@ additional_info:
     // البلاغ يُسجَّل في السيرفر أولاً؛ لا نغلق الطلب محلياً إذا فشل
     const { ok, error } = await reportNonExecutionOnServer(dto.order_id, dto.reason);
     if (!ok) {
-      console.error('[Supabase][reportNonExecution] فشل تسجيل البلاغ:', error);
+      logError('[Supabase][reportNonExecution] فشل تسجيل البلاغ:', error);
       return { ok: false, error: orderErrorMessage(error) };
     }
 
@@ -1290,7 +1291,7 @@ additional_info:
     // الإنهاء يتم في السيرفر أولاً؛ لا نغيّر الحالة المحلية إذا فشل
     const { ok, error } = await completeRequest(currentOrder.id);
     if (!ok) {
-      console.error('[Supabase][completeOrder] فشل إنهاء الخدمة:', error);
+      logError('[Supabase][completeOrder] فشل إنهاء الخدمة:', error);
       return { ok: false, error: orderErrorMessage(error) };
     }
 
@@ -1331,7 +1332,7 @@ additional_info:
       });
       // ALREADY_RATED: التقييم محفوظ سابقاً، نعتبرها نجاحاً ونزامن السجل
       if (!ok && !(error ?? '').includes('ALREADY_RATED')) {
-        console.error('[Supabase][rateOrder] فشل حفظ التقييم:', error);
+        logError('[Supabase][rateOrder] فشل حفظ التقييم:', error);
         return { ok: false, error: orderErrorMessage(error) };
       }
 
@@ -1478,7 +1479,7 @@ additional_info: skill.additional_info?.trim() || '',
       if (isFirstSkill) {
         const bonus = await claimWelcomeBonus();
         if (bonus.error) {
-          console.error('[Supabase][welcomeBonus] فشل منح المكافأة:', bonus.error);
+          logError('[Supabase][welcomeBonus] فشل منح المكافأة:', bonus.error);
         } else if (bonus.granted) {
           welcomeBonus = true;
           setMyProviderProfile((prev) => (prev ? { ...prev, welcome_bonus_received: true } : prev));
@@ -1523,7 +1524,7 @@ additional_info: skill.additional_info?.trim() || '',
   additional_info: skill.additional_info,
           }).then((result) => {
             if (!result.success) {
-              console.error('[Supabase][providerServices] فشل حفظ موقع الخدمة:', result.error.message);
+              logError('[Supabase][providerServices] فشل حفظ موقع الخدمة:', result.error.message);
             }
           });
         }
@@ -1539,7 +1540,7 @@ additional_info: skill.additional_info?.trim() || '',
           .eq('user_id', user.id)
           .then(({ error }) => {
             if (error) {
-              console.error('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error.message);
+              logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error.message);
             }
           });
       }
@@ -1561,7 +1562,7 @@ additional_info: skill.additional_info?.trim() || '',
           .eq('user_id', user.id)
           .then(({ error }) => {
             if (error) {
-              console.error('[Supabase][providerProfile] فشل حفظ حالة التوفر:', error.message);
+              logError('[Supabase][providerProfile] فشل حفظ حالة التوفر:', error.message);
             }
           });
       }

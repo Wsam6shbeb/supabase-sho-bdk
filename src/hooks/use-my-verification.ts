@@ -13,6 +13,7 @@ import {
 } from '@/services/verification';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { logError } from '@/services/logger';
 
 export function useMyVerification() {
   const { user } = useAuth();
@@ -31,7 +32,7 @@ export function useMyVerification() {
       setData(await fetchMyVerification(userId));
     } catch (err) {
       // عند الفشل نُبقي آخر حالة معروفة بدل إظهار "غير موثّق" خطأً
-      console.error('[verification] تعذّر جلب حالة التوثيق:', (err as { message?: string })?.message);
+      logError('[verification] تعذّر جلب حالة التوثيق:', (err as { message?: string })?.message);
     } finally {
       setLoading(false);
     }

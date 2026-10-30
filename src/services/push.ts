@@ -21,6 +21,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { logWarn, logError } from '@/services/logger';
 
 // إشعار يصل والتطبيق مفتوح: نعرضه بحسب تفضيلات الجهاز، مع كتم رسائل المحادثة المفتوحة.
 Notifications.setNotificationHandler({
@@ -55,7 +56,7 @@ export async function getExpoPushToken(options: { askPermission: boolean }): Pro
   if (!projectId) {
     if (!warnedMissingProject) {
       warnedMissingProject = true;
-      console.warn('[push] لا يوجد EAS projectId في app.json (extra.eas.projectId)؛ تم تخطي تسجيل الإشعارات.');
+      logWarn('[push] لا يوجد EAS projectId في app.json (extra.eas.projectId)؛ تم تخطي تسجيل الإشعارات.');
     }
     return null;
   }
@@ -78,7 +79,7 @@ export async function getExpoPushToken(options: { askPermission: boolean }): Pro
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
     return data;
   } catch (err) {
-    console.error('[push] فشل الحصول على رمز Push:', err);
+    logError('[push] فشل الحصول على رمز Push:', err);
     return null;
   }
 }
@@ -95,7 +96,7 @@ export async function registerPushToken(): Promise<void> {
     p_token: token,
     p_platform: Platform.OS,
   });
-  if (error) console.error('[push] فشل حفظ رمز الجهاز:', error.message);
+  if (error) logError('[push] فشل حفظ رمز الجهاز:', error.message);
 }
 
 /** يزيل رمز هذا الجهاز من السيرفر. يرجع false إذا فشلت الإزالة فعلاً (اتصال/خطأ). */
@@ -105,12 +106,12 @@ async function removeDeviceToken(): Promise<boolean> {
     if (!token) return true; // لا رمز لهذا الجهاز (محاكي أو إذن مسحوب): لا شيء لإزالته
     const { error } = await supabase.rpc('unregister_push_token', { p_token: token });
     if (error) {
-      console.error('[push] فشل إزالة رمز الجهاز:', error.message);
+      logError('[push] فشل إزالة رمز الجهاز:', error.message);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('[push] خطأ أثناء إزالة رمز الجهاز:', err);
+    logError('[push] خطأ أثناء إزالة رمز الجهاز:', err);
     return false;
   }
 }

@@ -1,3 +1,4 @@
+import { logWarn, logError } from '@/services/logger';
 // ===============================================================
 // شرح الملف: هذا ملف كود (حالة الاتصال بالإنترنت على مستوى التطبيق).
 // الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
@@ -153,8 +154,8 @@ export function isConnectionError(error: unknown): boolean {
  */
 export function logFetchFailure(scope: string, action: string, error: unknown): void {
   if (isConnectionError(error)) {
-    console.warn(`[${scope}] ${action}: تعذّر الوصول للخادم — سيُحدَّث تلقائياً عند عودة الاتصال.`);
+    logWarn(`[${scope}] ${action}: تعذّر الوصول للخادم — سيُحدَّث تلقائياً عند عودة الاتصال.`);
     return;
   }
-  console.error(`[${scope}] ${action}:`, toMessage(error) ?? 'خطأ غير معروف');
+  logError(`[${scope}] ${action}:`, toMessage(error) ?? 'خطأ غير معروف');
 }

@@ -41,6 +41,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { logError } from '@/services/logger';
 
 // [شرح الدالة: MessagesTab] يعرض قائمة المحادثات والرسائل المرتبطة بطلبات المستخدم.
 export default function MessagesTab() {
@@ -74,7 +75,7 @@ export default function MessagesTab() {
         try {
           rows = (await fetchMyConversations()) ?? null;
         } catch (error) {
-          console.error('[messages] تعذّر جلب المحادثات:', error);
+          logError('[messages] تعذّر جلب المحادثات:', error);
           rows = null;
         }
         if (!isMountedRef.current) return;
@@ -107,7 +108,7 @@ export default function MessagesTab() {
           setArchiveFailed(true);
         }
       } catch (error) {
-        console.error('[messages] تعذّر جلب الأرشيف:', error);
+        logError('[messages] تعذّر جلب الأرشيف:', error);
         if (isMountedRef.current) setArchiveFailed(true);
       }
     })();

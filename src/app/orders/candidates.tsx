@@ -38,6 +38,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { logError } from '@/services/logger';
 
 // [شرح الدالة: CandidatesScreen] يعرض مقدمي الخدمة المرشحين لطلب المستخدم.
 export default function CandidatesScreen() {
@@ -60,7 +61,7 @@ export default function CandidatesScreen() {
   // بدلاً من الاعتماد على قائمة موجودة فقط في الذاكرة المحلية.
   useEffect(() => {
     if (!requestId) {
-      console.error('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
+      logError('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
       return;
     }
 
@@ -95,7 +96,7 @@ export default function CandidatesScreen() {
       if (cancelled) return;
 
       if (error) {
-        console.error('[Supabase][candidates] فشل تحميل المرشحين:', error.message);
+        logError('[Supabase][candidates] فشل تحميل المرشحين:', error.message);
         return;
       }
 
@@ -115,7 +116,7 @@ export default function CandidatesScreen() {
         : { data: [], error: null };
 
       if (servicesError) {
-        console.error('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError.message);
+        logError('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError.message);
       }
 
       const servicesByProvider = new Map<string, any[]>();

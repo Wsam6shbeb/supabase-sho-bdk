@@ -24,6 +24,7 @@ import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { logError, logWarn } from '@/services/logger';
 
 // [شرح الدالة: SearchingScreen] يعرض حالة البحث عن مقدمي الخدمة أثناء انتظار النتائج.
 export default function SearchingScreen() {
@@ -63,7 +64,7 @@ export default function SearchingScreen() {
             .maybeSingle();
 
           if (requestError) {
-            console.error('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
+            logError('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
             break;
           }
 
@@ -75,7 +76,7 @@ export default function SearchingScreen() {
         }
 
                 if (!requestStructuredData) {
-          console.warn('[Supabase][searching] تحليل طلب الخدمة لم يكتمل بعد، سيتم استخدام النص الخام كاحتياط.');
+          logWarn('[Supabase][searching] تحليل طلب الخدمة لم يكتمل بعد، سيتم استخدام النص الخام كاحتياط.');
         } else if (requestStructuredData.ai_failed === true) {
           // ⭐ الـ AI فشل أثناء إنشاء الطلب → نعرض banner
           setShowAiBanner(true);
@@ -94,7 +95,7 @@ export default function SearchingScreen() {
         );
 
         if (candidateError) {
-          console.error('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
+          logError('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
           searchFailed = true;
         } else {
           providersData = (candidateRows ?? []).map((row: any) => ({
@@ -132,7 +133,7 @@ export default function SearchingScreen() {
           .limit(10);
 
         if (fallbackError) {
-          console.error('[Supabase][searching] فشل جلب المرشحين الاحتياطي:', fallbackError.message);
+          logError('[Supabase][searching] فشل جلب المرشحين الاحتياطي:', fallbackError.message);
           setIsSearching(false);
           return;
         }
@@ -207,7 +208,7 @@ export default function SearchingScreen() {
             );
 
             if (matchError) {
-              console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
+              logError('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
               return null;
             }
             return Array.isArray(matchData?.matches)
@@ -288,12 +289,12 @@ export default function SearchingScreen() {
           .upsert(rows, { onConflict: 'request_id,provider_id' });
 
         if (candidatesError) {
-          console.error('[Supabase][searching] فشل حفظ المرشحين بجدول candidates:', candidatesError.message);
+          logError('[Supabase][searching] فشل حفظ المرشحين بجدول candidates:', candidatesError.message);
         } else {
           console.log('[Supabase][searching] تم حفظ المرشحين بجدول candidates:', rows.length);
         }
       } else if (!requestId) {
-        console.error('[Supabase][searching] لا يوجد request_id حقيقي، تم تجاوز حفظ المرشحين بجدول candidates.');
+        logError('[Supabase][searching] لا يوجد request_id حقيقي، تم تجاوز حفظ المرشحين بجدول candidates.');
       }
 
       setTimeout(() => {

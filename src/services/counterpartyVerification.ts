@@ -5,6 +5,7 @@
 
 import { supabase } from '@/services/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { logWarn } from '@/services/logger';
 
 // الدوال الجديدة غير موجودة في الأنواع المولّدة، فنتعامل معها بدون أنواع
 const db = supabase as unknown as SupabaseClient;
@@ -27,7 +28,7 @@ export async function fetchCounterpartyVerification(
     if (error) {
       // Temporary diagnostics: never log conversation IDs, returned data, or credentials.
       if (__DEV__) {
-        console.warn('[verification] get_counterparty_verification RPC error', {
+        logWarn('[verification] get_counterparty_verification RPC error', {
           code: error.code,
           message: error.message,
         });
@@ -49,7 +50,7 @@ export async function fetchCounterpartyVerification(
     return { verified: Boolean(row.verified), requestedByMe: Boolean(row.requested_by_me) };
   } catch (err) {
     if (__DEV__) {
-      console.warn('[verification] get_counterparty_verification unexpected failure', {
+      logWarn('[verification] get_counterparty_verification unexpected failure', {
         errorType: err instanceof Error ? err.name : 'UnknownError',
       });
     }

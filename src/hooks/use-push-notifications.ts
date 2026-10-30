@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { logError } from '@/services/logger';
 
 // آخر إشعار تم التعامل معه. getLastNotificationResponseAsync يُرجع آخر نقرة حتى لو عولجت سابقاً،
 // فبدون هذا السجل كان يُعاد فتح نفس الإشعار بعد تبديل الحساب (تسجيل خروج ثم دخول بحساب آخر).
@@ -26,7 +27,7 @@ function openRouteFrom(response: Notifications.NotificationResponse | null | und
     try {
       router.push(route as never);
     } catch (err) {
-      console.error('[push] فشل فتح وجهة الإشعار:', err);
+      logError('[push] فشل فتح وجهة الإشعار:', err);
     }
   }, 600);
 }

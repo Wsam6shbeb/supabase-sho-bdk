@@ -6,6 +6,7 @@
 
 import { supabase } from '@/services/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { logError } from '@/services/logger';
 
 export type MyVerificationStatus = 'not_verified' | 'under_review' | 'verified' | 'rejected';
 
@@ -131,7 +132,7 @@ export async function submitVerificationPhotos(
     if (message.includes('ACCOUNT_SUSPENDED')) {
       return { ok: false, message: 'حسابك موقوف حالياً.' };
     }
-    console.error('[verification] فشل إرسال طلب التوثيق:', message);
+    logError('[verification] فشل إرسال طلب التوثيق:', message);
     return { ok: false, message: 'تعذّر إرسال الطلب. تحقق من الاتصال وحاول مجدداً.' };
   }
 }

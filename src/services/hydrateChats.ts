@@ -11,6 +11,7 @@ import { logFetchFailure } from '@/services/networkStatus';
 import { supabase } from '@/services/supabase';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import type { ChatThread, Order, ServiceProvider } from '@/types/orders';
+import { logError } from '@/services/logger';
 
 export interface HydratedChats {
   order: Order;
@@ -221,7 +222,7 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
       agreement,
     };
   } catch (err) {
-    console.error('[hydrate] خطأ غير متوقع أثناء استعادة المحادثات:', err);
+    logError('[hydrate] خطأ غير متوقع أثناء استعادة المحادثات:', err);
     return null;
   }
 }
