@@ -206,7 +206,7 @@ export default function MessagesTab() {
 
     if (!result.ok) {
       Alert.alert(
-        t('common.error'),
+        t('common.somethingWentWrong'),
         t(isArchived ? 'messages.unarchiveFailed' : 'messages.archiveFailed'),
       );
       return;
