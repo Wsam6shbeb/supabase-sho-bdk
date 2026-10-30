@@ -267,7 +267,7 @@ export default function MessagesTab() {
           <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
         </Pressable> */}
         <Text style={[styles.title, { color: scheme.text }]}>
-          {t('tabs.messages')}
+          {t(showArchived ? 'messages.archiveTitle' : 'tabs.messages')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -348,6 +348,9 @@ export default function MessagesTab() {
                         size={21}
                         color={scheme.textSecondary}
                       />
+                      <Text style={[styles.archiveActionText, { color: scheme.textSecondary }]}>
+                        {t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                      </Text>
                     </Pressable>
                   </View>
                 </AppCard>
@@ -414,6 +417,9 @@ export default function MessagesTab() {
                           size={21}
                           color={scheme.textSecondary}
                         />
+                        <Text style={[styles.archiveActionText, { color: scheme.textSecondary }]}>
+                          {t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                        </Text>
                       </Pressable>
                     )}
                   </View>
@@ -630,11 +636,19 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   archiveAction: {
-    width: 38,
+    minWidth: 72,
     height: 42,
+    paddingHorizontal: Spacing.two,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.one,
     borderRadius: Radii.sm,
+  },
+  archiveActionText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium,
+    writingDirection: 'rtl',
   },
   archiveFooter: {
     minHeight: 54,
