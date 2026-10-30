@@ -22,6 +22,7 @@ export type NotificationType =
   | 'verification_approved'
   | 'verification_rejected'
   | 'balance_low'
+  | 'wallet_topup'
   | 'welcome_bonus'
   | 'rating_reminder'
   | 'rating_auto_approved'
