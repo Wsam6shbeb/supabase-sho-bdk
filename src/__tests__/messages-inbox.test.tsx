@@ -8,14 +8,24 @@
 
 import MessagesTab from '@/app/(drawer)/(tabs)/messages';
 import { useOrder } from '@/context/OrderContext';
-import { fetchMyConversations, subscribeToInbox, type InboxConversation } from '@/services/chat';
+import {
+  archiveConversation,
+  fetchMyArchivedConversationIds,
+  fetchMyConversations,
+  subscribeToInbox,
+  unarchiveConversation,
+  type InboxConversation,
+} from '@/services/chat';
 import { isOffline, subscribeNetworkStatus } from '@/services/networkStatus';
 import { ChatStatus } from '@/types/common';
 import type { ChatThread, ServiceProvider } from '@/types/orders';
-import { act, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 jest.mock('@/services/chat', () => ({
   fetchMyConversations: jest.fn(),
+  fetchMyArchivedConversationIds: jest.fn(),
+  archiveConversation: jest.fn(),
+  unarchiveConversation: jest.fn(),
   subscribeToInbox: jest.fn(() => () => {}),
 }));
 
@@ -37,6 +47,11 @@ jest.mock('expo-router', () => ({ router: { push: jest.fn(), replace: jest.fn() 
 const fetchMyConversationsMock = fetchMyConversations as jest.MockedFunction<
   typeof fetchMyConversations
 >;
+const fetchMyArchivedConversationIdsMock = fetchMyArchivedConversationIds as jest.MockedFunction<
+  typeof fetchMyArchivedConversationIds
+>;
+const archiveConversationMock = archiveConversation as jest.MockedFunction<typeof archiveConversation>;
+const unarchiveConversationMock = unarchiveConversation as jest.MockedFunction<typeof unarchiveConversation>;
 const subscribeToInboxMock = subscribeToInbox as jest.MockedFunction<typeof subscribeToInbox>;
 const isOfflineMock = isOffline as jest.MockedFunction<typeof isOffline>;
 const subscribeNetworkStatusMock = subscribeNetworkStatus as jest.MockedFunction<
@@ -91,6 +106,9 @@ const activeProvider = {
 } as unknown as ServiceProvider;
 
 beforeEach(() => {
+  fetchMyArchivedConversationIdsMock.mockResolvedValue([]);
+  archiveConversationMock.mockResolvedValue({ ok: true });
+  unarchiveConversationMock.mockResolvedValue({ ok: true });
   isOfflineMock.mockReturnValue(false);
   useOrderMock.mockReturnValue({ activeChats: [], allProviders: [], orderHistory: [] });
 });
@@ -164,4 +182,30 @@ describe('MessagesTab — حالات تحميل صندوق الوارد', () => 
     await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
     expect(screen.queryByText('messages.loadFailedTitle')).toBeNull();
   });
+  it('ينقل المحادثة إلى الأرشيف عند الضغط على زر الأرشفة', async () => {
+    fetchMyConversationsMock.mockResolvedValue([providerConversation]);
+
+    const screen = render(<MessagesTab />);
+    await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
+
+    fireEvent.press(screen.getByLabelText('messages.archive'));
+    await waitFor(() => expect(archiveConversationMock).toHaveBeenCalledWith('c1'));
+    expect(screen.queryByText('أحمد')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('messages.archiveTitle'));
+    await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
+  });
+
+  it('يعيد المحادثة من الأرشيف عند إلغاء الأرشفة', async () => {
+    fetchMyConversationsMock.mockResolvedValue([providerConversation]);
+    fetchMyArchivedConversationIdsMock.mockResolvedValue(['c1']);
+
+    const screen = render(<MessagesTab />);
+    await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
+
+    fireEvent.press(screen.getByLabelText('messages.unarchive'));
+    await waitFor(() => expect(unarchiveConversationMock).toHaveBeenCalledWith('c1'));
+    expect(screen.queryByText('أحمد')).toBeNull();
+  });
+
 });
