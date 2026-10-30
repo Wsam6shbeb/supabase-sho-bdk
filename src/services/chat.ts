@@ -225,3 +225,48 @@ export async function getConversationWriteStatus(
     return undefined;
   }
 }
+
+/** جلب المحادثات المؤرشفة لهذا المستخدم فقط. */
+export async function fetchMyArchivedConversationIds(): Promise<string[] | null> {
+  const { data, error } = await supabase
+    .from('conversation_user_archives')
+    .select('conversation_id');
+
+  if (error) {
+    logFetchFailure('chat', 'فشل جلب الأرشيف', error);
+    return null;
+  }
+  return (data ?? []).map((row) => row.conversation_id);
+}
+
+/** أرشفة محادثة للمستخدم الحالي دون التأثير على الطرف الآخر. */
+export async function archiveConversation(
+  conversationId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('conversation_user_archives')
+    .insert({ conversation_id: conversationId });
+
+  // تكرار الأرشفة لا يعد فشلاً؛ قد يكون الطلب السابق نجح وانقطع الرد.
+  if (error && error.code !== '23505') {
+    logFetchFailure('chat', 'فشلت أرشفة المحادثة', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** إلغاء أرشفة محادثة للمستخدم الحالي فقط. */
+export async function unarchiveConversation(
+  conversationId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('conversation_user_archives')
+    .delete()
+    .eq('conversation_id', conversationId);
+
+  if (error) {
+    logFetchFailure('chat', 'فشل إلغاء أرشفة المحادثة', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
