@@ -485,6 +485,14 @@ export const ar = {
     loadFailedTitle: 'تعذّر تحميل المحادثات',
     loadFailedHint: 'تأكد من اتصالك بالإنترنت، ثم أعد المحاولة.',
     refreshFailed: 'تعذّر تحديث المحادثات. تحقق من الاتصال.',
+    archive: 'أرشفة',
+    unarchive: 'إلغاء الأرشفة',
+    archiveTitle: 'الأرشيف',
+    archiveEmpty: 'لا توجد محادثات مؤرشفة',
+    archiveEmptyHint: 'المحادثات التي تؤرشفها ستظهر هنا.',
+    backToMessages: 'العودة إلى الرسائل',
+    archiveFailed: 'تعذّرت أرشفة المحادثة. تحقق من الاتصال وحاول مجدداً.',
+    unarchiveFailed: 'تعذّر إلغاء أرشفة المحادثة. حاول مجدداً.',
   },
     // ⭐ Disclaimer
   disclaimer: {
