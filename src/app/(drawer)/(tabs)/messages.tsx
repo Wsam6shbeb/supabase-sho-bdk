@@ -457,6 +457,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   listContent: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,
   },
