@@ -17,13 +17,29 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
-import { fetchMyConversations, subscribeToInbox, type InboxConversation } from '@/services/chat';
+import {
+  archiveConversation,
+  fetchMyArchivedConversationIds,
+  fetchMyConversations,
+  subscribeToInbox,
+  unarchiveConversation,
+  type InboxConversation,
+} from '@/services/chat';
 import { isOffline, subscribeNetworkStatus } from '@/services/networkStatus';
 import { ChatStatus, OrderStatus } from '@/types/common';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  LayoutAnimation,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: MessagesTab] يعرض قائمة المحادثات والرسائل المرتبطة بطلبات المستخدم.
@@ -38,8 +54,11 @@ export default function MessagesTab() {
 
   // كل محادثاتي من الخادم (كطالب خدمة أو كمقدم خدمة) مع تحديث لحظي
   const [inbox, setInbox] = useState<InboxConversation[]>([]);
+  const [archivedConversationIds, setArchivedConversationIds] = useState<string[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   // فشل تحميل صندوق الوارد: نميّزه عن القائمة الفارغة فعلاً
   const [inboxFailed, setInboxFailed] = useState(false);
+  const [archiveFailed, setArchiveFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const isMountedRef = useRef(true);
   const inFlightRef = useRef(false);
@@ -48,19 +67,45 @@ export default function MessagesTab() {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      // محاولات محدودة عند فشل الجلب (بلا طلبات متكررة بلا توقف)
+      // تحميل المحادثات والأرشيف بشكل مستقل: فشل الأرشيف لا يحجب المحادثات.
       const maxAttempts = 3;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-        const rows = await fetchMyConversations();
+        // اعزل كل طلب عن الآخر: حتى الاستثناء غير المتوقع في طلب الأرشيف
+        // يجب ألا يمنع ظهور المحادثات التي نجح جلبها.
+        const [rows, archivedIds] = await Promise.all([
+          (async () => {
+            try {
+              return (await fetchMyConversations()) ?? null;
+            } catch (error) {
+              console.error('[messages] تعذّر جلب المحادثات:', error);
+              return null;
+            }
+          })(),
+          (async () => {
+            try {
+              return (await fetchMyArchivedConversationIds()) ?? null;
+            } catch (error) {
+              console.error('[messages] تعذّر جلب الأرشيف:', error);
+              return null;
+            }
+          })(),
+        ]);
         if (!isMountedRef.current) return;
-        // نجاح: نحدّث القائمة ونصفّر حالة الفشل (حتى لو كانت القائمة فارغة فعلاً)
+
         if (rows !== null) {
           setInbox(rows);
           setInboxFailed(false);
-          return;
         }
-        // فشل: أثناء انقطاع الشبكة لا فائدة من إعادة المحاولة فوراً،
-        // ننتظر عودة الاتصال (انظر اشتراك subscribeNetworkStatus أدناه)
+        if (archivedIds !== null) {
+          setArchivedConversationIds(archivedIds);
+          setArchiveFailed(false);
+        } else {
+          setArchiveFailed(true);
+        }
+
+        // لا نكرر الجلب إذا نجح صندوق المحادثات؛ تعذّر الأرشيف يظهر كحالة مستقلة.
+        if (rows !== null) return;
+
         if (isOffline() || attempt === maxAttempts) {
           setInboxFailed(true);
           return;
@@ -142,9 +187,64 @@ export default function MessagesTab() {
       !activeConversationIds.has(conv.conversation_id) && !completedRequestIds.has(conv.request_id),
   );
 
-  // هل لدينا أي محادثة لعرضها فعلاً؟ (نشطة أو مكتملة أو من الخادم)
-  const hasConversations =
-    allThreads.length > 0 || completedProviders.length > 0 || inbox.length > 0;
+  // ربط سجل الطلب المكتمل بمعرّف المحادثة الحقيقي حتى تبقى الأرشفة شخصية.
+  const conversationItems = [
+    ...inboxThreads.map((conv) => ({
+      type: 'incoming' as const,
+      conv,
+      conversationId: conv.conversation_id,
+    })),
+    ...allThreads.map((item) => ({
+      type: 'active' as const,
+      ...item,
+      conversationId: item.thread.conversation_id ?? null,
+    })),
+    ...completedProviders.map((item) => ({
+      type: 'completed' as const,
+      thread: null,
+      ...item,
+      conversationId:
+        inbox.find(
+          (conv) =>
+            conv.request_id === item.order.id &&
+            conv.other_user_id === item.order.provider_id,
+        )?.conversation_id ?? null,
+    })),
+  ];
+  const archivedItems = conversationItems.filter(
+    (item) => item.conversationId && archivedConversationIds.includes(item.conversationId),
+  );
+  const activeItems = conversationItems.filter(
+    (item) => !item.conversationId || !archivedConversationIds.includes(item.conversationId),
+  );
+  const visibleItems = showArchived ? archivedItems : activeItems;
+  const hasConversations = visibleItems.length > 0;
+
+  const handleArchiveToggle = async (conversationId: string) => {
+    if (!allowPress()) return;
+    const isArchived = archivedConversationIds.includes(conversationId);
+    const result = isArchived
+      ? await unarchiveConversation(conversationId)
+      : await archiveConversation(conversationId);
+
+    if (!result.ok) {
+      Alert.alert(
+        t('common.somethingWentWrong'),
+        t(isArchived ? 'messages.unarchiveFailed' : 'messages.archiveFailed'),
+      );
+      return;
+    }
+
+    // انتقال سلس للقائمة عند نقل المحادثة بين الرسائل والأرشيف.
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setArchivedConversationIds((current) =>
+      isArchived
+        ? current.filter((id) => id !== conversationId)
+        : current.includes(conversationId)
+          ? current
+          : [...current, conversationId],
+    );
+  };
 
 // [شرح الدالة: handleOpenChat] يفتح المحادثة مع مقدم الخدمة المختار.
   const handleOpenChat = (providerId: string) => {
@@ -190,7 +290,7 @@ export default function MessagesTab() {
           <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
         </Pressable> */}
         <Text style={[styles.title, { color: scheme.text }]}>
-          {t('tabs.messages')}
+          {t(showArchived ? 'messages.archiveTitle' : 'tabs.messages')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -198,7 +298,7 @@ export default function MessagesTab() {
       <FlatList
           removeClippedSubviews={false}
           ListHeaderComponent={
-            inboxFailed ? (
+            inboxFailed || (showArchived && archiveFailed) ? (
               <View style={styles.inboxNotice}>
                 <Text style={[styles.inboxNoticeText, { color: scheme.textSecondary }]}>
                   {t('messages.refreshFailed')}
@@ -211,15 +311,7 @@ export default function MessagesTab() {
               </View>
             ) : null
           }
-          data={[
-            ...inboxThreads.map((conv) => ({ type: 'incoming' as const, conv })),
-            ...allThreads.map((item) => ({ type: 'active' as const, ...item })),
-            ...completedProviders.map((item) => ({
-              type: 'completed' as const,
-              thread: null,
-              ...item,
-            })),
-          ]}
+          data={visibleItems}
           keyExtractor={(item, index) =>
             item.type === 'incoming'
               ? `incoming_${item.conv.conversation_id}`
@@ -231,17 +323,18 @@ export default function MessagesTab() {
             if (item.type === 'incoming') {
               const { conv } = item;
               return (
-                <Pressable
-                  onPress={() => {
-                    if (!allowPress()) return;
-                    router.push({
-                      pathname: '/orders/conversation',
-                      params: { conversation_id: conv.conversation_id, name: conv.other_name },
-                    });
-                  }}
-                >
-                  <AppCard padding="three" elevation="sm" style={styles.card}>
-                    <View style={styles.row}>
+                <AppCard padding="three" elevation="sm" style={styles.card}>
+                  <View style={styles.row}>
+                    <Pressable
+                      style={styles.conversationMain}
+                      onPress={() => {
+                        if (!allowPress()) return;
+                        router.push({
+                          pathname: '/orders/conversation',
+                          params: { conversation_id: conv.conversation_id, name: conv.other_name },
+                        });
+                      }}
+                    >
                       <Ionicons name="chatbubble-ellipses" size={28} color={scheme.primary} />
                       <View style={{ flex: 1, marginStart: Spacing.three }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
@@ -265,9 +358,25 @@ export default function MessagesTab() {
                           {conv.last_message_body ?? 'لا توجد رسائل بعد'}
                         </Text>
                       </View>
-                    </View>
-                  </AppCard>
-                </Pressable>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                      hitSlop={10}
+                      style={styles.archiveAction}
+                      onPress={() => void handleArchiveToggle(conv.conversation_id)}
+                    >
+                      <Ionicons
+                        name={showArchived ? 'archive' : 'archive-outline'}
+                        size={21}
+                        color={scheme.textSecondary}
+                      />
+                      <Text style={[styles.archiveActionText, { color: scheme.textSecondary }]}>
+                        {t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </AppCard>
               );
             }
             if (item.type === 'active') {
@@ -277,9 +386,9 @@ export default function MessagesTab() {
               const lastMsg = thread.last_message;
 
               return (
-                <Pressable onPress={() => handleOpenChat(provider.id)}>
-                  <AppCard padding="three" elevation="sm" style={styles.card}>
-                    <View style={styles.row}>
+                <AppCard padding="three" elevation="sm" style={styles.card}>
+                  <View style={styles.row}>
+                    <Pressable style={styles.conversationMain} onPress={() => handleOpenChat(provider.id)}>
                       <View
                         style={[
                           styles.avatar,
@@ -316,14 +425,28 @@ export default function MessagesTab() {
                           </Text>
                         )}
                       </View>
-                      <Ionicons
-                        name="chevron-back"
-                        size={20}
-                        color={scheme.textTertiary}
-                      />
-                    </View>
-                  </AppCard>
-                </Pressable>
+                      <Ionicons name="chevron-back" size={20} color={scheme.textTertiary} />
+                    </Pressable>
+                    {item.conversationId && (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                        hitSlop={10}
+                        style={styles.archiveAction}
+                        onPress={() => void handleArchiveToggle(item.conversationId!)}
+                      >
+                        <Ionicons
+                          name={showArchived ? 'archive' : 'archive-outline'}
+                          size={21}
+                          color={scheme.textSecondary}
+                        />
+                        <Text style={[styles.archiveActionText, { color: scheme.textSecondary }]}>
+                          {t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </AppCard>
               );
             }
 
@@ -367,6 +490,21 @@ export default function MessagesTab() {
                       {order.description}
                     </Text>
                   </View>
+                  {item.conversationId && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t(showArchived ? 'messages.unarchive' : 'messages.archive')}
+                      hitSlop={10}
+                      style={styles.archiveAction}
+                      onPress={() => void handleArchiveToggle(item.conversationId!)}
+                    >
+                      <Ionicons
+                        name={showArchived ? 'archive' : 'archive-outline'}
+                        size={21}
+                        color={scheme.textSecondary}
+                      />
+                    </Pressable>
+                  )}
                 </View>
 
                 <View style={styles.completedActions}>
@@ -401,7 +539,7 @@ export default function MessagesTab() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             !hasConversations
-              ? inboxFailed
+              ? (inboxFailed || (showArchived && archiveFailed))
                 ? (
                     <ErrorState
                       title={t('messages.loadFailedTitle')}
@@ -413,14 +551,40 @@ export default function MessagesTab() {
                     <View style={styles.emptyWrap}>
                       <Ionicons name="chatbubbles-outline" size={64} color={scheme.textTertiary} />
                       <Text style={[styles.emptyTitle, { color: scheme.text }]}>
-                        {t('messages.empty')}
+                        {t(showArchived ? 'messages.archiveEmpty' : 'messages.empty')}
                       </Text>
                       <Text style={[styles.emptySubtitle, { color: scheme.textSecondary }]}>
-                        {t('messages.emptyHint')}
+                        {t(showArchived ? 'messages.archiveEmptyHint' : 'messages.emptyHint')}
                       </Text>
                     </View>
                   )
               : null
+          }
+          ListFooterComponent={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
+              style={styles.archiveFooter}
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setShowArchived((current) => !current);
+              }}
+            >
+              <Ionicons
+                name={showArchived ? 'chatbubbles-outline' : 'archive-outline'}
+                size={22}
+                color={scheme.primary}
+              />
+              <Text style={[styles.archiveFooterText, { color: scheme.primary }]}>
+                {t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
+              </Text>
+              {!showArchived && (
+                <Text style={[styles.archiveCount, { color: scheme.textSecondary }]}>
+                  {archivedItems.length}
+                </Text>
+              )}
+              <Ionicons name="chevron-back" size={18} color={scheme.textTertiary} />
+            </Pressable>
           }
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
@@ -487,6 +651,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  conversationMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  archiveAction: {
+    minWidth: 72,
+    height: 42,
+    paddingHorizontal: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    borderRadius: Radii.sm,
+  },
+  archiveActionText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium,
+    writingDirection: 'rtl',
+  },
+  archiveFooter: {
+    minHeight: 54,
+    marginTop: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radii.md,
+    backgroundColor: 'rgba(128, 128, 128, 0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  archiveFooterText: {
+    flex: 1,
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.semibold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  archiveCount: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium,
   },
   avatar: {
     width: 52,
