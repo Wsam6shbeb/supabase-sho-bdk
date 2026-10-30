@@ -196,6 +196,20 @@ describe('MessagesTab — حالات تحميل صندوق الوارد', () => 
     await waitFor(() => expect(screen.getByText('messages.loadFailedTitle')).toBeTruthy());
   });
 
+  it('يبقي المحادثات ظاهرة إذا رمى طلب الأرشيف استثناءً', async () => {
+    fetchMyConversationsMock.mockResolvedValue([providerConversation]);
+    fetchMyArchivedConversationIdsMock.mockRejectedValue(new Error('archive request failed'));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const screen = render(<MessagesTab />);
+      await waitFor(() => expect(screen.getByText('أحمد')).toBeTruthy());
+      expect(screen.queryByText('messages.loadFailedTitle')).toBeNull();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it('ينقل المحادثة إلى الأرشيف عند الضغط على زر الأرشفة', async () => {
     fetchMyConversationsMock.mockResolvedValue([providerConversation]);
 
