@@ -38,6 +38,7 @@ const NOTIFICATION_CONFIG: Record<
   verification_approved: { icon: 'shield-checkmark-outline', colorKey: 'success' },
   verification_rejected: { icon: 'shield-outline', colorKey: 'danger' },
   balance_low: { icon: 'wallet-outline', colorKey: 'danger' },
+  wallet_topup: { icon: 'wallet-outline', colorKey: 'success' },
   welcome_bonus: { icon: 'gift-outline', colorKey: 'warning' },
   rating_reminder: { icon: 'star-half-outline', colorKey: 'warning' },
   provider_finished: { icon: 'checkmark-done-outline', colorKey: 'primary' },
