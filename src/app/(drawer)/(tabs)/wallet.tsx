@@ -1,7 +1,7 @@
 // ===============================================================
 // شرح الملف: هذا صفحة المحفظة.
 // الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: WalletTab، handleTopUp، handleSupport، TransactionRow.
+// الدوال/الوظائف المعرّفة هنا: WalletTab، handleSupport، handleCopyCode، TransactionRow.
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
@@ -20,7 +20,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { Alert, FlatList, Linking, Share, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
