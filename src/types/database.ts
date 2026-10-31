@@ -792,6 +792,7 @@ export type Database = {
           rating_count: number
           region: string | null
           status: string
+          topup_code: string
           updated_at: string
           verification_status: Database["public"]["Enums"]["verification_status"]
         }
@@ -809,6 +810,7 @@ export type Database = {
           rating_count?: number
           region?: string | null
           status?: string
+          topup_code?: string
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
         }
@@ -826,6 +828,7 @@ export type Database = {
           rating_count?: number
           region?: string | null
           status?: string
+          topup_code?: string
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
         }
