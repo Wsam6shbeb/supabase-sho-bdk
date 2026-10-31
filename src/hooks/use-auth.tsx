@@ -106,7 +106,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name, phone, region, avatar_url, is_provider, is_admin, verification_status, status, deleted_at, created_at')
+      .select('id, full_name, phone, region, avatar_url, is_provider, is_admin, verification_status, status, deleted_at, created_at, topup_code')
       .eq('id', sbUser.id)
       .maybeSingle();
 
@@ -126,6 +126,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
       status: data.deleted_at ? 'deleted' : ((data.status ?? 'active') as 'active' | 'suspended' | 'deleted'),
       verification_status: data.verification_status as VerificationStatus,
       created_at: data.created_at,
+      topup_code: data.topup_code,
     };
   } catch {
     return fallback;

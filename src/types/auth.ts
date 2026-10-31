@@ -26,6 +26,7 @@ export interface User {
   /** Account state managed by the admin dashboard. */
   status?: 'active' | 'suspended' | 'deleted';
   balance: number;
+  topup_code?: string;
   received_welcome_bonus: boolean;
   created_at: string;
 }

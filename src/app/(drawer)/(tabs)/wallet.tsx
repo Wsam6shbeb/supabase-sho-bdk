@@ -1,7 +1,7 @@
 // ===============================================================
 // شرح الملف: هذا صفحة المحفظة.
 // الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: WalletTab، handleTopUp، handleSupport، TransactionRow.
+// الدوال/الوظائف المعرّفة هنا: WalletTab، handleSupport، handleCopyCode، TransactionRow.
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
@@ -13,59 +13,81 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
+import { useAuth } from '@/hooks/use-auth';
+import { Image } from 'expo-image';
+import { getSupportContacts } from '@/services/support';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [شرح الدالة: WalletTab] يعرض رصيد المستخدم وحركات المحفظة والإجراءات المرتبطة بها.
 export default function WalletTab() {
   const theme = useTheme();
   const scheme = Colors[theme];
+  const { user } = useAuth();
+  const [paymentSettings, setPaymentSettings] = useState<{ accountCode: string; qrUrl: string; enabled: boolean } | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(true);
   const {
     balance,
     transactions,
     isLowBalance,
     isCriticalBalance,
-    topUp,
   } = useOrder();
 
-// [شرح الدالة: handleTopUp] يعالج طلب شحن/إضافة رصيد إلى المحفظة (عبر السيرفر).
-  const runTopUp = async (method: string) => {
-    const result = await topUp(5000, method);
-    if (!result.ok) {
-      Alert.alert(t('wallet.topUpTitle'), result.error ?? 'تعذر إضافة الرصيد. حاول مرة أخرى.');
-    }
-  };
+  useEffect(() => {
+    let active = true;
+    void fetch('https://sho-bdk-dashboard.pages.dev/api/public-payment-settings')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('تعذّر تحميل بيانات الشحن');
+        return response.json();
+      })
+      .then((data) => {
+        if (active) setPaymentSettings({
+          accountCode: typeof data.accountCode === 'string' ? data.accountCode : '',
+          qrUrl: typeof data.qrUrl === 'string' ? data.qrUrl : '',
+          enabled: data.enabled === true,
+        });
+      })
+      .catch(() => { if (active) setPaymentSettings(null); })
+      .finally(() => { if (active) setPaymentLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  const handleTopUp = () => {
-    Alert.alert(
-      t('wallet.topUpTitle'),
-      t('wallet.topUpSubtitle'),
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        { text: 'شام كاش', onPress: () => void runTopUp('شام كاش') },
-        { text: 'سيرياتيل كاش', onPress: () => void runTopUp('سيرياتيل كاش') },
-      ],
-    );
+  const handleCopyCode = async () => {
+    if (!user?.topup_code) return;
+    try {
+      await Clipboard.setStringAsync(user.topup_code);
+      Alert.alert('تم النسخ', 'تم نسخ رمز الشحن إلى الحافظة.');
+    } catch {
+      Alert.alert('رمز الشحن', user.topup_code);
+    }
   };
 
 // [شرح الدالة: handleSupport] ينقل المستخدم إلى قناة الدعم المرتبطة بالمحفظة.
   const handleSupport = async () => {
-    const subject = encodeURIComponent('استفسار بخصوص الرصيد - تطبيق شو بدك');
-    const body = encodeURIComponent('مرحباً فريق دعم شو بدك،\n\nأرغب بالاستفسار بخصوص الرصيد.\n\n');
-    const emailUrl = `mailto:shobdkhelpcenter@gmail.com?subject=${subject}&body=${body}`;
-
     try {
-      await Linking.openURL(emailUrl);
+      const contacts = await getSupportContacts();
+      const rawPhone = contacts.phone.replace(/\D/g, '');
+      const whatsappPhone = rawPhone.startsWith('00')
+        ? rawPhone.slice(2)
+        : rawPhone.startsWith('0')
+          ? `963${rawPhone.slice(1)}`
+          : rawPhone;
+
+      if (!/^\d{8,15}$/.test(whatsappPhone)) {
+        Alert.alert('رقم واتساب الدعم غير متوفر', 'يرجى المحاولة لاحقاً أو التواصل عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
+        return;
+      }
+
+      const message = encodeURIComponent('مرحباً، أحتاج مساعدة بخصوص الرصيد في تطبيق شو بدك.');
+      await Linking.openURL(`https://wa.me/${whatsappPhone}?text=${message}`);
     } catch {
-      Alert.alert(
-        'تعذر فتح البريد الإلكتروني',
-        'يمكنك مراسلتنا مباشرة على shobdkhelpcenter@gmail.com',
-      );
+      Alert.alert('تعذر فتح واتساب', 'يمكنك التواصل مع الدعم عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
     }
   };
 
@@ -136,28 +158,46 @@ export default function WalletTab() {
 
               <View style={styles.actionsRow}>
                 <AppButton
-                  title={t('wallet.topUpBtn')}
-                  variant="primary"
-                  size="md"
-                  onPress={handleTopUp}
-                  fullWidth={false}
-                  style={{ flex: 1 }}
-                  leadingIcon={
-                    <Ionicons name="add-circle" size={18} color={scheme.primaryContrast} />
-                  }
-                />
-                <AppButton
                   title={t('wallet.supportBtn')}
                   variant="secondary"
                   size="md"
                   onPress={handleSupport}
-                  fullWidth={false}
-                  style={{ flex: 1, marginStart: Spacing.two }}
-                  leadingIcon={
-                    <Ionicons name="headset" size={18} color={scheme.text} />
-                  }
+                  fullWidth
+                  leadingIcon={<Ionicons name="headset" size={18} color={scheme.text} />}
                 />
               </View>
+            </AppCard>
+
+            <AppCard padding="four" elevation="sm" style={styles.paymentCard}>
+              <Text style={[styles.paymentTitle, { color: scheme.text }]}>شحن الرصيد عبر شام كاش</Text>
+              {paymentLoading ? (
+                <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>جارٍ تحميل بيانات الدفع…</Text>
+              ) : !paymentSettings?.enabled ? (
+                <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>الشحن اليدوي غير متاح حالياً. يمكنك التواصل مع الدعم.</Text>
+              ) : (
+                <>
+                  <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رقم حساب شام كاش</Text>
+                  <Text selectable style={[styles.accountCode, { color: scheme.primary }]}>{paymentSettings.accountCode || 'غير متوفر حالياً'}</Text>
+                  {paymentSettings.qrUrl ? (
+                    <Image source={{ uri: paymentSettings.qrUrl }} contentFit="contain" style={styles.qrImage} />
+                  ) : null}
+                  <Text style={[styles.paymentText, { color: scheme.text }]}>طريقة الشحن:</Text>
+                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text>
+                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text>
+                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٣. احتفظ بصورة إيصال التحويل.</Text>
+                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٤. أرسل صورة الإيصال إلى واتساب الدعم، واذكر الرمز إذا لم يظهر بوضوح.</Text>
+                  <View style={styles.codeBox}>
+                    <View style={styles.codeTextWrap}>
+                      <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رمز الشحن الخاص بك</Text>
+                      <Text selectable style={[styles.accountCode, { color: scheme.text }]}>{user?.topup_code || 'سيظهر الرمز بعد تحديث بيانات الحساب'}</Text>
+                    </View>
+                    <AppButton title="نسخ الرمز" variant="secondary" size="sm" onPress={handleCopyCode} fullWidth={false} />
+                  </View>
+                  <View style={styles.warningBox}>
+                    <Text style={styles.warningText}>لا تنسَ كتابة الرمز الفريد الخاص بك بملاحظات الحوالة ولا تنسَ ترسل صورة عن الإيصال إلى واتساب الدعم</Text>
+                  </View>
+                </>
+              )}
             </AppCard>
 
             {transactions.length > 0 && (
@@ -275,6 +315,16 @@ const styles = StyleSheet.create({
   balanceCard: {
     marginBottom: Spacing.four,
   },
+  paymentCard: { marginBottom: Spacing.four, gap: Spacing.three },
+  paymentTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, writingDirection: 'rtl' },
+  paymentText: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right' },
+  accountCode: { fontSize: FontSizes.xl, fontWeight: FontWeights.bold, textAlign: 'center', letterSpacing: 1 },
+  qrImage: { width: 190, height: 190, alignSelf: 'center', marginVertical: Spacing.two },
+  instruction: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right', lineHeight: 24 },
+  codeBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, padding: Spacing.three, borderRadius: Radii.md, backgroundColor: '#F1F5F9' },
+  codeTextWrap: { flex: 1, gap: 4 },
+  warningBox: { backgroundColor: '#FDECEC', borderRadius: Radii.md, padding: Spacing.three },
+  warningText: { color: '#9B1C1C', fontSize: FontSizes.sm, fontWeight: FontWeights.semibold, textAlign: 'right', writingDirection: 'rtl', lineHeight: 24 },
   balanceLabel: {
     fontSize: FontSizes.sm,
     writingDirection: 'rtl',
