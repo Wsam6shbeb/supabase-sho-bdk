@@ -11,7 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { containsPhoneNumber } from '@/domain/chatSafety';
 
 interface ChatInputProps {
@@ -39,6 +39,7 @@ export function ChatInput({ onSend, onChangeText, disabled, placeholder }: ChatI
     }
     setValidationError(null);
     onSend(trimmed);
+    Keyboard.dismiss();
     setText('');
     onChangeText?.('');
   };
