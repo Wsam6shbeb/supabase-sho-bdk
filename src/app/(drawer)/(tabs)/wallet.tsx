@@ -62,7 +62,7 @@ export default function WalletTab() {
       const whatsappPhone = rawPhone.startsWith('00')
         ? rawPhone.slice(2)
         : rawPhone.startsWith('0')
-          ? \`963\${rawPhone.slice(1)}\`
+          ? `963${rawPhone.slice(1)}`
           : rawPhone;
 
       if (!/^\d{8,15}$/.test(whatsappPhone)) {
@@ -71,7 +71,7 @@ export default function WalletTab() {
       }
 
       const message = encodeURIComponent('مرحباً، أحتاج مساعدة بخصوص الرصيد في تطبيق شو بدك.');
-      await Linking.openURL(\`https://wa.me/\${whatsappPhone}?text=\${message}\`);
+      await Linking.openURL(`https://wa.me/${whatsappPhone}?text=${message}`);
     } catch {
       Alert.alert('تعذر فتح واتساب', 'يمكنك التواصل مع الدعم عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
     }
