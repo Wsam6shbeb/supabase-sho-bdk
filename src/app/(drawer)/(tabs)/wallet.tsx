@@ -13,6 +13,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
+import { getSupportContacts } from '@/services/support';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
@@ -55,17 +56,24 @@ export default function WalletTab() {
 
 // [شرح الدالة: handleSupport] ينقل المستخدم إلى قناة الدعم المرتبطة بالمحفظة.
   const handleSupport = async () => {
-    const subject = encodeURIComponent('استفسار بخصوص الرصيد - تطبيق شو بدك');
-    const body = encodeURIComponent('مرحباً فريق دعم شو بدك،\n\nأرغب بالاستفسار بخصوص الرصيد.\n\n');
-    const emailUrl = `mailto:shobdkhelpcenter@gmail.com?subject=${subject}&body=${body}`;
-
     try {
-      await Linking.openURL(emailUrl);
+      const contacts = await getSupportContacts();
+      const rawPhone = contacts.phone.replace(/\D/g, '');
+      const whatsappPhone = rawPhone.startsWith('00')
+        ? rawPhone.slice(2)
+        : rawPhone.startsWith('0')
+          ? \`963\${rawPhone.slice(1)}\`
+          : rawPhone;
+
+      if (!/^\d{8,15}$/.test(whatsappPhone)) {
+        Alert.alert('رقم واتساب الدعم غير متوفر', 'يرجى المحاولة لاحقاً أو التواصل عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
+        return;
+      }
+
+      const message = encodeURIComponent('مرحباً، أحتاج مساعدة بخصوص الرصيد في تطبيق شو بدك.');
+      await Linking.openURL(\`https://wa.me/\${whatsappPhone}?text=\${message}\`);
     } catch {
-      Alert.alert(
-        'تعذر فتح البريد الإلكتروني',
-        'يمكنك مراسلتنا مباشرة على shobdkhelpcenter@gmail.com',
-      );
+      Alert.alert('تعذر فتح واتساب', 'يمكنك التواصل مع الدعم عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
     }
   };
 
