@@ -20,7 +20,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Alert, FlatList, Linking, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -60,7 +61,8 @@ export default function WalletTab() {
   const handleCopyCode = async () => {
     if (!user?.topup_code) return;
     try {
-      await Share.share({ message: user.topup_code });
+      await Clipboard.setStringAsync(user.topup_code);
+      Alert.alert('تم النسخ', 'تم نسخ رمز الشحن إلى الحافظة.');
     } catch {
       Alert.alert('رمز الشحن', user.topup_code);
     }
@@ -189,7 +191,7 @@ export default function WalletTab() {
                       <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رمز الشحن الخاص بك</Text>
                       <Text selectable style={[styles.accountCode, { color: scheme.text }]}>{user?.topup_code || 'سيظهر الرمز بعد تحديث بيانات الحساب'}</Text>
                     </View>
-                    <AppButton title="نسخ / مشاركة الرمز" variant="secondary" size="sm" onPress={handleCopyCode} fullWidth={false} />
+                    <AppButton title="نسخ الرمز" variant="secondary" size="sm" onPress={handleCopyCode} fullWidth={false} />
                   </View>
                   <View style={styles.warningBox}>
                     <Text style={styles.warningText}>لا تنسَ كتابة الرمز الفريد الخاص بك بملاحظات الحوالة ولا تنسَ ترسل صورة عن الإيصال إلى واتساب الدعم</Text>
