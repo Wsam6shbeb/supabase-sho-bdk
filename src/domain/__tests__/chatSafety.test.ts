@@ -18,6 +18,10 @@ describe('chat phone safety', () => {
     expect(containsPhoneNumber('عندي ثلاثة كتب')).toBe(false);
   });
 
+  it('allows ordinary error numbers written in digits and words', () => {
+    expect(containsPhoneNumber('هل الخطأ الظاهر عندك رقمه 79 تسعة وسبعين؟')).toBe(false);
+  });
+
   it('normalizes spoken digits without changing surrounding words', () => {
     expect(normalizeSpokenPhoneDigits('رقمي صفر تسعة خمسة')).toBe('رقمي 0 9 5');
   });
