@@ -15,6 +15,7 @@ import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
+import { supabase } from '@/services/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -32,7 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TIP_CARD_WIDTH = SCREEN_WIDTH - Spacing.four * 2 - Spacing.six;
 const TIP_CARD_GAP = Spacing.three;
-const AUTO_SCROLL_INTERVAL = 5000;
+
 
 // [شرح الدالة: HomeTab] يعرض الصفحة الرئيسية للمستخدم والإجراءات الأساسية مثل طلب أو تقديم خدمة.
 export default function HomeTab() {
@@ -41,22 +42,52 @@ export default function HomeTab() {
   const { user } = useAuth();
   const { hasProviderProfile, myProviderProfile, toggleAvailability, unreadNotificationsCount } = useOrder();
 
-  const tips = useMemo(() => {
-    return [
-      t('home.tip1'),
-      t('home.tip2'),
-      t('home.tip3'),
-      t('home.tip4'),
-      t('home.tip5'),
-      t('home.tip6'),
-    ];
-  }, []);
-
+  const fallbackTips = useMemo(() => [
+    t('home.tip1'), t('home.tip2'), t('home.tip3'), t('home.tip4'),
+    t('home.tip5'), t('home.tip6'), t('home.tip7'),
+  ], []);
+  const [tips, setTips] = useState<string[]>(fallbackTips);
+  const [tipIntervalMs, setTipIntervalMs] = useState(6000);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
+
+  // Load public tip settings; retain the approved local copy if the request fails.
+  useEffect(() => {
+    let active = true;
+    const loadTips = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('key, value')
+          .in('key', ['home_tips', 'home_tips_interval_seconds']);
+        if (error || !active || !data) return;
+        const values = Object.fromEntries(data.map((row) => [row.key, row.value]));
+        const configuredTips = values.home_tips;
+        if (Array.isArray(configuredTips)) {
+          const visibleTips = configuredTips
+            .filter((tip): tip is { text: string; enabled: boolean } =>
+              !!tip && typeof tip === 'object' &&
+              typeof (tip as { text?: unknown }).text === 'string' &&
+              (tip as { text: string }).text.trim().length > 0 &&
+              (tip as { enabled?: unknown }).enabled === true)
+            .map((tip) => tip.text.trim());
+          if (active) setTips(visibleTips);
+        }
+        const seconds = values.home_tips_interval_seconds;
+        if (active && typeof seconds === 'number' && Number.isInteger(seconds) && seconds >= 3 && seconds <= 60) {
+          setTipIntervalMs(seconds * 1000);
+        }
+      } catch {
+        // Keep local fallback tips and the default six-second interval.
+      }
+    };
+    void loadTips();
+    return () => { active = false; };
+  }, []);
   const flatListRef = useRef<FlatList<string>>(null);
 
-  // دوران تلقائي كل 5 ثواني
+  // دوران تلقائي كل 6 ثوانٍ
   useEffect(() => {
+    if (tips.length === 0) return;
     const interval = setInterval(() => {
       setCurrentTipIndex((prev) => {
         const next = (prev + 1) % tips.length;
@@ -66,10 +97,10 @@ export default function HomeTab() {
         });
         return next;
       });
-    }, AUTO_SCROLL_INTERVAL);
+    }, tipIntervalMs);
 
     return () => clearInterval(interval);
-  }, [tips.length]);
+  }, [tips.length, tipIntervalMs]);
 
 // [شرح الدالة: handleRequestService] ينقل المستخدم إلى مسار طلب خدمة جديد.
   const handleRequestService = () => {
@@ -236,7 +267,7 @@ export default function HomeTab() {
         </View>
 
         {/* Quick Tips — Carousel مع دوران تلقائي */}
-        <View style={styles.tipsSection}>
+        {tips.length > 0 && <View style={styles.tipsSection}>
           <View style={styles.tipsHeader}>
             <Ionicons name="bulb-outline" size={20} color={scheme.warning} />
             <Text style={[styles.tipsTitle, { color: scheme.text }]}>
@@ -298,7 +329,7 @@ export default function HomeTab() {
               />
             ))}
           </View>
-        </View>
+        </View>}
       </ScrollView>
     </SafeAreaView>
   );
