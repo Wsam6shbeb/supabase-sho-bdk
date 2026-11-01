@@ -9,6 +9,11 @@ describe('chat phone safety', () => {
     expect(containsPhoneNumber('صفر تسعة خمسة خمسة اتنين تلاتة اربعة خمسه سته سبعه')).toBe(true);
   });
 
+  it('detects additional colloquial forms of eight in spoken phone numbers', () => {
+    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانه تمانة')).toBe(true);
+    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانية')).toBe(true);
+  });
+
   it('detects numbers written as English digit words', () => {
     expect(containsPhoneNumber('my number is zero nine five five one two three four five six')).toBe(true);
   });
