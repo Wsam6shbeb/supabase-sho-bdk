@@ -32,7 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TIP_CARD_WIDTH = SCREEN_WIDTH - Spacing.four * 2 - Spacing.six;
 const TIP_CARD_GAP = Spacing.three;
-const AUTO_SCROLL_INTERVAL = 5000;
+const AUTO_SCROLL_INTERVAL = 6000;
 
 // [شرح الدالة: HomeTab] يعرض الصفحة الرئيسية للمستخدم والإجراءات الأساسية مثل طلب أو تقديم خدمة.
 export default function HomeTab() {
@@ -49,13 +49,14 @@ export default function HomeTab() {
       t('home.tip4'),
       t('home.tip5'),
       t('home.tip6'),
+      t('home.tip7'),
     ];
   }, []);
 
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const flatListRef = useRef<FlatList<string>>(null);
 
-  // دوران تلقائي كل 5 ثواني
+  // دوران تلقائي كل 6 ثوانٍ
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTipIndex((prev) => {
