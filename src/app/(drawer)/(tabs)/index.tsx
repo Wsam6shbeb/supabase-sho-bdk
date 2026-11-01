@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { supabase } from '@/services/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Dimensions,
@@ -50,40 +50,48 @@ export default function HomeTab() {
   const [tipIntervalMs, setTipIntervalMs] = useState(6000);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
-  // Load public tip settings; retain the approved local copy if the request fails.
-  useEffect(() => {
-    let active = true;
-    const loadTips = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('key, value')
-          .in('key', ['home_tips', 'home_tips_interval_seconds']);
-        if (error || !active || !data) return;
-        const values = Object.fromEntries(data.map((row) => [row.key, row.value]));
-        const configuredTips = values.home_tips;
-        if (Array.isArray(configuredTips)) {
-          const visibleTips = configuredTips
-            .filter((tip): tip is { text: string; enabled: boolean } =>
-              !!tip && typeof tip === 'object' &&
-              typeof (tip as { text?: unknown }).text === 'string' &&
-              (tip as { text: string }).text.trim().length > 0 &&
-              (tip as { enabled?: unknown }).enabled === true)
-            .map((tip) => tip.text.trim());
-          if (active) setTips(visibleTips);
-        }
-        const seconds = values.home_tips_interval_seconds;
-        if (active && typeof seconds === 'number' && Number.isInteger(seconds) && seconds >= 3 && seconds <= 60) {
-          setTipIntervalMs(seconds * 1000);
-        }
-      } catch {
-        // Keep local fallback tips and the default six-second interval.
-      }
-    };
-    void loadTips();
-    return () => { active = false; };
-  }, []);
   const flatListRef = useRef<FlatList<string>>(null);
+
+  // Reload public tip settings whenever the home tab becomes active.
+  // This lets dashboard edits appear without restarting the Metro app.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const loadTips = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('app_settings')
+            .select('key, value')
+            .in('key', ['home_tips', 'home_tips_interval_seconds']);
+          if (error || !active || !data) return;
+          const values = Object.fromEntries(data.map((row) => [row.key, row.value]));
+          const configuredTips = values.home_tips;
+          if (Array.isArray(configuredTips)) {
+            const visibleTips = configuredTips
+              .filter((tip): tip is { text: string; enabled: boolean } =>
+                !!tip && typeof tip === 'object' &&
+                typeof (tip as { text?: unknown }).text === 'string' &&
+                (tip as { text: string }).text.trim().length > 0 &&
+                (tip as { enabled?: unknown }).enabled === true)
+              .map((tip) => tip.text.trim());
+            if (active) {
+              setTips(visibleTips);
+              setCurrentTipIndex(0);
+              flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+            }
+          }
+          const seconds = values.home_tips_interval_seconds;
+          if (active && typeof seconds === 'number' && Number.isInteger(seconds) && seconds >= 3 && seconds <= 60) {
+            setTipIntervalMs(seconds * 1000);
+          }
+        } catch {
+          // Keep local fallback tips and the default six-second interval.
+        }
+      };
+      void loadTips();
+      return () => { active = false; };
+    }, []),
+  );
 
   // دوران تلقائي كل 6 ثوانٍ
   useEffect(() => {
