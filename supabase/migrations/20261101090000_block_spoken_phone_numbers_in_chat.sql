@@ -24,17 +24,17 @@ begin
     '01234567890123456789'
   );
 
-  -- Convert common Arabic/colloquial and English spoken digit names.
-  v_body := regexp_replace(v_body, '(صفر|زيرو|zero)', '0', 'gi');
-  v_body := regexp_replace(v_body, '(واحده|واحدة|واحد|أحد|احد|one)', '1', 'gi');
-  v_body := regexp_replace(v_body, '(اثنين|اتنين|تنين|ثنين|two)', '2', 'gi');
-  v_body := regexp_replace(v_body, '(ثلاثة|ثلاثه|تلاتة|تلاته|three)', '3', 'gi');
-  v_body := regexp_replace(v_body, '(أربعة|اربعة|أربعه|اربعه|four)', '4', 'gi');
-  v_body := regexp_replace(v_body, '(خمسة|خمسه|five)', '5', 'gi');
-  v_body := regexp_replace(v_body, '(ستة|سته|six)', '6', 'gi');
-  v_body := regexp_replace(v_body, '(سبعة|سبعه|seven)', '7', 'gi');
-  v_body := regexp_replace(v_body, '(ثمانية|ثمانيه|تمانية|تمنية|تمنيه|eight)', '8', 'gi');
-  v_body := regexp_replace(v_body, '(تسعة|تسعه|nine)', '9', 'gi');
+  -- Convert whole Arabic/colloquial and English digit words only.
+  v_body := regexp_replace(v_body, '\\m(صفر|زيرو|zero)\\M', '0', 'gi');
+  v_body := regexp_replace(v_body, '\\m(واحده|واحدة|واحد|أحد|احد|one)\\M', '1', 'gi');
+  v_body := regexp_replace(v_body, '\\m(اثنين|اتنين|تنين|ثنين|two)\\M', '2', 'gi');
+  v_body := regexp_replace(v_body, '\\m(ثلاثة|ثلاثه|تلاتة|تلاته|three)\\M', '3', 'gi');
+  v_body := regexp_replace(v_body, '\\m(أربعة|اربعة|أربعه|اربعه|four)\\M', '4', 'gi');
+  v_body := regexp_replace(v_body, '\\m(خمسة|خمسه|five)\\M', '5', 'gi');
+  v_body := regexp_replace(v_body, '\\m(ستة|سته|six)\\M', '6', 'gi');
+  v_body := regexp_replace(v_body, '\\m(سبعة|سبعه|seven)\\M', '7', 'gi');
+  v_body := regexp_replace(v_body, '\\m(ثمانية|ثمانيه|تمانية|تمنية|تمنيه|eight)\\M', '8', 'gi');
+  v_body := regexp_replace(v_body, '\\m(تسعة|تسعه|nine)\\M', '9', 'gi');
 
   if v_body ~ '(^|[^0-9])09[[:space:]().-]*[0-9][0-9[:space:]().-]{6,}[0-9]([^0-9]|$)'
      or v_body ~ '(^|[^0-9])(([+]|00)?963)[[:space:]().-]*9[[:space:]().-]*[0-9][0-9[:space:]().-]{6,}[0-9]([^0-9]|$)'
