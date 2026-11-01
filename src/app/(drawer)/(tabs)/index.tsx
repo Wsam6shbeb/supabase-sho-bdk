@@ -70,7 +70,7 @@ export default function HomeTab() {
               (tip as { text: string }).text.trim().length > 0 &&
               (tip as { enabled?: unknown }).enabled === true)
             .map((tip) => tip.text.trim());
-          if (active && visibleTips.length > 0) setTips(visibleTips);
+          if (active) setTips(visibleTips);
         }
         const seconds = values.home_tips_interval_seconds;
         if (active && typeof seconds === 'number' && Number.isInteger(seconds) && seconds >= 3 && seconds <= 60) {
@@ -87,6 +87,7 @@ export default function HomeTab() {
 
   // دوران تلقائي كل 6 ثوانٍ
   useEffect(() => {
+    if (tips.length === 0) return;
     const interval = setInterval(() => {
       setCurrentTipIndex((prev) => {
         const next = (prev + 1) % tips.length;
@@ -266,7 +267,7 @@ export default function HomeTab() {
         </View>
 
         {/* Quick Tips — Carousel مع دوران تلقائي */}
-        <View style={styles.tipsSection}>
+        {tips.length > 0 && <View style={styles.tipsSection}>
           <View style={styles.tipsHeader}>
             <Ionicons name="bulb-outline" size={20} color={scheme.warning} />
             <Text style={[styles.tipsTitle, { color: scheme.text }]}>
@@ -328,7 +329,7 @@ export default function HomeTab() {
               />
             ))}
           </View>
-        </View>
+        </View>}
       </ScrollView>
     </SafeAreaView>
   );
