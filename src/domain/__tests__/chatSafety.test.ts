@@ -10,8 +10,9 @@ describe('chat phone safety', () => {
   });
 
   it('detects additional colloquial forms of eight in spoken phone numbers', () => {
-    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانه تمانة')).toBe(true);
-    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانية')).toBe(true);
+    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانه سبعة ثمانية')).toBe(true);
+    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانة سبعة ثمانية')).toBe(true);
+    expect(containsPhoneNumber('صفر تسعة خمسة خمسة أربعة تلاتة تنين تمانية سبعة ثمانية')).toBe(true);
   });
 
   it('detects numbers written as English digit words', () => {
