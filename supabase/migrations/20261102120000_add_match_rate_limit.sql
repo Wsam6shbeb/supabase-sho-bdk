@@ -14,6 +14,9 @@ CREATE TABLE private.match_service_provider_rate_limits (
   day_count integer NOT NULL DEFAULT 0
 );
 
+ALTER TABLE private.match_service_provider_rate_limits
+ENABLE ROW LEVEL SECURITY;
+
 REVOKE ALL ON TABLE private.match_service_provider_rate_limits
 FROM PUBLIC, anon, authenticated, service_role;
 
