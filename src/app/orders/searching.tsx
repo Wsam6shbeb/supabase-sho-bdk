@@ -150,14 +150,6 @@ export default function SearchingScreen() {
 
       // محرك المطابقة الذكي: يرسل التحليل المنظم للطلب وخدمات مقدمي الخدمة
       // إلى Edge Function واحدة حتى يقارن الذكاء الاصطناعي المعنى بين الطرفين.
-      const requestForMatching = requestStructuredData ?? {
-        service: description,
-        skills: [],
-        synonyms: [],
-        region: null,
-        location: null,
-      };
-
       // دفاع إضافي: مقدم الخدمة قد يملك أكثر من خدمة، لكن يجب أن يظهر مرة واحدة فقط.
       providersData = Array.from(
         new Map(
