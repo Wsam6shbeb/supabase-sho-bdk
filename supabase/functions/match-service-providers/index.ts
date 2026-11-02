@@ -225,16 +225,21 @@ Deno.serve(async (req: Request) => {
       : { service: "", skills: [], synonyms: [], region: null, location: null },
   }));
 
-  const matches: Array<{ provider_id: string; score: number; reason: string }> = [];
+  const batches: Array<typeof candidates> = [];
   for (let offset = 0; offset < candidates.length; offset += 20) {
-    const batch = candidates.slice(offset, offset + 20);
-    try {
-      matches.push(...await matchBatch(geminiKey, requestData, batch));
-    } catch (error) {
-      console.error("[match-service-providers] Matching batch failed:", error);
-      return reply({ error: "AI matching failed" }, 502);
-    }
+    batches.push(candidates.slice(offset, offset + 20));
   }
+
+  let batchResults: Array<Array<{ provider_id: string; score: number; reason: string }>>;
+  try {
+    batchResults = await Promise.all(
+      batches.map((batch) => matchBatch(geminiKey, requestData, batch)),
+    );
+  } catch (error) {
+    console.error("[match-service-providers] Matching batch failed:", error);
+    return reply({ error: "AI matching failed" }, 502);
+  }
+  const matches = batchResults.flat();
 
   const scoreByProvider = new Map(matches.map((match) => [match.provider_id, match]));
   const ranked = providers
