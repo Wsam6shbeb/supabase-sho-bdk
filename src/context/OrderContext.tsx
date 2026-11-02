@@ -299,7 +299,6 @@ async function createServiceRequestInSupabase(params: {
         additional_info: params.additionalInfo?.trim() || null,
         urgency: params.isUrgent ? 'urgent' : 'normal',
         region: params.regionId || null,
-        state: 'submitted',
         structured_data: null,
         ai_confidence: null,
         needs_clarification: false,

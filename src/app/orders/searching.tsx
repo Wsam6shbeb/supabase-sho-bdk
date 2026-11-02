@@ -9,7 +9,7 @@
 // شاشة البحث عن مقدمي الخدمة
 // ═══════════════════════════════════════════════════════════
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -35,6 +35,7 @@ export default function SearchingScreen() {
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [isSearching, setIsSearching] = useState(true);
   const [showAiBanner, setShowAiBanner] = useState(false);
+  const [rateLimitExceeded, setRateLimitExceeded] = useState(false);
 
   const [bannerOpacity] = useState(() => new Animated.Value(0));
   const [bannerTranslateY] = useState(() => new Animated.Value(20));
@@ -50,6 +51,7 @@ export default function SearchingScreen() {
       let providersData: any[] = [];
       // يميّز "فشل البحث تقنياً" عن "لا يوجد مقدم مناسب" حتى لا نخدع المستخدم برسالة خاطئة.
       let searchFailed = false;
+      let rateLimitWasExceeded = false;
 
       // ننتظر التحليل المنظم للطلب لفترة قصيرة لأن تحليل AI يعمل في الخلفية.
       // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
@@ -150,14 +152,6 @@ export default function SearchingScreen() {
 
       // محرك المطابقة الذكي: يرسل التحليل المنظم للطلب وخدمات مقدمي الخدمة
       // إلى Edge Function واحدة حتى يقارن الذكاء الاصطناعي المعنى بين الطرفين.
-      const requestForMatching = requestStructuredData ?? {
-        service: description,
-        skills: [],
-        synonyms: [],
-        region: null,
-        location: null,
-      };
-
       // دفاع إضافي: مقدم الخدمة قد يملك أكثر من خدمة، لكن يجب أن يظهر مرة واحدة فقط.
       providersData = Array.from(
         new Map(
@@ -167,59 +161,32 @@ export default function SearchingScreen() {
         ).values(),
       );
 
-      const providerCandidates = (providersData ?? []).map((p: any) => ({
-        provider: p,
-        services: Array.isArray(p.services) ? p.services : [],
-      }));
-
       let aiMatches: Array<{ provider_id: string; score: number; reason: string }> = [];
 
-      if (providerCandidates.length > 0) {
-        // الـ Edge Function تقبل 20 مقدم خدمة كحد أقصى لكل طلب؛ نقسّم القائمة (حتى 50) إلى دفعات
-        // بدل أن يُهمَل بصمت كل من بعد العشرين.
-        const MATCH_BATCH_SIZE = 20;
-        const batches: Array<typeof providerCandidates> = [];
-        for (let i = 0; i < providerCandidates.length; i += MATCH_BATCH_SIZE) {
-          batches.push(providerCandidates.slice(i, i + MATCH_BATCH_SIZE));
-        }
-
-        const batchResults = await Promise.all(
-          batches.map(async (batch) => {
-            const { data: matchData, error: matchError } = await supabase.functions.invoke(
-              'match-service-providers',
-              {
-                body: {
-                  request: requestForMatching,
-                  providers: batch.map(({ provider, services }) => ({
-                    provider_id: provider.user_id,
-                    service: services.length
-                      ? services
-                      : {
-                          service: '',
-                          skills: [],
-                          synonyms: [],
-                          region: null,
-                          location: null,
-                        },
-                  })),
-                },
-              },
-            );
-
-            if (matchError) {
-              console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
-              return null;
-            }
-            return Array.isArray(matchData?.matches)
-              ? (matchData.matches as Array<{ provider_id: string; score: number; reason: string }>)
-              : null;
-          }),
+      if (requestId && providersData.length > 0) {
+        // الخادم يعيد جلب المرشحين بنفسه ويتحقق من ملكية الطلب، ثم يحفظ النتائج بصلاحياته.
+        // لا نرسل قائمة مقدمي الخدمة أو درجات المطابقة من جهاز المستخدم.
+        const { data: matchData, error: matchError } = await supabase.functions.invoke(
+          'match-service-providers',
+          { body: { request_id: requestId } },
         );
 
-        for (const matches of batchResults) {
-          if (matches) aiMatches = aiMatches.concat(matches);
-          else searchFailed = true;
+        if (matchError) {
+          console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
+
+          if ((matchError as any).context?.status === 429) {
+            rateLimitWasExceeded = true;
+            setRateLimitExceeded(true);
+          }
+
+          searchFailed = true;
+        } else if (Array.isArray(matchData?.matches)) {
+          aiMatches = matchData.matches as Array<{ provider_id: string; score: number; reason: string }>;
+        } else {
+          console.error('[Supabase][searching] استجابة محرك المطابقة غير صالحة.');
+          searchFailed = true;
         }
+
         console.log('[Supabase][searching] نتائج المطابقة بالذكاء الاصطناعي:', aiMatches);
       }
 
@@ -273,30 +240,9 @@ export default function SearchingScreen() {
       setCandidates(results);
       setIsSearching(false);
 
-      // حفظ نتائج البحث كـ "مرشحين" بجدول candidates — أفضل محاولة
-      // (best-effort): ما بتوقف أو تغيّر تدفق الشاشة إذا فشلت (مثلاً لو
-      // requestId فاضي لأنو المستخدم مو مسجّل دخول وقت إنشاء الطلب).
-      if (requestId && results.length > 0) {
-        const rows = results.map((p, index) => ({
-          request_id: requestId,
-          provider_id: p.id,
-          rank: index + 1,
-          match_score: (p as any).match_score ?? null,
-        }));
-        const { error: candidatesError } = await supabase
-          .from('candidates')
-          .upsert(rows, { onConflict: 'request_id,provider_id' });
+      // حفظ المرشحين يتم داخل Edge Function بعد التحقق من هوية صاحب الطلب.
 
-        if (candidatesError) {
-          console.error('[Supabase][searching] فشل حفظ المرشحين بجدول candidates:', candidatesError.message);
-        } else {
-          console.log('[Supabase][searching] تم حفظ المرشحين بجدول candidates:', rows.length);
-        }
-      } else if (!requestId) {
-        console.error('[Supabase][searching] لا يوجد request_id حقيقي، تم تجاوز حفظ المرشحين بجدول candidates.');
-      }
-
-      setTimeout(() => {
+      const navigateToCandidates = () => {
         router.replace({
           pathname: '/orders/candidates',
           params: {
@@ -307,7 +253,18 @@ export default function SearchingScreen() {
             ...(searchFailed && results.length === 0 ? { search_failed: '1' } : {}),
           },
         });
-      }, 2000);
+      };
+
+      if (rateLimitWasExceeded) {
+        Alert.alert(
+          'تم تجاوز الحد المسموح',
+          'وصلت إلى الحد المسموح من طلبات البحث خلال هذه الدقيقة. يرجى المحاولة بعد قليل.',
+          [{ text: 'حسناً', onPress: navigateToCandidates }],
+          { cancelable: false },
+        );
+      } else {
+        setTimeout(navigateToCandidates, 2000);
+      }
     }, 1500);
 
     return () => clearTimeout(searchTimeout);
@@ -381,10 +338,10 @@ export default function SearchingScreen() {
           <View style={styles.foundContainer}>
             <Ionicons name="checkmark-circle" size={64} color={scheme.success} />
             <Text style={[styles.foundText, { color: scheme.text }]}>
-              تم العثور على {providers.length} مقدم خدمة
+              {rateLimitExceeded ? 'تم تجاوز الحد المسموح' : `تم العثور على ${providers.length} مقدم خدمة`}
             </Text>
             <Text style={[styles.foundSubtext, { color: scheme.textSecondary }]}>
-              جارٍ الانتقال...
+              {rateLimitExceeded ? 'يرجى المحاولة بعد قليل.' : 'جارٍ الانتقال...'}
             </Text>
           </View>
         )}
