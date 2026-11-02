@@ -173,7 +173,7 @@ Deno.serve(async (req: Request) => {
     return reply({ error: "Server configuration is incomplete" }, 500);
   }
 
-  let body: { request_id?: unknown };
+  let body: { request_id?: unknown; request?: unknown; providers?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -181,9 +181,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const requestId = typeof body?.request_id === "string" ? body.request_id : "";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) {
-    return reply({ error: "A valid request_id is required" }, 400);
-  }
+  const validRequestId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId);
 
   const userClient = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -193,6 +191,38 @@ Deno.serve(async (req: Request) => {
   if (authError || !authData.user) return reply({ error: "Unauthorized" }, 401);
 
   const requesterId = authData.user.id;
+
+  // Compatibility for app versions already installed by users. Legacy calls can still
+  // receive matching scores, but only the request_id path below can write candidate rows.
+  if (!validRequestId) {
+    const legacyRequest = body?.request;
+    const legacyProviders = Array.isArray(body?.providers) ? body.providers : [];
+    if (!legacyRequest || typeof legacyRequest !== "object" || legacyProviders.length === 0 || legacyProviders.length > 20) {
+      return reply({ error: "A valid request_id is required" }, 400);
+    }
+
+    const validLegacyProviders = legacyProviders.filter((provider: any) =>
+      typeof provider?.provider_id === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(provider.provider_id) &&
+      provider.service !== null &&
+      typeof provider.service === "object"
+    );
+    if (validLegacyProviders.length !== legacyProviders.length) {
+      return reply({ error: "Invalid legacy provider payload" }, 400);
+    }
+
+    try {
+      const matches = await matchBatch(
+        geminiKey,
+        legacyRequest as Record<string, unknown>,
+        validLegacyProviders,
+      );
+      return reply({ matches });
+    } catch (error) {
+      console.error("[match-service-providers] Legacy matching failed:", error);
+      return reply({ error: "AI matching failed" }, 502);
+    }
+  }
   const { data: requestRow, error: requestError } = await userClient
     .from("service_requests")
     .select("id, requester_id, raw_text, structured_data, region, service_area")
