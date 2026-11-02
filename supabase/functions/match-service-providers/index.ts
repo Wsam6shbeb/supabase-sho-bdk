@@ -156,7 +156,16 @@ Deno.serve(async (req: Request) => {
   if (!authorization || !token) return reply({ error: "Unauthorized" }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const publishableKeysRaw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
+  let defaultPublishableKey: string | undefined;
+  if (publishableKeysRaw) {
+    try {
+      defaultPublishableKey = JSON.parse(publishableKeysRaw)?.default;
+    } catch {
+      console.error("[match-service-providers] SUPABASE_PUBLISHABLE_KEYS is not valid JSON");
+    }
+  }
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? defaultPublishableKey;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !geminiKey) {
