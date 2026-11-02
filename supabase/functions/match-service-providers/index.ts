@@ -191,7 +191,46 @@ Deno.serve(async (req: Request) => {
   if (authError || !authData.user) return reply({ error: "Unauthorized" }, 401);
 
   const requesterId = authData.user.id;
+    // Enforce per-user Gemini matching limits before either legacy or new flow.
+  const rateLimitClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
+  const { data: rateLimitData, error: rateLimitError } =
+    await rateLimitClient.rpc("consume_match_rate_limit", {
+      p_user_id: requesterId,
+    });
+
+  if (rateLimitError || !Array.isArray(rateLimitData) || !rateLimitData[0]) {
+    console.error("[match-service-providers] Rate limit check failed");
+    return reply({ error: "Matching is temporarily unavailable" }, 503);
+  }
+
+  const rateLimit = rateLimitData[0];
+
+  if (typeof rateLimit.allowed !== "boolean") {
+    console.error("[match-service-providers] Invalid rate limit response");
+    return reply({ error: "Matching is temporarily unavailable" }, 503);
+  }
+
+  if (!rateLimit.allowed) {
+    const retryAfter = Math.max(
+      1,
+      Number(rateLimit.retry_after_seconds) || 60,
+    );
+
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded", retry_after_seconds: retryAfter }),
+      {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Retry-After": String(retryAfter),
+        },
+      },
+    );
+  }
   // Compatibility for app versions already installed by users. Legacy calls can still
   // receive matching scores, but only the request_id path below can write candidate rows.
   if (!validRequestId) {
