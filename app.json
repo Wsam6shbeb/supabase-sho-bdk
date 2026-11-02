@@ -59,6 +59,14 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "يحتاج التطبيق الوصول إلى صورك لاختيار صورة الملف الشخصي أو وثائق التوثيق.",
+          "cameraPermission": "يحتاج التطبيق الوصول إلى الكاميرا لالتقاط صورة الملف الشخصي أو وثائق التوثيق.",
+          "microphonePermission": false
+        }
+      ],
       "expo-secure-store",
       "expo-sqlite",
       [
