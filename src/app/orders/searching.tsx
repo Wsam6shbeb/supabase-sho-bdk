@@ -9,7 +9,7 @@
 // شاشة البحث عن مقدمي الخدمة
 // ═══════════════════════════════════════════════════════════
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -35,6 +35,7 @@ export default function SearchingScreen() {
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [isSearching, setIsSearching] = useState(true);
   const [showAiBanner, setShowAiBanner] = useState(false);
+  const [rateLimitExceeded, setRateLimitExceeded] = useState(false);
 
   const [bannerOpacity] = useState(() => new Animated.Value(0));
   const [bannerTranslateY] = useState(() => new Animated.Value(20));
@@ -50,6 +51,7 @@ export default function SearchingScreen() {
       let providersData: any[] = [];
       // يميّز "فشل البحث تقنياً" عن "لا يوجد مقدم مناسب" حتى لا نخدع المستخدم برسالة خاطئة.
       let searchFailed = false;
+      let rateLimitWasExceeded = false;
 
       // ننتظر التحليل المنظم للطلب لفترة قصيرة لأن تحليل AI يعمل في الخلفية.
       // هذا يمنع ظهور "لا يوجد مقدم خدمة" فقط لأن التحليل لم يكتمل بعد.
@@ -171,6 +173,12 @@ export default function SearchingScreen() {
 
         if (matchError) {
           console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
+
+          if ((matchError as any).context?.status === 429) {
+            rateLimitWasExceeded = true;
+            setRateLimitExceeded(true);
+          }
+
           searchFailed = true;
         } else if (Array.isArray(matchData?.matches)) {
           aiMatches = matchData.matches as Array<{ provider_id: string; score: number; reason: string }>;
@@ -234,7 +242,7 @@ export default function SearchingScreen() {
 
       // حفظ المرشحين يتم داخل Edge Function بعد التحقق من هوية صاحب الطلب.
 
-      setTimeout(() => {
+      const navigateToCandidates = () => {
         router.replace({
           pathname: '/orders/candidates',
           params: {
@@ -245,7 +253,18 @@ export default function SearchingScreen() {
             ...(searchFailed && results.length === 0 ? { search_failed: '1' } : {}),
           },
         });
-      }, 2000);
+      };
+
+      if (rateLimitWasExceeded) {
+        Alert.alert(
+          'تم تجاوز الحد المسموح',
+          'وصلت إلى الحد المسموح من طلبات البحث خلال هذه الدقيقة. يرجى المحاولة بعد قليل.',
+          [{ text: 'حسناً', onPress: navigateToCandidates }],
+          { cancelable: false },
+        );
+      } else {
+        setTimeout(navigateToCandidates, 2000);
+      }
     }, 1500);
 
     return () => clearTimeout(searchTimeout);
@@ -319,10 +338,10 @@ export default function SearchingScreen() {
           <View style={styles.foundContainer}>
             <Ionicons name="checkmark-circle" size={64} color={scheme.success} />
             <Text style={[styles.foundText, { color: scheme.text }]}>
-              تم العثور على {providers.length} مقدم خدمة
+              {rateLimitExceeded ? 'تم تجاوز الحد المسموح' : `تم العثور على ${providers.length} مقدم خدمة`}
             </Text>
             <Text style={[styles.foundSubtext, { color: scheme.textSecondary }]}>
-              جارٍ الانتقال...
+              {rateLimitExceeded ? 'يرجى المحاولة بعد قليل.' : 'جارٍ الانتقال...'}
             </Text>
           </View>
         )}
