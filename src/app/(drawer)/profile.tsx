@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -133,7 +134,7 @@ export default function ProfileScreen() {
               <Text style={[styles.email, { color: scheme.textSecondary }]} numberOfLines={1}>
                 {user?.email ?? ''}
               </Text>
-              <Pressable
+              <GuardedPressable
                 onPress={() => router.push('/auth/complete-phone?mode=edit')}
                 hitSlop={6}
                 style={styles.regionRow}
@@ -143,7 +144,7 @@ export default function ProfileScreen() {
                   {user?.phone ? formatPhoneForDisplay(user.phone) : 'أضف رقم هاتفك'}
                 </Text>
                 <Text style={[styles.region, { color: scheme.primary }]}>تعديل</Text>
-              </Pressable>
+              </GuardedPressable>
               {user?.region && (
                 <View style={styles.regionRow}>
                   <Ionicons name="location" size={14} color={scheme.textSecondary} />
@@ -179,7 +180,7 @@ export default function ProfileScreen() {
 
         {/* الرصيد */}
         <AppCard padding="four" elevation="sm" style={styles.section}>
-          <Pressable
+          <GuardedPressable
             onPress={() => router.push('/(drawer)/(tabs)/wallet')}
             style={styles.balanceRow}
           >
@@ -205,7 +206,7 @@ export default function ProfileScreen() {
               />
             )}
             <Ionicons name="chevron-back" size={20} color={scheme.textTertiary} />
-          </Pressable>
+          </GuardedPressable>
         </AppCard>
 
 
@@ -314,7 +315,7 @@ export default function ProfileScreen() {
 
         {/* زر التوثيق */}
         {!isVerified && verificationStatus !== 'under_review' && (
-          <Pressable
+          <GuardedPressable
             onPress={handleVerify}
             style={({ pressed }) => [
               styles.verifyBanner,
@@ -342,7 +343,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-back" size={20} color={scheme.primary} />
-          </Pressable>
+          </GuardedPressable>
         )}
 
 
@@ -381,7 +382,7 @@ function SettingsRow({ icon, label, onPress, danger, isLast }: SettingsRowProps)
   const color = danger ? scheme.danger : scheme.text;
 
   return (
-    <Pressable
+    <GuardedPressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.settingsRow,
@@ -394,7 +395,7 @@ function SettingsRow({ icon, label, onPress, danger, isLast }: SettingsRowProps)
         <Text style={[styles.settingsLabel, { color }]}>{label}</Text>
       </View>
       <Ionicons name="chevron-back" size={20} color={scheme.textTertiary} />
-    </Pressable>
+    </GuardedPressable>
   );
 }
 
