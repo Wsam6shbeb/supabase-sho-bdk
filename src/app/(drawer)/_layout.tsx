@@ -4,6 +4,7 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -32,13 +33,13 @@ function BackButton() {
   };
 
   return (
-    <Pressable
+    <GuardedPressable
       onPress={handleBack}
       hitSlop={8}
       style={{ paddingHorizontal: 12, paddingVertical: 8 }}
     >
       <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-    </Pressable>
+    </GuardedPressable>
   );
 }
 
@@ -117,7 +118,7 @@ function DrawerContent(props: any) {
           const isActive = props.state?.routeNames?.[props.state.index] === item.name;
 
           return (
-            <Pressable
+            <GuardedPressable
               key={item.name}
               onPress={() => {
                 props.navigation.navigate(item.name);
@@ -151,12 +152,12 @@ function DrawerContent(props: any) {
               >
                 {item.label}
               </Text>
-            </Pressable>
+            </GuardedPressable>
           );
         })}
 
         {/* شارك التطبيق: إجراء وليس شاشة، فلا يكون "نشطاً" أبداً */}
-        <Pressable
+        <GuardedPressable
           onPress={handleShareApp}
           accessibilityRole="button"
           accessibilityLabel="شارك التطبيق"
@@ -183,10 +184,10 @@ function DrawerContent(props: any) {
           >
             شارك التطبيق
           </Text>
-        </Pressable>
+        </GuardedPressable>
       </View>
 
-      <Pressable
+      <GuardedPressable
         onPress={handleLogout}
         style={{
           marginTop: 'auto',
@@ -212,7 +213,7 @@ function DrawerContent(props: any) {
         >
           تسجيل الخروج
         </Text>
-      </Pressable>
+      </GuardedPressable>
     </ScrollView>
   );
 }
