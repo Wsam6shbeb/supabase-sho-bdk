@@ -5,6 +5,7 @@
 // رقمك لا يظهر لأحد إلا إذا ضغطت "شارك رقمي" داخل محادثة اتفاق فعّال.
 // ===============================================================
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { formatPhoneForDisplay, normalizeSyrianPhone } from '@/domain/phone';
@@ -59,9 +60,9 @@ export default function CompletePhoneScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {isEdit && (
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+            <GuardedPressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
               <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-            </Pressable>
+            </GuardedPressable>
           )}
 
           <Ionicons name="call-outline" size={56} color={scheme.primary} style={styles.icon} />
@@ -101,11 +102,11 @@ export default function CompletePhoneScreen() {
           />
 
           {!isEdit && (
-            <Pressable onPress={handleLogout} hitSlop={8} style={styles.logout}>
+            <GuardedPressable onPress={handleLogout} hitSlop={8} style={styles.logout}>
               <Text style={[styles.logoutText, { color: scheme.textSecondary }]}>
                 تسجيل الخروج {user?.email ? `(${user.email})` : ''}
               </Text>
-            </Pressable>
+            </GuardedPressable>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
