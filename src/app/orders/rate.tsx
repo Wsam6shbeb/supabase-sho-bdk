@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { RatingStars } from '@/components/orders/RatingStars';
 import { AppButton } from '@/components/ui/AppButton';
@@ -183,9 +184,9 @@ export default function RateOrderScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="close" size={26} color={scheme.text} />
-          </Pressable>
+          </GuardedPressable>
           <Text style={[styles.headerTitle, { color: scheme.text }]}>
             {isReadonly
               ? t('orders.myOrders.actions.viewDetails')
@@ -249,7 +250,7 @@ export default function RateOrderScreen() {
               {RATING_TAGS.map((tag) => {
                 const selected = selectedTags.includes(tag.id);
                 return (
-                  <Pressable
+                  <GuardedPressable
                     key={tag.id}
                     onPress={() => toggleTag(tag.id)}
                     disabled={isReadonly}
@@ -278,7 +279,7 @@ export default function RateOrderScreen() {
                     >
                       {tag.label}
                     </Text>
-                  </Pressable>
+                  </GuardedPressable>
                 );
               })}
             </View>
