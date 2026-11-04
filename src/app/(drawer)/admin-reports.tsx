@@ -2,6 +2,7 @@
 // مراجعة البلاغات (للأدمن فقط): قرار يدوي — رد عمولة المزود أو إغلاق البلاغ بدون رد.
 // ===============================================================
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -182,11 +183,11 @@ export default function AdminReportsScreen() {
           <Text style={[styles.line, { color: scheme.textSecondary }]}>ملاحظة الأدمن: {item.resolution_note}</Text>
         ) : null}
 
-        <Pressable onPress={() => void toggleCase(item.id)} hitSlop={8}>
+        <GuardedPressable onPress={() => void toggleCase(item.id)} hitSlop={8}>
           <Text style={[styles.link, { color: scheme.primary }]}>
             {openCaseId === item.id ? 'إخفاء تفاصيل الحالة' : 'عرض تفاصيل الحالة (المحادثة والأرقام)'}
           </Text>
-        </Pressable>
+        </GuardedPressable>
 
         {openCaseId === item.id ? (
           caseLoading || !caseData ? (
@@ -199,9 +200,9 @@ export default function AdminReportsScreen() {
                     {p.name} {p.role ? `(${p.role})` : ''} {p.is_reporter ? '· المُبلِّغ' : '· المُبلَّغ عليه'}
                   </Text>
                   {p.phone ? (
-                    <Pressable onPress={() => void Linking.openURL(`tel:${p.phone}`)} hitSlop={6}>
+                    <GuardedPressable onPress={() => void Linking.openURL(`tel:${p.phone}`)} hitSlop={6}>
                       <Text style={[styles.line, { color: scheme.primary }]}>{p.phone}</Text>
-                    </Pressable>
+                    </GuardedPressable>
                   ) : (
                     <Text style={[styles.line, { color: scheme.textSecondary }]}>لا يوجد رقم هاتف</Text>
                   )}
@@ -270,7 +271,7 @@ export default function AdminReportsScreen() {
     <View style={[styles.flex, { backgroundColor: scheme.background }]}>
       <View style={styles.tabs}>
         {(['open', 'all'] as const).map((key) => (
-          <Pressable
+          <GuardedPressable
             key={key}
             onPress={() => setTab(key)}
             style={[styles.tab, { borderColor: tab === key ? scheme.primary : scheme.border }]}
@@ -278,7 +279,7 @@ export default function AdminReportsScreen() {
             <Text style={{ color: tab === key ? scheme.primary : scheme.textSecondary, fontWeight: FontWeights.bold }}>
               {key === 'open' ? 'المفتوحة' : 'الكل'}
             </Text>
-          </Pressable>
+          </GuardedPressable>
         ))}
       </View>
 
