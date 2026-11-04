@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -95,7 +96,7 @@ export function AgreementBubble({
 
         {decided === null ? (
           <>
-            <Pressable
+            <GuardedPressable
               onPress={() => {
                 const next = !sharePhone;
                 setSharePhone(next);
@@ -119,7 +120,7 @@ export function AgreementBubble({
               <Text style={[styles.checkboxLabel, { color: scheme.text }]}>
                 {t('orders.chat.sharePhoneWithCustomerLabel')}
               </Text>
-            </Pressable>
+            </GuardedPressable>
 
             <View style={styles.actions}>
               <AppButton
