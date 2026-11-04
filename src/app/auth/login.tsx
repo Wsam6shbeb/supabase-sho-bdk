@@ -243,7 +243,7 @@ export default function LoginScreen() {
               </Text>
             </Pressable>
             <Text
-              onPress={() => void Linking.openURL('https://ho-bdk-policy.abo-majd85.workers.dev/')}
+              onPress={() => void Linking.openURL('https://sho-bdk-legal.pages.dev/')}
               accessibilityRole="link"
               style={[styles.privacyLink, { color: scheme.primary }]}
             >
