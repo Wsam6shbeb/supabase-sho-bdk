@@ -4,6 +4,7 @@
 // بعد الإرسال يمكن للمُبلِّغ تقييم الطرف الآخر مباشرة.
 // ===============================================================
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { PHONE_IN_TEXT_MESSAGE, containsPhoneNumber } from '@/domain/chatSafety';
@@ -70,9 +71,9 @@ export default function ReportProblemScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-          </Pressable>
+          </GuardedPressable>
 
           {phase === 'form' ? (
             <>
@@ -117,13 +118,13 @@ export default function ReportProblemScreen() {
                   <Text style={[styles.ratingTitle, { color: scheme.text }]}>قيّم الطرف الآخر</Text>
                   <View style={styles.starsRow}>
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <Pressable key={n} onPress={() => setStars(n)} hitSlop={6}>
+                      <GuardedPressable key={n} onPress={() => setStars(n)} hitSlop={6}>
                         <Ionicons
                           name={n <= stars ? 'star' : 'star-outline'}
                           size={34}
                           color={n <= stars ? scheme.warning : scheme.textSecondary}
                         />
-                      </Pressable>
+                      </GuardedPressable>
                     ))}
                   </View>
                   {ratingError ? <Text style={[styles.subtitle, { color: scheme.danger }]}>{ratingError}</Text> : null}

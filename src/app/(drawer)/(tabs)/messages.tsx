@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { allowPress } from '@/utils/single-press';
 import { AppCard } from '@/components/ui/AppCard';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -281,9 +282,9 @@ export default function MessagesTab() {
     >
       <View style={styles.header}>
                 {/* التعليق لزر رجوع يعيدنا الى صفحة البروفايل */}
-        {/* <Pressable onPress={() => router.replace('/(drawer)/profile')} hitSlop={8} style={styles.backBtn}>
+        {/* <GuardedPressable onPress={() => router.replace('/(drawer)/profile')} hitSlop={8} style={styles.backBtn}>
           <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-        </Pressable> */}
+        </GuardedPressable> */}
         <Text style={[styles.title, { color: scheme.text }]}>
           {t(showArchived ? 'messages.archiveTitle' : 'tabs.messages')}
         </Text>
@@ -300,11 +301,11 @@ export default function MessagesTab() {
                 <Text style={[styles.inboxNoticeText, { color: scheme.textSecondary }]}>
                   {t('messages.refreshFailed')}
                 </Text>
-                <Pressable onPress={() => void loadInbox()} hitSlop={8}>
+                <GuardedPressable onPress={() => void loadInbox()} hitSlop={8}>
                   <Text style={[styles.inboxNoticeRetry, { color: scheme.primary }]}>
                     {t('common.retry')}
                   </Text>
-                </Pressable>
+                </GuardedPressable>
               </View>
             ) : null
           }
@@ -322,7 +323,7 @@ export default function MessagesTab() {
               return (
                 <AppCard padding="three" elevation="sm" style={styles.card}>
                   <View style={styles.row}>
-                    <Pressable
+                    <GuardedPressable
                       style={styles.conversationMain}
                       onPress={() => {
                         if (!allowPress()) return;
@@ -355,8 +356,8 @@ export default function MessagesTab() {
                           {conv.last_message_body ?? 'لا توجد رسائل بعد'}
                         </Text>
                       </View>
-                    </Pressable>
-                    <Pressable
+                    </GuardedPressable>
+                    <GuardedPressable
                       accessibilityRole="button"
                       accessibilityLabel={t(showArchived ? 'messages.unarchive' : 'messages.archive')}
                       hitSlop={10}
@@ -371,7 +372,7 @@ export default function MessagesTab() {
                       <Text style={[styles.archiveActionText, { color: scheme.textSecondary }]}>
                         {t(showArchived ? 'messages.unarchive' : 'messages.archive')}
                       </Text>
-                    </Pressable>
+                    </GuardedPressable>
                   </View>
                 </AppCard>
               );
@@ -385,7 +386,7 @@ export default function MessagesTab() {
               return (
                 <AppCard padding="three" elevation="sm" style={styles.card}>
                   <View style={styles.row}>
-                    <Pressable style={styles.conversationMain} onPress={() => handleOpenChat(provider.id)}>
+                    <GuardedPressable style={styles.conversationMain} onPress={() => handleOpenChat(provider.id)}>
                       <View
                         style={[
                           styles.avatar,
@@ -423,9 +424,9 @@ export default function MessagesTab() {
                         )}
                       </View>
                       <Ionicons name="chevron-back" size={20} color={scheme.textTertiary} />
-                    </Pressable>
+                    </GuardedPressable>
                     {item.conversationId && (
-                      <Pressable
+                      <GuardedPressable
                         accessibilityRole="button"
                         accessibilityLabel={t(showArchived ? 'messages.unarchive' : 'messages.archive')}
                         hitSlop={10}
@@ -440,7 +441,7 @@ export default function MessagesTab() {
                         <Text style={[styles.archiveActionText, { color: scheme.textSecondary }]}>
                           {t(showArchived ? 'messages.unarchive' : 'messages.archive')}
                         </Text>
-                      </Pressable>
+                      </GuardedPressable>
                     )}
                   </View>
                 </AppCard>
@@ -488,7 +489,7 @@ export default function MessagesTab() {
                     </Text>
                   </View>
                   {item.conversationId && (
-                    <Pressable
+                    <GuardedPressable
                       accessibilityRole="button"
                       accessibilityLabel={t(showArchived ? 'messages.unarchive' : 'messages.archive')}
                       hitSlop={10}
@@ -500,7 +501,7 @@ export default function MessagesTab() {
                         size={21}
                         color={scheme.textSecondary}
                       />
-                    </Pressable>
+                    </GuardedPressable>
                   )}
                 </View>
 
@@ -563,7 +564,7 @@ export default function MessagesTab() {
           showsVerticalScrollIndicator={false}
         />
       <View style={[styles.archiveBar, { borderTopColor: scheme.border, backgroundColor: scheme.background }]}>
-        <Pressable
+        <GuardedPressable
           accessibilityRole="button"
           accessibilityLabel={t(showArchived ? 'messages.backToMessages' : 'messages.archiveTitle')}
           style={styles.archiveFooter}
@@ -586,7 +587,7 @@ export default function MessagesTab() {
             </Text>
           )}
           <Ionicons name="chevron-back" size={18} color={scheme.textTertiary} />
-        </Pressable>
+        </GuardedPressable>
       </View>
     </SafeAreaView>
   );

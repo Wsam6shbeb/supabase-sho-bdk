@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppTextInput } from '@/components/ui/AppTextInput';
@@ -226,7 +227,7 @@ export default function LoginScreen() {
               </>
             ) : null}
 
-            <Pressable
+            <GuardedPressable
               accessibilityRole="checkbox"
               accessibilityState={{ checked: privacyAccepted }}
               onPress={() => {
@@ -241,7 +242,7 @@ export default function LoginScreen() {
               <Text style={[styles.privacyText, { color: scheme.text }]}>
                 أوافق على سياسة الخصوصية
               </Text>
-            </Pressable>
+            </GuardedPressable>
             <Text
               onPress={() => void Linking.openURL('https://sho-bdk-legal.pages.dev/')}
               accessibilityRole="link"

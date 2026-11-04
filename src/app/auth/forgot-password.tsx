@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
@@ -96,9 +97,9 @@ export default function ForgotPasswordScreen() {
         >
           <View style={styles.headerRow}>
             <Link href="/auth/login" asChild>
-              <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+              <GuardedPressable style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
                 <Text style={StyleSheet.flatten([styles.backText, { color: scheme.primary }])}>← رجوع</Text>
-              </Pressable>
+              </GuardedPressable>
             </Link>
           </View>
 

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -222,9 +223,9 @@ service_area: [
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="arrow-forward" size={26} color={scheme.text} />
-          </Pressable>
+          </GuardedPressable>
           <Text style={[styles.headerTitle, { color: scheme.text }]}>
             {t('home.editProfile.title')}
           </Text>
@@ -243,7 +244,7 @@ service_area: [
               <Text style={[styles.sectionTitle, { color: scheme.text }]}>
                 {t('home.editProfile.skillsSection')}
               </Text>
-              <Pressable
+              <GuardedPressable
                 onPress={() => {
                   setShowAddSkill(true);
                   scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -251,7 +252,7 @@ service_area: [
                 hitSlop={6}
               >
                 <Ionicons name="add-circle" size={26} color={scheme.primary} />
-              </Pressable>
+              </GuardedPressable>
             </View>
 
             {/* Add Skill Form: فوق قائمة المهارات حتى يظهر زر "إضافة" أول شي ولا تغطيه لوحة المفاتيح */}
@@ -318,7 +319,7 @@ service_area: [
               const area = skillAreas[skill.id] ?? skill.area ?? '';
 
               return (
-                <Pressable
+                <GuardedPressable
                   key={skill.id}
                   onPress={() =>
                     setExpandedSkillId(isExpanded ? null : skill.id)
@@ -379,13 +380,13 @@ service_area: [
                     )}
                   </View>
 
-                  <Pressable
+                  <GuardedPressable
                     onPress={() => handleRemoveSkill(skill.id)}
                     hitSlop={6}
                   >
                     <Ionicons name="trash-outline" size={20} color={scheme.danger} />
-                  </Pressable>
-                </Pressable>
+                  </GuardedPressable>
+                </GuardedPressable>
               );
             })}
           </AppCard>

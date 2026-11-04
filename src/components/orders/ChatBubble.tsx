@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useTheme } from '@/hooks/use-theme';
 import type { ChatMessage, MessageStatus } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -122,9 +123,9 @@ export function ChatBubble({ message, isMine, onRetry }: ChatBubbleProps) {
   return (
     <View style={[styles.row, isMine ? styles.rowMine : styles.rowOther]}>
       {failed && onRetry ? (
-        <Pressable onPress={() => onRetry(message.id)} style={styles.retryWrap}>
+        <GuardedPressable onPress={() => onRetry(message.id)} style={styles.retryWrap}>
           {bubble}
-        </Pressable>
+        </GuardedPressable>
       ) : (
         bubble
       )}

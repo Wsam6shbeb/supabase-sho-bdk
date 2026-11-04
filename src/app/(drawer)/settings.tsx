@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -221,7 +222,7 @@ export default function SettingsScreen() {
 
       {/* Logout */}
       <AppCard padding="four" elevation="sm" style={styles.section}>
-        <Pressable
+        <GuardedPressable
           onPress={async () => {
             await logout();
           }}
@@ -231,7 +232,7 @@ export default function SettingsScreen() {
           <Text style={[styles.logoutText, { color: scheme.danger }]}>
             تسجيل الخروج
           </Text>
-        </Pressable>
+        </GuardedPressable>
       </AppCard>
 
       <Text style={[styles.version, { color: scheme.textTertiary }]}>
@@ -269,7 +270,7 @@ function SettingRow({
   const color = danger ? scheme.danger : scheme.text;
 
   return (
-    <Pressable
+    <GuardedPressable
       onPress={onPress}
       disabled={!onPress}
       style={({ pressed }) => [
@@ -297,7 +298,7 @@ function SettingRow({
           <Ionicons name="chevron-back" size={20} color={scheme.textTertiary} />
         )}
       </View>
-    </Pressable>
+    </GuardedPressable>
   );
 }
 

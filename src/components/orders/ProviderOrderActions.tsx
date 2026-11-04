@@ -3,6 +3,7 @@
 // القواعد (من يستطيع ماذا ومتى) تأتي من السيرفر عبر ConversationRatingStatus.
 // ===============================================================
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { Colors, FontSizes, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { providerFinishService } from '@/services/orderActions';
@@ -75,12 +76,12 @@ export function ProviderOrderActions({ status, onChanged }: Props) {
           <Text style={[styles.hint, { color: scheme.textSecondary }]}>
             في حال إساءة الاستخدام يرجى الإبلاغ عن الطرف الآخر.
           </Text>
-          <Pressable
+          <GuardedPressable
             onPress={() => router.push({ pathname: '/orders/report-problem', params: { request_id: status.request_id } })}
             hitSlop={10}
           >
             <Text style={[styles.link, { color: scheme.textSecondary }]}>إبلاغ عن مشكلة</Text>
-          </Pressable>
+          </GuardedPressable>
         </View>
       ) : null}
     </View>

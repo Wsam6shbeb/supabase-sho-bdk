@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { allowPress } from '@/utils/single-press';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -129,11 +130,11 @@ export default function ActiveOrderScreen() {
 
         {/* بلاغ "لم تُنفّذ الخدمة": رابط صغير وهادئ عمداً (قرار حساس تراجعه الإدارة يدوياً) */}
         <Text style={[styles.reportHint, { color: scheme.textSecondary }]}>{t('orders.active.reportHint')}</Text>
-        <Pressable onPress={reportNotExecuted} hitSlop={10} style={styles.reportLink}>
+        <GuardedPressable onPress={reportNotExecuted} hitSlop={10} style={styles.reportLink}>
           <Text style={[styles.reportLinkText, { color: scheme.textSecondary }]}>
             {t('orders.active.reportNotExecuted')}
           </Text>
-        </Pressable>
+        </GuardedPressable>
       </View>
     </SafeAreaView>
   );
