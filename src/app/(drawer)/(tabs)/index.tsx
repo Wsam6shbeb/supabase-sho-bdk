@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppCard } from '@/components/ui/AppCard';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
@@ -155,7 +156,7 @@ export default function HomeTab() {
               {user?.name ?? 'بك'} 👋
             </Text>
           </View>
-          <Pressable
+          <GuardedPressable
             accessibilityRole="button"
             accessibilityLabel="الإشعارات"
             onPress={() => router.push('/(drawer)/notifications')}
@@ -169,7 +170,7 @@ export default function HomeTab() {
                 </Text>
               </View>
             )}
-          </Pressable>
+          </GuardedPressable>
         </View>
 
         {/* Provider Availability */}
@@ -197,7 +198,7 @@ export default function HomeTab() {
                 </Text>
               </View>
             </View>
-            <Pressable
+            <GuardedPressable
               onPress={toggleAvailability}
               accessibilityRole="button"
               accessibilityLabel={myProviderProfile?.is_available ? 'تغيير الحالة إلى غير متاح' : 'تغيير الحالة إلى متاح'}
@@ -224,13 +225,13 @@ export default function HomeTab() {
               >
                 {myProviderProfile?.is_available ? 'متاح' : 'غير متاح'}
               </Text>
-            </Pressable>
+            </GuardedPressable>
           </View>
         )}
 
         {/* Action Cards */}
         <View style={styles.actionsGrid}>
-          <Pressable
+          <GuardedPressable
             onPress={handleRequestService}
             style={({ pressed }) => [
               styles.actionCard,
@@ -246,9 +247,9 @@ export default function HomeTab() {
             <Text style={[styles.actionSubtitle, { color: `${scheme.primaryContrast}CC` }]}>
               اكتب طلبك واحصل على مرشحين
             </Text>
-          </Pressable>
+          </GuardedPressable>
 
-          <Pressable
+          <GuardedPressable
             onPress={handleProvideService}
             style={({ pressed }) => [
               styles.actionCard,
@@ -271,7 +272,7 @@ export default function HomeTab() {
             <Text style={[styles.actionSubtitle, { color: 'rgba(255,255,255,0.85)' }]}>
               {hasProviderProfile ? 'إضافة أو حذف أو تعديل الخدمات التي تقدمها للآخرين' : t('home.provideServiceBtnSubtitle')}
             </Text>
-          </Pressable>
+          </GuardedPressable>
         </View>
 
         {/* Quick Tips — Carousel مع دوران تلقائي */}
