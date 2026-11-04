@@ -8,8 +8,8 @@ import {
 
 /**
  * Pressable that ignores accidental rapid repeat taps on the same control.
- * Async actions remain locked until they settle; synchronous actions have a
- * short cooldown so repeated taps cannot open the same screen more than once.
+ * If the handler returns a Promise, taps stay blocked until it settles.
+ * Otherwise, a short cooldown prevents accidental rapid repeat taps.
  */
 export const GuardedPressable = forwardRef<View, PressableProps>(
   function GuardedPressable({ onPress, ...props }, ref) {
