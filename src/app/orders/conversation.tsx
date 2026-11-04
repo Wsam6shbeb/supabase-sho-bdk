@@ -4,6 +4,7 @@
 // ===============================================================
 
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AgreementBubble } from '@/components/orders/AgreementBubble';
 import { PhoneSharePanel } from '@/components/orders/PhoneSharePanel';
 import { formatRating } from '@/domain/rating';
@@ -240,9 +241,9 @@ export default function ConversationScreen() {
             { backgroundColor: scheme.backgroundElevated, borderBottomColor: scheme.border },
           ]}
         >
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
             <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-          </Pressable>
+          </GuardedPressable>
           <Text style={[styles.title, { color: scheme.text }]} numberOfLines={1}>
             {otherName}
           </Text>
@@ -286,13 +287,13 @@ export default function ConversationScreen() {
                 <Text style={[styles.ratingTitle, { color: scheme.text }]}>كيف كانت تجربتك مع {otherName}؟</Text>
                 <View style={styles.starsRow}>
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <Pressable key={n} onPress={() => setStars(n)} hitSlop={6}>
+                    <GuardedPressable key={n} onPress={() => setStars(n)} hitSlop={6}>
                       <Ionicons
                         name={n <= stars ? 'star' : 'star-outline'}
                         size={34}
                         color={n <= stars ? scheme.warning : scheme.textSecondary}
                       />
-                    </Pressable>
+                    </GuardedPressable>
                   ))}
                 </View>
                 <AppButton
@@ -349,11 +350,11 @@ export default function ConversationScreen() {
             <Text style={[styles.connectionNoticeText, { color: scheme.textSecondary }]}>
               {t('orders.chat.agreementUpdateFailed')}
             </Text>
-            <Pressable onPress={() => void loadAgreement()} hitSlop={8}>
+            <GuardedPressable onPress={() => void loadAgreement()} hitSlop={8}>
               <Text style={[styles.connectionNoticeRetry, { color: scheme.primary }]}>
                 {t('common.retry')}
               </Text>
-            </Pressable>
+            </GuardedPressable>
           </View>
         )}
         {partnerTyping && (
