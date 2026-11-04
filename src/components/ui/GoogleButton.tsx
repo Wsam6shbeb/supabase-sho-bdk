@@ -19,6 +19,7 @@ import {
     Radii,
     Spacing,
 } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useTheme } from '@/hooks/use-theme';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
@@ -48,7 +49,7 @@ export function GoogleButton({
   const opacity = isInteractive ? 1 : Opacity.disabled;
 
   return (
-    <Pressable
+    <GuardedPressable
       onPress={isInteractive ? onPress : undefined}
       disabled={!isInteractive}
       style={({ pressed }) => [
@@ -86,7 +87,7 @@ export function GoogleButton({
           {label}
         </Text>
       </View>
-    </Pressable>
+    </GuardedPressable>
   );
 }
 
