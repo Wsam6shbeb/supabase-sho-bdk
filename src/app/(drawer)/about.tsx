@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
@@ -161,7 +162,7 @@ function ContactRow({
   const scheme = Colors[theme];
 
   return (
-    <Pressable
+    <GuardedPressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.row,
@@ -174,7 +175,7 @@ function ContactRow({
         <Text style={[styles.label, { color: scheme.text }]}>{label}</Text>
       </View>
       <Text style={[styles.value, { color: scheme.textSecondary }]}>{value}</Text>
-    </Pressable>
+    </GuardedPressable>
   );
 }
 
@@ -199,7 +200,7 @@ function FAQItem({
         !isLast && { borderBottomColor: scheme.border, borderBottomWidth: 1 },
       ]}
     >
-      <Pressable
+      <GuardedPressable
         onPress={() => setOpen(!open)}
         style={({ pressed }) => [styles.faqHeader, { opacity: pressed ? 0.6 : 1 }]}
       >
@@ -209,7 +210,7 @@ function FAQItem({
           size={20}
           color={scheme.textSecondary}
         />
-      </Pressable>
+      </GuardedPressable>
       {open && (
         <Text style={[styles.faqAnswer, { color: scheme.textSecondary }]}>
           {answer}
