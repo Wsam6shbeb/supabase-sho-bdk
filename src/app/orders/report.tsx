@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -121,9 +122,9 @@ export default function ReportScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="close" size={26} color={scheme.text} />
-          </Pressable>
+          </GuardedPressable>
           <Text style={[styles.headerTitle, { color: scheme.text }]}>
             {t('reports.title')}
           </Text>
