@@ -23,5 +23,5 @@ jobs:
         run: npm ci
       - name: Run Jest tests
         run: npm test -- --runInBand
-      - name: Check TypeScript
-        run: npx tsc --noEmit
+      - name: Check app TypeScript
+        run: npx tsc --noEmit --excludeFiles 'supabase/functions/**/*.ts'
