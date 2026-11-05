@@ -159,7 +159,7 @@ export default function WalletTab() {
 
             </AppCard>
 
-            <AppCard padding="four" elevation="sm" style={styles.paymentCard}>
+            <AppCard padding="four" elevation="md" style={styles.paymentCard}>
               <GuardedPressable
                 onPress={() => setShowPaymentInstructions((current) => !current)}
                 accessibilityRole="button"
@@ -341,13 +341,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.four,
   },
   paymentCard: { marginBottom: Spacing.four },
-  paymentToggle: { minHeight: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.four, paddingVertical: Spacing.two, borderRadius: Radii.md, borderWidth: 1, elevation: 3, shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.16, shadowRadius: 4 },
-  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three, alignItems: 'stretch', direction: 'rtl' },
-  paymentTitle: { fontSize: FontSizes.xl, fontWeight: FontWeights.extrabold, writingDirection: 'rtl' },
+  paymentToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three, alignItems: 'stretch', direction: 'ltr' },
+  paymentTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, writingDirection: 'rtl' },
   paymentText: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right' },
   accountCode: { fontSize: FontSizes.xl, fontWeight: FontWeights.bold, textAlign: 'center', letterSpacing: 1 },
   qrImage: { width: 190, height: 190, alignSelf: 'center', marginVertical: Spacing.two },
-  instructionRow: { width: '100%', alignSelf: 'stretch', direction: 'rtl', alignItems: 'flex-end' },
+  instructionRow: { width: '100%', alignSelf: 'stretch', direction: 'ltr', alignItems: 'stretch' },
   instructionText: { width: '100%', alignSelf: 'stretch', writingDirection: 'rtl', textAlign: 'right', textAlignVertical: 'center' },
   instruction: { width: '100%', alignSelf: 'stretch', fontSize: FontSizes.lg, fontWeight: FontWeights.semibold, writingDirection: 'rtl', textAlign: 'right', lineHeight: 32 },
   importantInstruction: { fontWeight: FontWeights.bold },
