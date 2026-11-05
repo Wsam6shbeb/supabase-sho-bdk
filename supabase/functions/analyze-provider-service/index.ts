@@ -169,7 +169,6 @@ Deno.serve(async (req: Request) => {
         ...(validation.data.service_area as Record<string, unknown>),
         raw: serviceArea,
       },
-      additional_info: additionalInfo || null,
     };
 
     return json({
