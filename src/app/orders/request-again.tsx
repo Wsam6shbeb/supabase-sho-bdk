@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { formatRating } from '@/domain/rating';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
@@ -106,9 +107,9 @@ export default function RequestAgainScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="close" size={26} color={scheme.text} />
-          </Pressable>
+          </GuardedPressable>
           <Text style={[styles.headerTitle, { color: scheme.text }]}>
             {t('requestAgain.title')}
           </Text>

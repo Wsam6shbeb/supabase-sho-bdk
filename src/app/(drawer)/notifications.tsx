@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { allowPress } from '@/utils/single-press';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -85,15 +86,15 @@ export default function NotificationsScreen() {
         {notifications.length > 0 && (
           <View style={styles.headerActions}>
             {unreadNotificationsCount > 0 && (
-              <Pressable onPress={markAllNotificationsRead} hitSlop={6}>
+              <GuardedPressable onPress={markAllNotificationsRead} hitSlop={6}>
                 <Text style={[styles.headerBtn, { color: scheme.primary }]}>
                   {t('notifications.markAllRead')}
                 </Text>
-              </Pressable>
+              </GuardedPressable>
             )}
-            <Pressable onPress={clearAllNotifications} hitSlop={6}>
+            <GuardedPressable onPress={clearAllNotifications} hitSlop={6}>
               <Ionicons name="trash-outline" size={20} color={scheme.danger} />
-            </Pressable>
+            </GuardedPressable>
           </View>
         )}
       </View>
@@ -161,7 +162,7 @@ function NotificationCard({
   });
 
   return (
-    <Pressable onPress={onPress}>
+    <GuardedPressable onPress={onPress}>
       <AppCard
         padding="three"
         elevation={notification.read ? 'sm' : 'md'}
@@ -213,12 +214,12 @@ function NotificationCard({
             </Text>
           </View>
 
-          <Pressable onPress={onClear} hitSlop={6} style={styles.clearBtn}>
+          <GuardedPressable onPress={onClear} hitSlop={6} style={styles.clearBtn}>
             <Ionicons name="close" size={18} color={scheme.textTertiary} />
-          </Pressable>
+          </GuardedPressable>
         </View>
       </AppCard>
-    </Pressable>
+    </GuardedPressable>
   );
 }
 

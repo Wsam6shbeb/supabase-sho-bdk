@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useTheme } from '@/hooks/use-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';

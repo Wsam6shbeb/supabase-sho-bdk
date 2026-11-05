@@ -9,11 +9,11 @@
 // ═══════════════════════════════════════════════════════════
 
 import { Colors, FontSizes, FontWeights, Opacity, Radii, Spacing } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useTheme } from '@/hooks/use-theme';
 import { forwardRef, type ReactNode } from 'react';
 import {
     ActivityIndicator,
-    Pressable,
     StyleSheet,
     Text,
     View,
@@ -102,7 +102,7 @@ export const AppButton = forwardRef<View, AppButtonProps>(function AppButton(
   const opacity = isInteractive ? 1 : Opacity.disabled;
 
   return (
-    <Pressable
+    <GuardedPressable
       ref={ref}
       {...rest}
       onPress={isInteractive ? onPress : undefined}
@@ -145,7 +145,7 @@ export const AppButton = forwardRef<View, AppButtonProps>(function AppButton(
           {trailingIcon ? <View style={styles.iconSlot}>{trailingIcon}</View> : null}
         </View>
       )}
-    </Pressable>
+    </GuardedPressable>
   );
 });
 

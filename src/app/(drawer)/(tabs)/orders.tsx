@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { OrderCard } from '@/components/orders/OrderCard';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -227,7 +228,7 @@ function TabButton({ label, active, count, onPress }: TabButtonProps) {
   const scheme = Colors[theme];
 
   return (
-    <Pressable
+    <GuardedPressable
       onPress={onPress}
       style={[
         styles.tabButton,
@@ -262,7 +263,7 @@ function TabButton({ label, active, count, onPress }: TabButtonProps) {
           </Text>
         </View>
       )}
-    </Pressable>
+    </GuardedPressable>
   );
 }
 

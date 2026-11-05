@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
@@ -57,9 +58,9 @@ export default function BlockedListScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <GuardedPressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-forward" size={26} color={scheme.primary} />
-        </Pressable>
+        </GuardedPressable>
         <Text style={[styles.headerTitle, { color: scheme.text }]}>
           {t('blocking.blockedListTitle')}
         </Text>

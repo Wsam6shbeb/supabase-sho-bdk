@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ProviderProfileCard } from '@/components/orders/ProviderProfileCard';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -158,7 +159,7 @@ export default function ProviderProfileScreen() {
       <View style={styles.content}>
         {/* Header — سهم رجوع بدل الإغلاق */}
         <View style={styles.header}>
-          <Pressable
+          <GuardedPressable
             onPress={handleClose}
             hitSlop={8}
             style={({ pressed }) => [
@@ -167,7 +168,7 @@ export default function ProviderProfileScreen() {
             ]}
           >
             <Ionicons name="arrow-forward" size={26} color={scheme.primary} />
-          </Pressable>
+          </GuardedPressable>
 
           {blocked && (
             <View style={[styles.blockedBadge, { backgroundColor: `${scheme.danger}15` }]}>
@@ -211,28 +212,28 @@ export default function ProviderProfileScreen() {
             />
           )}
 
-          <Pressable onPress={handleReport} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
+          <GuardedPressable onPress={handleReport} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
             <Ionicons name="flag-outline" size={20} color={scheme.warning} />
             <Text style={[styles.actionText, { color: scheme.warning }]}>
               {t('reports.title')}
             </Text>
-          </Pressable>
+          </GuardedPressable>
 
           {!blocked && (
             <>
-              <Pressable onPress={handleBlock} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
+              <GuardedPressable onPress={handleBlock} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
                 <Ionicons name="ban-outline" size={20} color={scheme.danger} />
                 <Text style={[styles.actionText, { color: scheme.danger }]}>
                   {t('blocking.title')}
                 </Text>
-              </Pressable>
+              </GuardedPressable>
 
-              <Pressable onPress={handleBlockAndReport} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
+              <GuardedPressable onPress={handleBlockAndReport} style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}>
                 <Ionicons name="shield-outline" size={20} color={scheme.danger} />
                 <Text style={[styles.actionText, { color: scheme.danger }]}>
                   {t('blocking.blockAndReport')}
                 </Text>
-              </Pressable>
+              </GuardedPressable>
             </>
           )}
         </View>

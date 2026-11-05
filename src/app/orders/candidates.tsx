@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { supabase } from '@/services/supabase';
 import { AppCard } from '@/components/ui/AppCard';
@@ -500,9 +501,9 @@ export default function CandidatesScreen() {
       style={[styles.safe, { backgroundColor: scheme.background }]}
     >
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <GuardedPressable onPress={() => router.back()} hitSlop={8}>
           <Text style={[styles.backText, { color: scheme.primary }]}>← رجوع</Text>
-        </Pressable>
+        </GuardedPressable>
         <Text style={[styles.headerTitle, { color: scheme.text }]}>
           {t('orders.candidates.title')}
         </Text>
@@ -532,9 +533,9 @@ export default function CandidatesScreen() {
                   ? t('orders.candidates.blockedWarning')
                   : t('orders.candidates.alreadyAgreedWarning')}
             </Text>
-            <Pressable onPress={() => setWarning(null)}>
+            <GuardedPressable onPress={() => setWarning(null)}>
               <Ionicons name="close" size={20} color={scheme.textSecondary} />
-            </Pressable>
+            </GuardedPressable>
           </View>
         </AppCard>
       )}

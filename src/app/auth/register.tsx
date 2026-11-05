@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -195,9 +196,9 @@ export default function RegisterScreen() {
         >
           <View style={styles.headerRow}>
             <Link href="/auth/login" asChild>
-              <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+              <GuardedPressable style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
                 <Text style={StyleSheet.flatten([styles.backText, { color: scheme.primary }])}>← رجوع</Text>
-              </Pressable>
+              </GuardedPressable>
             </Link>
           </View>
 
@@ -235,7 +236,7 @@ export default function RegisterScreen() {
                 {t('auth.register.regionLabel')}
                 <Text style={{ color: scheme.danger }}> *</Text>
               </Text>
-              <Pressable
+              <GuardedPressable
                 onPress={() => setRegionPickerOpen(true)}
                 style={({ pressed }) => [
                   styles.pickerBox,
@@ -258,7 +259,7 @@ export default function RegisterScreen() {
                   {region ? region.name_ar : t('auth.register.regionPlaceholder')}
                 </Text>
                 <Text style={{ color: scheme.textTertiary, fontSize: FontSizes.lg }}>▾</Text>
-              </Pressable>
+              </GuardedPressable>
               {errors.region ? (
                 <Text style={[styles.pickerError, { color: scheme.danger }]}>{errors.region}</Text>
               ) : null}
@@ -268,7 +269,7 @@ export default function RegisterScreen() {
               <Text style={[styles.pickerLabel, { color: scheme.text }]}>
                 {t('auth.register.avatarLabel')}
               </Text>
-              <Pressable
+              <GuardedPressable
                 onPress={() => setAvatarPickerOpen(true)}
                 style={({ pressed }) => [
                   styles.avatarBox,
@@ -296,7 +297,7 @@ export default function RegisterScreen() {
                     </Text>
                   </View>
                 )}
-              </Pressable>
+              </GuardedPressable>
             </View>
 
             <View style={{ height: Spacing.two }} />
@@ -376,9 +377,9 @@ export default function RegisterScreen() {
               <AppCard style={styles.modalCard} padding="six" elevation="lg">
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: scheme.text }]}>اختر المنطقة</Text>
-                  <Pressable onPress={() => setRegionPickerOpen(false)}>
+                  <GuardedPressable onPress={() => setRegionPickerOpen(false)}>
                     <Text style={{ color: scheme.primary, fontSize: FontSizes.base }}>إغلاق</Text>
-                  </Pressable>
+                  </GuardedPressable>
                 </View>
                 <FlatList
                   data={regions}
@@ -388,7 +389,7 @@ export default function RegisterScreen() {
                   renderItem={({ item }) => {
                     const isSelected = region?.id === item.id;
                     return (
-                      <Pressable
+                      <GuardedPressable
                         onPress={() => {
                           setRegion(api.auth.getRegionById(item.id));
                           setRegionPickerOpen(false);
@@ -412,7 +413,7 @@ export default function RegisterScreen() {
                           {item.name_ar}
                         </Text>
                         {isSelected ? <Ionicons name="checkmark" size={18} color={scheme.primary} /> : null}
-                      </Pressable>
+                      </GuardedPressable>
                     );
                   }}
                 />
@@ -432,12 +433,12 @@ export default function RegisterScreen() {
               <AppCard style={styles.modalCard} padding="six" elevation="lg">
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: scheme.text }]}>{t('auth.register.avatarLabel')}</Text>
-                  <Pressable onPress={() => setAvatarPickerOpen(false)}>
+                  <GuardedPressable onPress={() => setAvatarPickerOpen(false)}>
                     <Text style={{ color: scheme.primary, fontSize: FontSizes.base }}>إغلاق</Text>
-                  </Pressable>
+                  </GuardedPressable>
                 </View>
                 <View style={styles.avatarOptionsGroup}>
-                  <Pressable
+                  <GuardedPressable
                     onPress={handlePickFromGallery}
                     style={({ pressed }) => [
                       styles.avatarOption,
@@ -452,8 +453,8 @@ export default function RegisterScreen() {
                     <Text style={[styles.avatarOptionText, { color: scheme.text }]}>
                       {t('auth.register.avatarChooseGallery')}
                     </Text>
-                  </Pressable>
-                  <Pressable
+                  </GuardedPressable>
+                  <GuardedPressable
                     onPress={handleTakePhoto}
                     style={({ pressed }) => [
                       styles.avatarOption,
@@ -469,9 +470,9 @@ export default function RegisterScreen() {
                     <Text style={[styles.avatarOptionText, { color: scheme.text }]}>
                       {t('auth.register.avatarTakePhoto')}
                     </Text>
-                  </Pressable>
+                  </GuardedPressable>
                   {avatar ? (
-                    <Pressable
+                    <GuardedPressable
                       onPress={handleRemoveAvatar}
                       style={({ pressed }) => [
                         styles.avatarOption,
@@ -486,7 +487,7 @@ export default function RegisterScreen() {
                       <Text style={[styles.avatarOptionText, { color: scheme.danger }]}>
                         {t('auth.register.avatarRemove')}
                       </Text>
-                    </Pressable>
+                    </GuardedPressable>
                   ) : null}
                 </View>
               </AppCard>

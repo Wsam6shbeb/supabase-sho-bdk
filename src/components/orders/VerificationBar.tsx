@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import type { CounterpartyVerificationState } from '@/hooks/use-counterparty-verification';
 import { useTheme } from '@/hooks/use-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -69,7 +70,7 @@ export function VerificationBar({ state, otherName }: VerificationBarProps) {
       {data.verified ? null : data.requestedByMe ? (
         <Text style={[styles.note, { color: scheme.textTertiary }]}>تم إرسال طلب التوثيق</Text>
       ) : (
-        <Pressable
+        <GuardedPressable
           onPress={confirmRequest}
           disabled={requesting}
           hitSlop={8}
@@ -82,7 +83,7 @@ export function VerificationBar({ state, otherName }: VerificationBarProps) {
           ) : (
             <Text style={[styles.actionText, { color: scheme.primary }]}>اطلب توثيق الحساب</Text>
           )}
-        </Pressable>
+        </GuardedPressable>
       )}
     </View>
   );

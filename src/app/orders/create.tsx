@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -199,9 +200,9 @@ export default function CreateOrderScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={8}>
+            <GuardedPressable onPress={() => router.back()} hitSlop={8}>
               <Text style={[styles.backText, { color: scheme.primary }]}>← رجوع</Text>
-            </Pressable>
+            </GuardedPressable>
           </View>
 
           <View style={styles.titleSection}>
@@ -261,7 +262,7 @@ export default function CreateOrderScreen() {
               containerStyle={styles.additionalInput}
             />
 
-            <Pressable
+            <GuardedPressable
               onPress={() => setIsUrgent(!isUrgent)}
               style={({ pressed }) => [
                 styles.urgentToggle,
@@ -298,7 +299,7 @@ export default function CreateOrderScreen() {
                   </View>
                 )}
               </View>
-            </Pressable>
+            </GuardedPressable>
           </AppCard>
 
           {showClarification && (

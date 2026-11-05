@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { Colors, Radii, Spacing } from '@/constants/theme';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useTheme } from '@/hooks/use-theme';
 import type { ChatThread, ServiceProvider } from '@/types/orders';
 import { ChatStatus } from '@/types/common';
@@ -45,7 +46,7 @@ export function ProviderSwitcher({
           const color = provider.card_color;
 
           return (
-            <Pressable
+            <GuardedPressable
               key={thread.id}
               onPress={() => onSelect(provider.id)}
               style={[
@@ -87,7 +88,7 @@ export function ProviderSwitcher({
               {thread.status === ChatStatus.LOCKED_NOT_CHOSEN && (
                 <Ionicons name="lock-closed" size={12} color={scheme.textTertiary} />
               )}
-            </Pressable>
+            </GuardedPressable>
           );
         })}
       </ScrollView>

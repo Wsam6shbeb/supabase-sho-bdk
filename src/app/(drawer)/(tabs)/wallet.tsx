@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { AppButton } from '@/components/ui/AppButton';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppCard } from '@/components/ui/AppCard';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
@@ -98,9 +99,9 @@ export default function WalletTab() {
     >
       <View style={styles.header}>
         {/* التعليق لزر رجوع يعيدنا الى صفحة البروفايل */}
-        {/* <Pressable onPress={() => router.replace('/(drawer)/profile')} hitSlop={8} style={styles.backBtn}>
+        {/* <GuardedPressable onPress={() => router.replace('/(drawer)/profile')} hitSlop={8} style={styles.backBtn}>
           <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-        </Pressable> */}
+        </GuardedPressable> */}
         <Text style={[styles.title, { color: scheme.text }]}>
           {t('wallet.title')}
         </Text>

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { KEYBOARD_AVOIDING_BEHAVIOR } from '@/constants/keyboard';
+import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { ChatBubble } from '@/components/orders/ChatBubble';
 import { ChatBlockedNotice } from '@/components/orders/ChatBlockedNotice';
 import { PhoneSharePanel } from '@/components/orders/PhoneSharePanel';
@@ -286,11 +287,11 @@ export default function ChatScreen() {
             },
           ]}
         >
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+          <GuardedPressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
             <Ionicons name="arrow-forward" size={24} color={scheme.primary} />
-          </Pressable>
+          </GuardedPressable>
 
-          <Pressable
+          <GuardedPressable
             style={styles.headerCenter}
             onPress={() =>
               router.push({
@@ -314,17 +315,17 @@ export default function ChatScreen() {
                 {t('orders.chat.profileHint')}
               </Text>
             </View>
-          </Pressable>
+          </GuardedPressable>
 
           {thread.status === ChatStatus.NEGOTIATING && (
-            <Pressable
+            <GuardedPressable
               onPress={handleCloseNegotiation}
               hitSlop={8}
               style={styles.closeChatBtn}
               accessibilityLabel="إنهاء المحادثة"
             >
               <Ionicons name="close-circle-outline" size={24} color={scheme.danger} />
-            </Pressable>
+            </GuardedPressable>
           )}
         </View>
 
@@ -503,7 +504,7 @@ export default function ChatScreen() {
               <Text style={[styles.confirmPriceValue, { color: scheme.text }]}>{extractPriceFromChat(currentMessages) != null ? `${extractPriceFromChat(currentMessages)} ل.س` : 'غير محددة — اكتبوا السعر النهائي بوضوح في المحادثة'}</Text>
             </View>
 
-            <Pressable
+            <GuardedPressable
               onPress={() => setSharePhone(!sharePhone)}
               style={styles.checkboxRow}
             >
@@ -523,7 +524,7 @@ export default function ChatScreen() {
               <Text style={[styles.checkboxLabel, { color: scheme.text }]}>
                 {t('orders.chat.sharePhoneLabel')}
               </Text>
-            </Pressable>
+            </GuardedPressable>
 
             <View style={styles.confirmActions}>
               <AppButton
