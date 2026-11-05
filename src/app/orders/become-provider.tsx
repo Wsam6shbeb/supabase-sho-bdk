@@ -115,16 +115,8 @@ export default function BecomeProviderScreen() {
             </GuardedPressable>
           </View>
 
-          {/* Title */}
+          {/* وصف الصفحة */}
           <View style={styles.titleSection}>
-            <View
-              style={[styles.iconCircle, { backgroundColor: `${scheme.primary}15` }]}
-            >
-              <Ionicons name="construct" size={40} color={scheme.primary} />
-            </View>
-            <Text style={[styles.title, { color: scheme.text }]}>
-              {t('home.becomeProvider.title')}
-            </Text>
             <Text style={[styles.subtitle, { color: scheme.textSecondary }]}>
               {t('home.becomeProvider.subtitle')}
             </Text>
@@ -133,9 +125,8 @@ export default function BecomeProviderScreen() {
           {/* الخدمة ومكان تقديمها والمعلومات الإضافية */}
           <AppCard padding="four" elevation="sm">
             <View style={[styles.instructionBanner, { backgroundColor: `${scheme.primary}10`, borderColor: `${scheme.primary}35` }]}>
-              <Ionicons name="sparkles-outline" size={22} color={scheme.primary} />
               <Text style={[styles.instructionText, { color: scheme.text }]}>
-                اكتب أي شي أنت تتقنه (مصالح-تدريس-تعليم سواقة-تعقيب معاملات...) ليتمكن الناس من الوصول إليك
+                هناك من يبحث عن مهارتك
               </Text>
             </View>
 
@@ -149,7 +140,7 @@ export default function BecomeProviderScreen() {
               }}
               error={error}
               required
-              containerStyle={styles.serviceInput}
+              containerStyle={[styles.serviceInput, styles.featuredSkillInput]}
             />
 
             <AppTextInput
@@ -217,59 +208,49 @@ export default function BecomeProviderScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: {
-    padding: Spacing.six,
-    paddingBottom: Spacing.eight,
+    padding: Spacing.four,
+    paddingBottom: Spacing.six,
   },
   header: {
-    marginBottom: Spacing.four,
+    marginBottom: Spacing.two,
   },
   titleSection: {
     alignItems: 'center',
-    marginBottom: Spacing.six,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: Radii.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.four,
-  },
-  title: {
-    fontSize: FontSizes['2xl'],
-    fontWeight: FontWeights.bold,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-    marginBottom: Spacing.two,
+    marginBottom: Spacing.three,
   },
   subtitle: {
     fontSize: FontSizes.base,
     textAlign: 'center',
     writingDirection: 'rtl',
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.two,
   },
   instructionBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: Radii.md,
     padding: Spacing.three,
-    marginBottom: Spacing.four,
+    marginBottom: Spacing.three,
   },
   instructionText: {
-    flex: 1,
     fontSize: FontSizes.base,
     lineHeight: FontSizes.lg + 3,
-    fontWeight: FontWeights.semibold,
+    fontWeight: FontWeights.medium,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   serviceInput: {
-    minHeight: 150,
+    marginBottom: Spacing.two,
+  },
+  featuredSkillInput: {
+    backgroundColor: `${Colors.light.primary}0D`,
+    borderColor: `${Colors.light.primary}66`,
+    borderWidth: 1.5,
+    borderRadius: Radii.xl,
+    padding: Spacing.three,
+    marginBottom: Spacing.three,
   },
   actions: {
-    gap: Spacing.three,
-    marginTop: Spacing.six,
+    gap: Spacing.two,
+    marginTop: Spacing.three,
   },
 });
