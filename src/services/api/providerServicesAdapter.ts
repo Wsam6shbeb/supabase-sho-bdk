@@ -54,44 +54,38 @@ async function getCurrentUserId(): Promise<string | null> {
   return data.user?.id ?? null;
 }
 
-// [شرح الدالة: analyzeProviderService] يرسل وصف الخدمة إلى Edge Function لتحليله بالذكاء الاصطناعي.
-// نعيد المحاولة مرة واحدة عند الفشل (الخدمة قد تكون مشغولة لحظياً)، ولا نحفظ الخدمة إذا فشل التحليل
-// نهائياً؛ حتى تبقى بياناتها المنظمة (التصنيف/الخدمة/المهارات/المرادفات) مكتملة وصالحة للمطابقة.
-const AI_ANALYSIS_ATTEMPTS = 2;
-const AI_ANALYSIS_RETRY_DELAY_MS = 800;
-
+// [شرح الدالة: analyzeProviderService] يرسل وصف الخدمة إلى Edge Function لتحليله.
+// تصحيح JSON/schema يتم داخل الخادم مرة واحدة؛ لا نكرر استدعاء Gemini من التطبيق حتى لا نضاعف التكلفة.
 async function analyzeProviderService(input: {
   service: string;
   service_area: string;
   additional_info?: string;
 }): Promise<ProviderServiceRow['structured_data']> {
-  for (let attempt = 1; attempt <= AI_ANALYSIS_ATTEMPTS; attempt += 1) {
-    try {
-      const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
-        body: {
-          service_text: input.service,
-          service_area: input.service_area,
-          additional_info: input.additional_info ?? '',
-        },
-      });
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
+      body: {
+        service_text: input.service,
+        service_area: input.service_area,
+        additional_info: input.additional_info ?? '',
+      },
+    });
 
-      if (error) {
-        console.error(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
-      } else if (!data?.structured_data || typeof data.structured_data !== 'object') {
-        console.error(`[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة (محاولة ${attempt}).`);
-      } else {
-        return data.structured_data as ProviderServiceRow['structured_data'];
-      }
-    } catch (error) {
-      console.error(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
+    if (error) {
+      console.error('[Supabase][providerServices][AI] فشل تحليل الخدمة:', error.message);
+      return null;
     }
 
-    if (attempt < AI_ANALYSIS_ATTEMPTS) {
-      await new Promise((resolve) => setTimeout(resolve, AI_ANALYSIS_RETRY_DELAY_MS));
+    const structuredData = data?.structured_data;
+    if (!structuredData || typeof structuredData !== 'object' || Array.isArray(structuredData)) {
+      console.error('[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة.');
+      return null;
     }
+
+    return structuredData as ProviderServiceRow['structured_data'];
+  } catch (error) {
+    console.error('[Supabase][providerServices][AI] خطأ أثناء تحليل الخدمة:', error);
+    return null;
   }
-
-  return null;
 }
 
 function asStringArray(value: unknown): string[] {
