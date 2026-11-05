@@ -16,12 +16,11 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { Image } from 'expo-image';
-import { getSupportContacts } from '@/services/support';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Alert, FlatList, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +32,7 @@ export default function WalletTab() {
   const { user } = useAuth();
   const [paymentSettings, setPaymentSettings] = useState<{ accountCode: string; qrUrl: string; enabled: boolean } | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(true);
+  const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const {
     balance,
     transactions,
@@ -66,29 +66,6 @@ export default function WalletTab() {
       Alert.alert('تم النسخ', 'تم نسخ رمز الشحن إلى الحافظة.');
     } catch {
       Alert.alert('رمز الشحن', user.topup_code);
-    }
-  };
-
-// [شرح الدالة: handleSupport] ينقل المستخدم إلى قناة الدعم المرتبطة بالمحفظة.
-  const handleSupport = async () => {
-    try {
-      const contacts = await getSupportContacts();
-      const rawPhone = contacts.phone.replace(/\D/g, '');
-      const whatsappPhone = rawPhone.startsWith('00')
-        ? rawPhone.slice(2)
-        : rawPhone.startsWith('0')
-          ? `963${rawPhone.slice(1)}`
-          : rawPhone;
-
-      if (!/^\d{8,15}$/.test(whatsappPhone)) {
-        Alert.alert('رقم واتساب الدعم غير متوفر', 'يرجى المحاولة لاحقاً أو التواصل عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
-        return;
-      }
-
-      const message = encodeURIComponent('مرحباً، أحتاج مساعدة بخصوص الرصيد في تطبيق شو بدك.');
-      await Linking.openURL(`https://wa.me/${whatsappPhone}?text=${message}`);
-    } catch {
-      Alert.alert('تعذر فتح واتساب', 'يمكنك التواصل مع الدعم عبر البريد الإلكتروني shobdkhelpcenter@gmail.com');
     }
   };
 
@@ -157,48 +134,62 @@ export default function WalletTab() {
                 </View>
               )}
 
-              <View style={styles.actionsRow}>
-                <AppButton
-                  title={t('wallet.supportBtn')}
-                  variant="secondary"
-                  size="md"
-                  onPress={handleSupport}
-                  fullWidth
-                  leadingIcon={<Ionicons name="headset" size={18} color={scheme.text} />}
-                />
-              </View>
             </AppCard>
 
             <AppCard padding="four" elevation="sm" style={styles.paymentCard}>
-              <Text style={[styles.paymentTitle, { color: scheme.text }]}>شحن الرصيد عبر شام كاش</Text>
-              {paymentLoading ? (
-                <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>جارٍ تحميل بيانات الدفع…</Text>
-              ) : !paymentSettings?.enabled ? (
-                <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>الشحن اليدوي غير متاح حالياً. يمكنك التواصل مع الدعم.</Text>
-              ) : (
-                <>
-                  <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رقم حساب شام كاش</Text>
-                  <Text selectable style={[styles.accountCode, { color: scheme.primary }]}>{paymentSettings.accountCode || 'غير متوفر حالياً'}</Text>
-                  {paymentSettings.qrUrl ? (
-                    <Image source={{ uri: paymentSettings.qrUrl }} contentFit="contain" style={styles.qrImage} />
-                  ) : null}
-                  <Text style={[styles.paymentText, { color: scheme.text }]}>طريقة الشحن:</Text>
-                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text>
-                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text>
-                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٣. احتفظ بصورة إيصال التحويل.</Text>
-                  <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٤. أرسل صورة الإيصال إلى واتساب الدعم، واذكر الرمز إذا لم يظهر بوضوح.</Text>
-                  <View style={styles.codeBox}>
-                    <View style={styles.codeTextWrap}>
-                      <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رمز الشحن الخاص بك</Text>
-                      <Text selectable style={[styles.accountCode, { color: scheme.text }]}>{user?.topup_code || 'سيظهر الرمز بعد تحديث بيانات الحساب'}</Text>
-                    </View>
-                    <AppButton title="نسخ الرمز" variant="secondary" size="sm" onPress={handleCopyCode} fullWidth={false} />
-                  </View>
-                  <View style={styles.warningBox}>
-                    <Text style={styles.warningText}>لا تنسَ كتابة الرمز الفريد الخاص بك بملاحظات الحوالة ولا تنسَ ترسل صورة عن الإيصال إلى واتساب الدعم</Text>
-                  </View>
-                </>
-              )}
+              <GuardedPressable
+                onPress={() => setShowPaymentInstructions((current) => !current)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showPaymentInstructions }}
+                style={styles.paymentToggle}
+              >
+                <Text style={[styles.paymentTitle, { color: scheme.text }]}>كيفية تعبئة الرصيد</Text>
+                <Ionicons
+                  name={showPaymentInstructions ? 'chevron-up' : 'chevron-down'}
+                  size={22}
+                  color={scheme.primary}
+                />
+              </GuardedPressable>
+
+              {showPaymentInstructions ? (
+                <View style={styles.paymentDetails}>
+                  {paymentLoading ? (
+                    <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>جارٍ تحميل بيانات الدفع…</Text>
+                  ) : !paymentSettings?.enabled ? (
+                    <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>الشحن اليدوي غير متاح حالياً.</Text>
+                  ) : (
+                    <>
+                      <Text style={[styles.paymentText, { color: scheme.text }]}>طريقة الشحن:</Text>
+                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text>
+                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text>
+                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٣. احتفظ بصورة إيصال التحويل.</Text>
+                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٤. أرسل صورة الإيصال إلى واتساب الدعم، واذكر الرمز إذا لم يظهر بوضوح.</Text>
+
+                      {paymentSettings.qrUrl ? (
+                        <>
+                          <Text style={[styles.paymentText, { color: scheme.text }]}>رمز QR لحساب شام كاش</Text>
+                          <Image source={{ uri: paymentSettings.qrUrl }} contentFit="contain" style={styles.qrImage} />
+                        </>
+                      ) : null}
+
+                      <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رقم حساب شام كاش الخاص بالتطبيق</Text>
+                      <Text selectable style={[styles.accountCode, { color: scheme.primary }]}>{paymentSettings.accountCode || 'غير متوفر حالياً'}</Text>
+
+                      <View style={styles.codeBox}>
+                        <View style={styles.codeTextWrap}>
+                          <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رمز الشحن الخاص بك</Text>
+                          <Text selectable style={[styles.accountCode, { color: scheme.text }]}>{user?.topup_code || 'سيظهر الرمز بعد تحديث بيانات الحساب'}</Text>
+                        </View>
+                        <AppButton title="نسخ الرمز" variant="secondary" size="sm" onPress={handleCopyCode} fullWidth={false} />
+                      </View>
+
+                      <View style={styles.warningBox}>
+                        <Text style={styles.warningText}>لا تنسَ كتابة الرمز الفريد الخاص بك بملاحظات الحوالة ولا تنسَ ترسل صورة عن الإيصال إلى واتساب الدعم</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              ) : null}
             </AppCard>
 
             {transactions.length > 0 && (
@@ -316,7 +307,9 @@ const styles = StyleSheet.create({
   balanceCard: {
     marginBottom: Spacing.four,
   },
-  paymentCard: { marginBottom: Spacing.four, gap: Spacing.three },
+  paymentCard: { marginBottom: Spacing.four },
+  paymentToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three },
   paymentTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, writingDirection: 'rtl' },
   paymentText: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right' },
   accountCode: { fontSize: FontSizes.xl, fontWeight: FontWeights.bold, textAlign: 'center', letterSpacing: 1 },
