@@ -204,7 +204,7 @@ export default function WalletTab() {
                           <Text selectable style={[styles.accountCode, { color: scheme.text }]}>{user?.topup_code || 'سيظهر الرمز بعد تحديث بيانات الحساب'}</Text>
                         </View>
                         <AppButton
-                          title="نسخ الرمز"
+                          title="نسخ"
                           variant="primary"
                           size="md"
                           onPress={handleCopyCode}
