@@ -1,7 +1,7 @@
 // ===============================================================
 // شرح الملف: هذا صفحة المحفظة.
 // الهدف: توضيح وظيفة الملف ومهام الدوال دون تغيير منطق البرنامج.
-// الدوال/الوظائف المعرّفة هنا: WalletTab، handleSupport، handleCopyCode، TransactionRow.
+// الدوال/الوظائف المعرّفة هنا: WalletTab، handleCopyCode، TransactionRow.
 // ملاحظة: التعليقات التالية للشرح فقط؛ لا تغيّر سلوك الكود.
 // ===============================================================
 
@@ -192,11 +192,9 @@ export default function WalletTab() {
               ) : null}
             </AppCard>
 
-            {transactions.length > 0 && (
-              <Text style={[styles.sectionTitle, { color: scheme.text }]}>
-                {t('wallet.transactionsTitle')}
-              </Text>
-            )}
+            <Text style={[styles.sectionTitle, { color: scheme.text }]}>
+              سجل المعاملات المالية
+            </Text>
           </>
         }
         ListEmptyComponent={
@@ -352,9 +350,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.medium,
     writingDirection: 'rtl',
     flex: 1,
-  },
-  actionsRow: {
-    flexDirection: 'row',
   },
   sectionTitle: {
     fontSize: FontSizes.lg,
