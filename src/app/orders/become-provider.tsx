@@ -212,20 +212,22 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   header: {
+    alignItems: 'flex-start',
+    direction: 'rtl',
     marginBottom: Spacing.two,
   },
   titleSection: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     marginBottom: Spacing.three,
   },
   subtitle: {
     fontSize: FontSizes.base,
-    textAlign: 'center',
+    textAlign: 'right',
     writingDirection: 'rtl',
     paddingHorizontal: Spacing.two,
   },
   instructionBanner: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     borderWidth: 1,
     borderRadius: Radii.md,
     padding: Spacing.three,
