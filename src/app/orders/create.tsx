@@ -50,6 +50,8 @@ export default function CreateOrderScreen() {
   const { startOrder, analyzeOrderRequest, hasAcceptedDisclaimer } = useOrder();
 
   const [description, setDescription] = useState('');
+  const [descriptionInputHeight, setDescriptionInputHeight] = useState(120);
+  const [additionalInputHeight, setAdditionalInputHeight] = useState(90);
   const { city, setCity, remember: rememberCity } = usePreferredCity(user?.region?.id);
   const [serviceArea, setServiceArea] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
@@ -225,6 +227,8 @@ export default function CreateOrderScreen() {
               }}
               multiline
               numberOfLines={4}
+              onContentSizeChange={(event) => setDescriptionInputHeight(Math.min(240, Math.max(120, event.nativeEvent.contentSize.height)))}
+              style={{ height: descriptionInputHeight, textAlignVertical: 'top' }}
               containerStyle={styles.textInput}
             />
 
@@ -259,6 +263,8 @@ export default function CreateOrderScreen() {
               onChangeText={setAdditionalInfo}
               multiline
               numberOfLines={3}
+              onContentSizeChange={(event) => setAdditionalInputHeight(Math.min(150, Math.max(90, event.nativeEvent.contentSize.height)))}
+              style={{ height: additionalInputHeight, textAlignVertical: 'top' }}
               containerStyle={styles.additionalInput}
             />
 
@@ -407,25 +413,20 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   textInput: {
-    minHeight: 150,
-    maxHeight: 240,
-    textAlignVertical: 'top',
-    marginBottom: Spacing.four,
+    marginBottom: Spacing.two,
   },
   areaInput: {
     marginBottom: Spacing.four,
   },
   additionalInput: {
-    minHeight: 90,
-    maxHeight: 150,
-    textAlignVertical: 'top',
+    marginBottom: 0,
   },
   urgentToggle: {
     alignSelf: 'flex-start',
     borderRadius: Radii.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    marginTop: Spacing.three,
+    marginTop: Spacing.one,
     minHeight: 44,
   },
   urgentContent: {
