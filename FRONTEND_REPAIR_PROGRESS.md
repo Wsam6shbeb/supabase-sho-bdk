@@ -1,35 +1,47 @@
-# Frontend Repair Progress
+# حالة الواجهة الأمامية — سجل الوضع الحالي
 
-## Phase 1 — completed
-- Resolved the wallet TypeScript merge conflict.
-- Normalized wallet transaction and verification types.
-- Removed local Expo/build artifacts from the working archive.
+> آخر مراجعة للمصدر: فرع `main` عند الالتزام `33be67841d8c46abd0e0c331a6de5dd64204a628`.
+> هذه الوثيقة تصف ما شوهد في الكود؛ ليست قائمة مهام مستقبلية ولا شهادة نجاح بناء.
 
-## Phase 2 — completed
-- Fixed tab navigation structure.
-- Moved notifications out of the bottom tab bar.
-- Removed duplicated Profile/Notifications screen implementations from the tab layer.
-- Removed `as any` route casts from `src`.
-- Added `src/services/api` as the frontend/backend boundary.
-- Centralized business constants in `src/config/business.ts`.
+## التقنية ومكان الملفات
 
-## Phase 3 — completed
-- Extracted frontend-only commission estimation from `OrderContext` into `src/domain/commission.ts`.
-- Added explicit API boundary contracts in `src/services/api/contracts.ts`.
-- Documented that real commission/agreement values are Backend-authoritative.
-- Kept the existing mock adapter working so the UI can continue to run before Backend integration.
+- Expo SDK 57 وReact Native 0.86 وReact 19 وTypeScript 6.
+- التنقل عبر Expo Router، وملفات المسارات داخل `src/app` (وليس مجلد `app` الجذري).
+- نقطة الدخول في `package.json` هي `expo-router/entry`.
+- إعدادات الثيم واللغة والخدمات موزعة ضمن `src/constants` و`src/i18n` و`src/services`.
 
-## Next
-1. Split `OrderContext` into smaller domain hooks without changing the public `useOrder()` API.
-2. Move request/conversation/agreement mutations behind API services.
-3. Add a real API client implementation alongside the mock adapter.
-4. Add loading/error/offline states around asynchronous data.
-5. Add automated type/build checks once dependencies can be installed in the target environment.
+## البنية الحالية
 
-## Phase 4 — Domain Context Decomposition
-- Extracted notification state and actions into `src/hooks/order/useOrderNotifications.ts`.
-- Extracted reports/blocking state and actions into `src/hooks/order/useOrderSafety.ts`.
-- Kept the public `useOrder()` API stable for existing screens.
-- Converted internal notification calls to a typed object payload to reduce positional-argument mistakes.
-- Preserved the current mock behavior; these hooks are intentionally local until the Backend API becomes authoritative.
-- Full dependency installation/build could not be completed in the execution environment because `npm ci` timed out; no claim of a clean TypeScript build is made.
+- `src/context/OrderContext.tsx` ما زال Context رئيسياً ينسّق جزءاً كبيراً من حالة الطلبات والمحادثات والملف والرصيد.
+- جرى استخراج بعض المسؤوليات إلى Hooks مستقلة:
+  - `src/hooks/order/useOrderNotifications.ts`
+  - `src/hooks/order/useOrderSafety.ts`
+- توجد طبقة خدمات تحت `src/services`، وواجهة API/Adapters تحت `src/services/api`. وجود هذه الطبقة لا يعني أن كل منطق التطبيق أصبح منفصلاً عن Context.
+- ثوابت العمل المعروضة في الواجهة موجودة في `src/config/business.ts`؛ القيم المالية النهائية يجب أن تأتي من الخادم/إعدادات قاعدة البيانات، ولا تُعامل ثوابت الواجهة كمرجع مالي.
+- المدينة الافتراضية في `src/config/location.ts` هي اللاذقية، ويمكن للمستخدم اختيار مدينة مفضلة.
+
+## أجزاء مهمة موجودة في الكود
+
+- المصادقة عبر `src/hooks/use-auth.tsx`.
+- المحفظة عبر `src/services/api/walletAdapter.ts` وخدمات المحفظة.
+- خدمات الطلبات والاتفاقات والمحادثات والتقييمات والبلاغات في `src/services`.
+- التوثيق عبر `src/services/verification.ts` والـHooks والشاشات المرتبطة به.
+- فحص سلامة رسائل المحادثة موجود ضمن منطق المجال واختباراته، ولا ينبغي إعادة كتابة قواعده دون تشغيل الاختبارات ذات الصلة.
+
+## أوامر المشروع
+
+من `package.json`:
+
+- `npm install` لتثبيت الاعتماديات.
+- `npx expo start` لتشغيل Metro.
+- `npm run lint` لتشغيل Expo lint.
+- `npm test` لتشغيل Jest.
+
+يستخدم المشروع ملف قفل الاعتماديات `package-lock.json`. لا تحدّث الحزم أو ملف القفل ضمن مهمة توثيق فقط.
+
+## حدود هذه الوثيقة
+
+- لا توجد هنا قائمة «Next» قديمة؛ لا تعتمد على مراحل الإصلاح السابقة كأنها ما زالت مفتوحة.
+- وجود الاختبارات في المستودع لا يعني أنها اجتازت في آخر نسخة.
+- لم يُشغّل lint أو Jest أو TypeScript أو بناء Expo أثناء تحديث هذه الوثيقة.
+- عند تنفيذ تغيير برمجي، افحص الملف الحالي واختباراته أولاً. لا تنفّذ تغييرات في `main` مباشرة؛ استخدم فرع عمل واضحاً واطلب مراجعة قبل الدمج.
