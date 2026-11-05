@@ -16,11 +16,12 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { Image } from 'expo-image';
+import { getSupportContacts } from '@/services/support';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import type { Transaction } from '@/types/wallet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -66,6 +67,28 @@ export default function WalletTab() {
       Alert.alert('تم النسخ', 'تم نسخ رمز الشحن إلى الحافظة.');
     } catch {
       Alert.alert('رمز الشحن', user.topup_code);
+    }
+  };
+
+  const handleWhatsAppSupport = async () => {
+    try {
+      const contacts = await getSupportContacts();
+      const rawPhone = contacts.phone.replace(/\\D/g, '');
+      const whatsappPhone = rawPhone.startsWith('00')
+        ? rawPhone.slice(2)
+        : rawPhone.startsWith('0')
+          ? `963${rawPhone.slice(1)}`
+          : rawPhone;
+
+      if (!/^\\d{8,15}$/.test(whatsappPhone)) {
+        Alert.alert('رقم واتساب الدعم غير متوفر', 'يرجى المحاولة لاحقاً.');
+        return;
+      }
+
+      const message = encodeURIComponent('مرحباً، أحتاج مساعدة بخصوص تعبئة الرصيد في تطبيق شو بدك.');
+      await Linking.openURL(`https://wa.me/${whatsappPhone}?text=${message}`);
+    } catch {
+      Alert.alert('تعذر فتح واتساب', 'يرجى المحاولة لاحقاً.');
     }
   };
 
@@ -160,10 +183,10 @@ export default function WalletTab() {
                   ) : (
                     <>
                       <Text style={[styles.paymentText, { color: scheme.text }]}>طريقة الشحن:</Text>
-                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text>
-                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text>
-                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٣. احتفظ بصورة إيصال التحويل.</Text>
-                      <Text style={[styles.instruction, { color: scheme.textSecondary }]}>٤. أرسل صورة الإيصال إلى واتساب الدعم، واذكر الرمز إذا لم يظهر بوضوح.</Text>
+                      <Text style={[styles.instruction, { color: scheme.text }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text>
+                      <Text style={[styles.instruction, styles.importantInstruction, { color: scheme.danger }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text>
+                      <Text style={[styles.instruction, styles.importantInstruction, { color: scheme.danger }]}>٣. احتفظ بصورة إيصال التحويل.</Text>
+                      <Text style={[styles.instruction, { color: scheme.text }]}>٤. بعد التحويل، اضغط زر واتساب بالأسفل وأرسل صورة الإيصال للدعم.</Text>
 
                       {paymentSettings.qrUrl ? (
                         <>
@@ -180,12 +203,24 @@ export default function WalletTab() {
                           <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>رمز الشحن الخاص بك</Text>
                           <Text selectable style={[styles.accountCode, { color: scheme.text }]}>{user?.topup_code || 'سيظهر الرمز بعد تحديث بيانات الحساب'}</Text>
                         </View>
-                        <AppButton title="نسخ الرمز" variant="secondary" size="sm" onPress={handleCopyCode} fullWidth={false} />
+                        <AppButton
+                          title="نسخ الرمز"
+                          variant="primary"
+                          size="md"
+                          onPress={handleCopyCode}
+                          fullWidth={false}
+                          leadingIcon={<Ionicons name="copy-outline" size={17} color="#FFFFFF" />}
+                        />
                       </View>
 
-                      <View style={styles.warningBox}>
-                        <Text style={styles.warningText}>لا تنسَ كتابة الرمز الفريد الخاص بك بملاحظات الحوالة ولا تنسَ ترسل صورة عن الإيصال إلى واتساب الدعم</Text>
-                      </View>
+                      <AppButton
+                        title="إرسال الإيصال عبر واتساب"
+                        variant="secondary"
+                        size="md"
+                        onPress={handleWhatsAppSupport}
+                        fullWidth
+                        leadingIcon={<Ionicons name="logo-whatsapp" size={20} color={scheme.success} />}
+                      />
                     </>
                   )}
                 </View>
@@ -307,16 +342,15 @@ const styles = StyleSheet.create({
   },
   paymentCard: { marginBottom: Spacing.four },
   paymentToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three },
+  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three, alignItems: 'stretch' },
   paymentTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, writingDirection: 'rtl' },
   paymentText: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right' },
   accountCode: { fontSize: FontSizes.xl, fontWeight: FontWeights.bold, textAlign: 'center', letterSpacing: 1 },
   qrImage: { width: 190, height: 190, alignSelf: 'center', marginVertical: Spacing.two },
-  instruction: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right', lineHeight: 24 },
+  instruction: { width: '100%', alignSelf: 'stretch', fontSize: FontSizes.base, fontWeight: FontWeights.medium, writingDirection: 'rtl', textAlign: 'right', lineHeight: 28 },
+  importantInstruction: { fontWeight: FontWeights.bold },
   codeBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, padding: Spacing.three, borderRadius: Radii.md, backgroundColor: '#F1F5F9' },
   codeTextWrap: { flex: 1, gap: 4 },
-  warningBox: { backgroundColor: '#FDECEC', borderRadius: Radii.md, padding: Spacing.three },
-  warningText: { color: '#9B1C1C', fontSize: FontSizes.sm, fontWeight: FontWeights.semibold, textAlign: 'right', writingDirection: 'rtl', lineHeight: 24 },
   balanceLabel: {
     fontSize: FontSizes.sm,
     writingDirection: 'rtl',
