@@ -73,14 +73,14 @@ export default function WalletTab() {
   const handleWhatsAppSupport = async () => {
     try {
       const contacts = await getSupportContacts();
-      const rawPhone = contacts.phone.replace(/\\D/g, '');
+      const rawPhone = contacts.phone.replace(/\D/g, '');
       const whatsappPhone = rawPhone.startsWith('00')
         ? rawPhone.slice(2)
         : rawPhone.startsWith('0')
           ? `963${rawPhone.slice(1)}`
           : rawPhone;
 
-      if (!/^\\d{8,15}$/.test(whatsappPhone)) {
+      if (!/^\d{8,15}$/.test(whatsappPhone)) {
         Alert.alert('رقم واتساب الدعم غير متوفر', 'يرجى المحاولة لاحقاً.');
         return;
       }
