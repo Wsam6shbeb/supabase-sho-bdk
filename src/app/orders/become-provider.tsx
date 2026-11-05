@@ -140,7 +140,7 @@ export default function BecomeProviderScreen() {
               }}
               error={error}
               required
-              containerStyle={[styles.serviceInput, styles.featuredSkillInput]}
+              containerStyle={[styles.serviceInput, styles.featuredSkillInput, { backgroundColor: `${scheme.primary}0D`, borderColor: `${scheme.primary}66` }]}
             />
 
             <AppTextInput
@@ -242,8 +242,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   featuredSkillInput: {
-    backgroundColor: `${Colors.light.primary}0D`,
-    borderColor: `${Colors.light.primary}66`,
     borderWidth: 1.5,
     borderRadius: Radii.xl,
     padding: Spacing.three,
