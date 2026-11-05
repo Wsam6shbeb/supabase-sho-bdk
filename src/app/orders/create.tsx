@@ -229,6 +229,7 @@ export default function CreateOrderScreen() {
               numberOfLines={4}
               onContentSizeChange={(event) => setDescriptionInputHeight(Math.min(240, Math.max(120, event.nativeEvent.contentSize.height)))}
               style={{ height: descriptionInputHeight, textAlignVertical: 'top' }}
+              error={error === t('orders.create.required') ? error : null}
               containerStyle={styles.textInput}
             />
 
@@ -252,7 +253,7 @@ export default function CreateOrderScreen() {
                 setServiceArea(val);
                 setError(null);
               }}
-              error={error}
+              error={error === 'يرجى كتابة المدينة.' ? error : null}
               containerStyle={styles.areaInput}
             />
 
