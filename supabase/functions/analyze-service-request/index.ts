@@ -186,7 +186,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "AI response did not match the required format" }, 502);
     }
 
-    const structuredData = {
+    const structuredData: Record<string, unknown> = {
       ...validation.data,
       service_area: {
         ...(validation.data.service_area as Record<string, unknown>),
