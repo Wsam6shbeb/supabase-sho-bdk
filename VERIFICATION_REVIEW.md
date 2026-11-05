@@ -1,21 +1,56 @@
-# مراجعة نظام التوثيق — فرع تجريبي
+# مراجعة نظام التوثيق — الحالة الحالية
 
-الفرع: `feature/real-verification`
+> **آخر مراجعة للمصدر:** فرع `main` عند الالتزام `33be67841d8c46abd0e0c331a6de5dd64204a628`.
+> هذه الوثيقة تصف ما هو موجود في المستودع، ولا تثبت أن كل Migration طُبّقت على مشروع Supabase الإنتاجي.
 
-هذا الفرع معزول عن `main`. يحتوي على Migration التوثيق، خدمة رفع الصور، hook حالة التوثيق، وتحديث شاشة `verify-account.tsx`.
+## الحالة الحالية في الكود
 
-## خطوة الربط المتبقية في profile.tsx
+نظام التوثيق لم يعد مجرد فرع تجريبي منفصل. الملفات الأساسية موجودة على `main`:
 
-في `src/app/(drawer)/profile.tsx`:
-1. بعد `import { useAuth } from '@/hooks/use-auth';` أضف:
-```ts
-import { useMyVerification } from '@/hooks/use-my-verification';
-```
-2. احذف `verificationStatus,` و`isVerified,` من destructuring الخاص بـ `useOrder()`.
-3. بعد `} = useOrder();` أضف:
-```ts
-const { status: verificationStatus, isVerified } = useMyVerification();
-```
+- `supabase/migrations/20261021215212_verification_system.sql`
+- `supabase/migrations/20261023054628_verifications_service_role_select.sql`
+- `supabase/migrations/20261023105642_verification_visibility.sql`
+- `supabase/migrations/20261101190000_allow_support_verification_and_topups.sql`
+- `src/services/verification.ts`
+- `src/services/counterpartyVerification.ts`
+- `src/hooks/use-my-verification.ts`
+- `src/hooks/use-counterparty-verification.ts`
+- `src/app/orders/verify-account.tsx`
+- `src/app/(drawer)/profile.tsx`
 
-## تنبيه
-لم تُطبّق Migration على قاعدة البيانات. لا تُطبّقها على الإنتاج قبل مراجعة SQL، سياسات التخزين، وصيغة الاحتفاظ بسجلات التوثيق. هذه الملفات لم تُبنَ أو تُختبر كاملة بعد.
+### ربط الملف الشخصي
+
+**تم الربط بالفعل على `main`.** الملف `src/app/(drawer)/profile.tsx` يستورد `useMyVerification` ويقرأ منه `status` و`isVerified`. لا تُعِد إضافة هذا الربط ولا تحذف شيئاً منه دون سبب برمجي واضح.
+
+### رحلة المستخدم
+
+- شاشة التوثيق تستخدم الكاميرا عبر `expo-image-picker`.
+- الواجهة الحالية تلتقط صورة الهوية الأمامية وصورة سيلفي؛ **لا يظهر في الشاشة الحالية حقل لوجه الهوية الخلفي**.
+- الصور تُرفع إلى خدمة `verification-docs` ثم يُنشأ طلب في جدول `verifications`.
+- الحالات التي يعرضها hook: `not_verified` و`under_review` و`verified` و`rejected`.
+- عند الرفض يظهر سبب الرفض مع إمكانية إعادة المحاولة.
+- حالة المستخدم الحالي تُقرأ من `users.verification_status` وآخر سجل في `verifications`.
+- حالة الطرف الآخر في المحادثة تُقرأ عبر RPC باسم `get_counterparty_verification`، وطلب توثيقه يتم عبر `request_counterparty_verification`. لا يقرأ التطبيق مستندات الطرف الآخر.
+
+## ضوابط قاعدة البيانات والتخزين الموجودة في ملفات Migration
+
+- Bucket باسم `verification-docs` مضبوط كـ **خاص**، وبحد أقصى 5MB، وأنواع الصور المسموحة JPEG وPNG.
+- سياسة الرفع تسمح للمستخدم المسجّل بالرفع داخل مجلد يحمل معرّف حسابه، مع اشتراط أن يكون الحساب نشطاً.
+- لا تمنح سياسة التطبيق المستخدم صلاحية قراءة أو تعديل أو حذف صور التوثيق.
+- صلاحية INSERT على `verifications` محددة بالأعمدة `user_id` و`id_document_url` و`selfie_url`؛ لا يستطيع العميل تعيين حالة الموافقة بنفسه.
+- يوجد فهرس يمنع وجود أكثر من طلب واحد بحالة `pending` للمستخدم نفسه.
+- قرار القبول أو الرفض يتم عبر `decide_verification` من جهة الخادم، مع تحديث حالة المستخدم وسجل التدقيق.
+- سجل التوثيق يُترك محفوظاً عند تنفيذ `delete_my_account()` عمداً، ولا يُحذف مع بيانات الحساب الأخرى.
+- Migration لاحقة توسّع صلاحية قرار التوثيق لتشمل أدوار لوحة التحكم `owner` و`support` وفق شروطها.
+
+## ما لا يجوز افتراضه
+
+1. وجود ملفات Migration في GitHub **لا يعني** أنها طُبّقت على قاعدة الإنتاج. يجب التحقق من سجل Migration في مشروع Supabase قبل اعتبارها منشورة.
+2. لا تطبّق Migration على الإنتاج لمجرد أن هذا الملف يذكرها؛ راجع SQL الفعلي وسياسات Storage وصلاحيات الأدوار أولاً.
+3. لا تفترض أن صور الهوية الخلفية مدعومة؛ الكود الحالي الذي تمت مراجعته يرسل صورتين فقط: الهوية الأمامية والسيلفي.
+4. لا تدّعِ أن النظام اختُبر بالكامل أو أن البناء ناجحاً بناءً على وجود الملفات فقط. اختبارات البناء والتشغيل الفعلية مطلوبة قبل الإطلاق.
+5. لا تضع مفاتيح `service_role` أو أي أسرار في تطبيق الموبايل أو متغيرات `EXPO_PUBLIC_*`.
+
+## ملاحظة للمساعدات البرمجية
+
+هذه الوثيقة وصف للحالة المرئية في المستودع وليست تصريحاً لتعديل قاعدة الإنتاج. عند أي تعديل، افحص الملفات الفعلية وسياسات SQL وStorage ذات الصلة، وميّز بوضوح بين ما هو موجود في Git وما هو مطبّق على Supabase.
