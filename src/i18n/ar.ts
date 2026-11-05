@@ -166,7 +166,7 @@ export const ar = {
   orders: {
     create: {
       title: 'طلب خدمة جديدة',
-      subtitle: 'اكتب طلبك بلغتك المعتادة، وسيفهمه الذكاء الاصطناعي',
+      subtitle: 'اكتب طلبك بلغتك العادية',
       placeholder: 'مثال: أحتاج سباك لإصلاح تسرب في المطبخ',
       urgentToggle: 'طلب عاجل',
       urgentDescription: 'سيظهر طلبك بوضوح لمقدمي الخدمة القريبين',
