@@ -164,7 +164,7 @@ export default function WalletTab() {
                 onPress={() => setShowPaymentInstructions((current) => !current)}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: showPaymentInstructions }}
-                style={styles.paymentToggle}
+                style={[styles.paymentToggle, { backgroundColor: `${scheme.primary}12`, borderColor: `${scheme.primary}55` }]}
               >
                 <Text style={[styles.paymentTitle, { color: scheme.text }]}>كيفية تعبئة الرصيد</Text>
                 <Ionicons
@@ -182,11 +182,11 @@ export default function WalletTab() {
                     <Text style={[styles.paymentText, { color: scheme.textSecondary }]}>الشحن اليدوي غير متاح حالياً.</Text>
                   ) : (
                     <>
-                      <Text style={[styles.paymentText, { color: scheme.text }]}>طريقة الشحن:</Text>
-                      <Text style={[styles.instruction, { color: scheme.text }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text>
-                      <Text style={[styles.instruction, styles.importantInstruction, { color: scheme.danger }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text>
-                      <Text style={[styles.instruction, styles.importantInstruction, { color: scheme.danger }]}>٣. احتفظ بصورة إيصال التحويل.</Text>
-                      <Text style={[styles.instruction, { color: scheme.text }]}>٤. بعد التحويل، اضغط زر واتساب بالأسفل وأرسل صورة الإيصال للدعم.</Text>
+                      <View style={styles.instructionRow}><Text style={[styles.paymentText, styles.instructionText, { color: scheme.text }]}>طريقة الشحن:</Text></View>
+                      <View style={styles.instructionRow}><Text style={[styles.instruction, styles.instructionText, { color: scheme.text }]}>١. حوّل المبلغ عبر شام كاش باستخدام رقم الحساب أو رمز QR.</Text></View>
+                      <View style={styles.instructionRow}><Text style={[styles.instruction, styles.instructionText, styles.importantInstruction, { color: scheme.danger }]}>٢. اكتب رمز الشحن الخاص بك في ملاحظات الحوالة.</Text></View>
+                      <View style={styles.instructionRow}><Text style={[styles.instruction, styles.instructionText, styles.importantInstruction, { color: scheme.danger }]}>٣. احتفظ بصورة إيصال التحويل.</Text></View>
+                      <View style={styles.instructionRow}><Text style={[styles.instruction, styles.instructionText, { color: scheme.text }]}>٤. بعد التحويل، اضغط زر واتساب بالأسفل وأرسل صورة الإيصال للدعم.</Text></View>
 
                       {paymentSettings.qrUrl ? (
                         <>
@@ -341,13 +341,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.four,
   },
   paymentCard: { marginBottom: Spacing.four },
-  paymentToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three, alignItems: 'stretch' },
-  paymentTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, writingDirection: 'rtl' },
+  paymentToggle: { minHeight: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.four, paddingVertical: Spacing.two, borderRadius: Radii.md, borderWidth: 1, elevation: 3, shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.16, shadowRadius: 4 },
+  paymentDetails: { gap: Spacing.three, paddingTop: Spacing.three, alignItems: 'stretch', direction: 'rtl' },
+  paymentTitle: { fontSize: FontSizes.xl, fontWeight: FontWeights.extrabold, writingDirection: 'rtl' },
   paymentText: { fontSize: FontSizes.sm, writingDirection: 'rtl', textAlign: 'right' },
   accountCode: { fontSize: FontSizes.xl, fontWeight: FontWeights.bold, textAlign: 'center', letterSpacing: 1 },
   qrImage: { width: 190, height: 190, alignSelf: 'center', marginVertical: Spacing.two },
-  instruction: { width: '100%', alignSelf: 'stretch', fontSize: FontSizes.base, fontWeight: FontWeights.medium, writingDirection: 'rtl', textAlign: 'right', lineHeight: 28 },
+  instructionRow: { width: '100%', alignSelf: 'stretch', direction: 'rtl', alignItems: 'flex-end' },
+  instructionText: { width: '100%', alignSelf: 'stretch', writingDirection: 'rtl', textAlign: 'right', textAlignVertical: 'center' },
+  instruction: { width: '100%', alignSelf: 'stretch', fontSize: FontSizes.lg, fontWeight: FontWeights.semibold, writingDirection: 'rtl', textAlign: 'right', lineHeight: 32 },
   importantInstruction: { fontWeight: FontWeights.bold },
   codeBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two, padding: Spacing.three, borderRadius: Radii.md, backgroundColor: '#F1F5F9' },
   codeTextWrap: { flex: 1, gap: 4 },
