@@ -126,7 +126,7 @@ export default function BecomeProviderScreen() {
           <AppCard padding="four" elevation="sm">
             <View style={[styles.instructionBanner, { backgroundColor: `${scheme.primary}10`, borderColor: `${scheme.primary}35` }]}>
               <Text style={[styles.instructionText, { color: scheme.text }]}>
-                هناك من يبحث عن مهارتك
+                اكتب أي شي تتقنه (تعليم - إصلاح - تدريب سياقة... أي شيء)، هناك من يبحث عنك
               </Text>
             </View>
 
