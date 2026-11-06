@@ -52,6 +52,7 @@ export default function EditProviderProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [removingSkillId, setRemovingSkillId] = useState<string | null>(null);
   const [bioDraft, setBioDraft] = useState(myProviderProfile?.bio ?? '');
+  const bioEditedRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const keyboardVisible = useKeyboardVisible();
  const [skillCities, setSkillCities] = useState<Record<string, string>>({});
@@ -64,7 +65,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!profile) return;
     let active = true;
-    setBioDraft(profile.bio ?? '');
+    if (!bioEditedRef.current) setBioDraft(profile.bio ?? '');
     void Promise.resolve().then(() => {
       if (!active) return;
       setSkillCities(
@@ -123,7 +124,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     }
 
     if (containsPhoneNumber(trimmed) || containsPhoneNumber(city) || containsPhoneNumber(area)) {
-      Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في حقل المدينة أو المنطقة.');
+      Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في اسم المهارة أو المدينة أو المنطقة.');
       return false;
     }
 
@@ -212,7 +213,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     try {
       const updatedSkills = profile.skills.map((skill) => {
         const name = (skillNames[skill.id] ?? skill.name).trim();
-        const city = (skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY).trim();
+        const city = (skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY).trim() || DEFAULT_CITY;
         const area = (skillAreas[skill.id] ?? skill.area ?? '').trim();
         return {
           ...skill,
@@ -239,6 +240,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
         if (!added) return;
       }
 
+      bioEditedRef.current = false;
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
@@ -343,6 +345,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
                       setNewSkillName('');
                       setNewSkillArea('');
                     }}
+                    disabled={addingSkill || saving}
                     fullWidth={false}
                     style={{ flex: 1, marginStart: Spacing.two }}
                   />
@@ -421,7 +424,18 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
                   <GuardedPressable
                     onPress={(event) => {
                       event.stopPropagation();
-                      void handleRemoveSkill(skill.id);
+                      Alert.alert(
+                        'حذف المهارة؟',
+                        `هل تريد حذف «${skill.name}» من خدماتك؟ لا يمكن التراجع عن هذا الإجراء.`,
+                        [
+                          { text: 'إلغاء', style: 'cancel' },
+                          {
+                            text: 'حذف',
+                            style: 'destructive',
+                            onPress: () => { void handleRemoveSkill(skill.id); },
+                          },
+                        ],
+                      );
                     }}
                     hitSlop={6}
                     disabled={saving || removingSkillId !== null}
@@ -450,6 +464,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
                   Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في نبذة عنك.');
                   return;
                 }
+                bioEditedRef.current = true;
                 setBioDraft(v);
               }}
               multiline
