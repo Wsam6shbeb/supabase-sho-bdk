@@ -118,6 +118,9 @@ export interface OrderContextValue {
   orderHistory: Order[];
 
   myProviderProfile: MyProviderProfile | null;
+  providerProfileLoading: boolean;
+  providerProfileLoadFailed: boolean;
+  refreshMyProviderProfile: () => Promise<void>;
   hasProviderProfile: boolean;
   welcomeBonusReceived: boolean;
 
@@ -452,6 +455,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const lastAgreementRef = useRef<{ id: string; state: string } | null>(null);
 
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
+  const [providerProfileLoading, setProviderProfileLoading] = useState(false);
+  const [providerProfileLoadFailed, setProviderProfileLoadFailed] = useState(false);
 
   const loadMyProviderProfile = useCallback(async (userId: string) => {
     try {
@@ -469,20 +474,24 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (profileResult.error) {
+        setProviderProfileLoadFailed(true);
         logError('[Supabase][providerProfile] فشل قراءة ملف مقدم الخدمة:', profileResult.error.message);
         return;
       }
 
       if (servicesResult.error) {
+        setProviderProfileLoadFailed(true);
         logError('[Supabase][providerServices] فشل قراءة خدمات مقدم الخدمة:', servicesResult.error.message);
         return;
       }
 
       if (!profileResult.data && (servicesResult.data?.length ?? 0) === 0) {
         setMyProviderProfile(null);
+        setProviderProfileLoadFailed(false);
         return;
       }
 
+      setProviderProfileLoadFailed(false);
       setMyProviderProfile({
         skills: (servicesResult.data ?? []).map((service) => ({
           id: service.id,
@@ -528,6 +537,7 @@ additional_info:
         welcome_bonus_received: false,
       });
     } catch (err) {
+      setProviderProfileLoadFailed(true);
       logError('[Supabase][providerProfile] خطأ غير متوقع أثناء تحميل ملف مقدم الخدمة:', err);
     }
   }, []);
@@ -535,6 +545,8 @@ additional_info:
   useEffect(() => {
     let alive = true;
     if (!user?.id) {
+      setProviderProfileLoading(false);
+      setProviderProfileLoadFailed(false);
       void Promise.resolve().then(() => {
         if (alive) setMyProviderProfile(null);
       });
@@ -542,15 +554,35 @@ additional_info:
         alive = false;
       };
     }
+    setProviderProfileLoading(true);
+    setProviderProfileLoadFailed(false);
     void (async () => {
-      await loadMyProviderProfile(user.id);
-      // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
-      const repaired = await api.providerServices.repairIncomplete();
-      if (repaired) await loadMyProviderProfile(user.id);
+      try {
+        await loadMyProviderProfile(user.id);
+        // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
+        const repaired = await api.providerServices.repairIncomplete();
+        if (repaired) await loadMyProviderProfile(user.id);
+      } catch (error) {
+        setProviderProfileLoadFailed(true);
+        logError('[Supabase][providerProfile] فشل إكمال تحميل ملف مقدم الخدمة:', error);
+      } finally {
+        if (alive) setProviderProfileLoading(false);
+      }
     })();
     return () => {
       alive = false;
     };
+  }, [user?.id, loadMyProviderProfile]);
+
+  const refreshMyProviderProfile = useCallback(async () => {
+    if (!user?.id) return;
+    setProviderProfileLoading(true);
+    setProviderProfileLoadFailed(false);
+    try {
+      await loadMyProviderProfile(user.id);
+    } finally {
+      setProviderProfileLoading(false);
+    }
   }, [user?.id, loadMyProviderProfile]);
 
   const [verificationStatus, setVerificationStatus] =
@@ -1642,6 +1674,9 @@ additional_info: skill.additional_info?.trim() || '',
       approvalRemainingSeconds,
       orderHistory,
       myProviderProfile,
+      providerProfileLoading,
+      providerProfileLoadFailed,
+      refreshMyProviderProfile,
       hasProviderProfile: !!myProviderProfile && myProviderProfile.skills.length > 0,
       welcomeBonusReceived: myProviderProfile?.welcome_bonus_received ?? false,
       balance,
@@ -1703,6 +1738,9 @@ additional_info: skill.additional_info?.trim() || '',
       approvalRemainingSeconds,
       orderHistory,
       myProviderProfile,
+      providerProfileLoading,
+      providerProfileLoadFailed,
+      refreshMyProviderProfile,
       balance,
       transactions,
       walletLoadFailed,
