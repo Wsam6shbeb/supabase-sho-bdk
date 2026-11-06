@@ -7,6 +7,7 @@ import { registerPushToken } from '@/services/push';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
+import { logError } from '@/services/logger';
 import { Platform } from 'react-native';
 
 // آخر إشعار تم التعامل معه. getLastNotificationResponseAsync يُرجع آخر نقرة حتى لو عولجت سابقاً،
@@ -26,7 +27,7 @@ function openRouteFrom(response: Notifications.NotificationResponse | null | und
     try {
       router.push(route as never);
     } catch (err) {
-      console.error('[push] فشل فتح وجهة الإشعار:', err);
+      logError('[push] فشل فتح وجهة الإشعار:', err);
     }
   }, 600);
 }
