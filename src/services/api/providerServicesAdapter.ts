@@ -68,6 +68,7 @@ async function analyzeProviderService(input: {
   additional_info?: string;
 }): Promise<ProviderServiceRow['structured_data']> {
   for (let attempt = 1; attempt <= AI_ANALYSIS_ATTEMPTS; attempt += 1) {
+    let retryableFailure = false;
     try {
       const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
         body: {
@@ -78,18 +79,29 @@ async function analyzeProviderService(input: {
       });
 
       if (error) {
+        const status = Number((error as any)?.context?.status ?? (error as any)?.status);
+        retryableFailure =
+          !Number.isFinite(status) || status === 408 || status === 425 ||
+          status === 429 || (status >= 500 && status <= 599);
         logError(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
       } else if (!data?.structured_data || typeof data.structured_data !== 'object') {
+        // استجابة غير صالحة ليست عطلاً مؤقتاً؛ لا نكرر الطلب.
         logError(`[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة (محاولة ${attempt}).`);
       } else {
         return data.structured_data as ProviderServiceRow['structured_data'];
       }
     } catch (error) {
+      const status = Number((error as any)?.context?.status ?? (error as any)?.status);
+      retryableFailure =
+        !Number.isFinite(status) || status === 408 || status === 425 ||
+        status === 429 || (status >= 500 && status <= 599);
       logError(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
     }
 
-    if (attempt < AI_ANALYSIS_ATTEMPTS) {
+    if (attempt < AI_ANALYSIS_ATTEMPTS && retryableFailure) {
       await new Promise((resolve) => setTimeout(resolve, AI_ANALYSIS_RETRY_DELAY_MS));
+    } else {
+      break;
     }
   }
 

@@ -1,5 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
+import { describeError, redactSecrets } from "../_shared/safe-log.ts";
+import {
+  BodyTooLargeError,
+  buildGeminiRequest,
+  buildMatchPrompt,
+  normalizeMatches,
+  readJsonBodyLimited,
+  sanitizeProviderEntries,
+  sanitizeRequestForPrompt,
+} from "./match-core.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,89 +51,29 @@ function parseAiJson(content: string): unknown {
   return JSON.parse(cleaned.slice(firstObject, lastObject + 1));
 }
 
-function buildPrompt(request: Record<string, unknown>, providers: Array<{ provider_id: string; service: unknown }>) {
-  return [
-    "أنت محرك المطابقة الذكي في تطبيق خدمات.",
-    "قارن طلب العميل مع خدمات مقدمي الخدمة اعتماداً على المعنى والبيانات المنظمة، وليس التطابق الحرفي للكلمات فقط.",
-    "اعتبر المرادفات، صياغة الخدمة، التصنيف العام، المهارات، المدينة، منطقة طلب الخدمة ومناطق تقديم الخدمة.",
-    "",
-    "قاعدة أساسية: نوع الخدمة شرط لا يعوّضه شيء. القرب الجغرافي أو التصنيف العام المشترك لا يجعل مقدماً مناسباً.",
-    "إذا كانت خدمة مقدم الخدمة من نوع مختلف عن الخدمة المطلوبة (مثال: الطلب صيدلية ومقدم الخدمة معقب معاملات أو مدرّس لغات أو حلاق)، أعطه درجة بين 0 و15، حتى لو كان في نفس المدينة أو نفس التصنيف العام أو كان الوحيد في القائمة.",
-    "لا تُرجع مقدماً غير مناسب لمجرد أن القائمة قصيرة أو لتجنّب نتيجة فارغة. أن لا يوجد أي مقدم مناسب جواب صحيح ومقبول، وعندها تكون كل الدرجات منخفضة.",
-    "",
-    "مقياس الدرجة (0 إلى 100) = قدرته على تنفيذ الطلب فعلياً:",
-    "- 85 إلى 100: يقدّم نفس الخدمة المطلوبة بوضوح.",
-    "- 60 إلى 84: خدمة قريبة جداً ويستطيع تنفيذ الطلب غالباً.",
-    "- 30 إلى 59: صلة ضعيفة أو جزئية فقط.",
-    "- 0 إلى 29: خدمة مختلفة أو غير ذات صلة.",
-    "",
-    "المكان: مدينة حساب مقدم الخدمة ومدينة طالب الخدمة فلتر أولي من الباك إند. اختلاف المنطقة داخل نفس المدينة لا يعني استبعاد مقدم الخدمة، فاستخدم منطقة طلب العميل ونطاق تقديم الخدمة لتحديد القرب والأولوية.",
-    "أعط أولوية لمن يستطيع تقديم الخدمة في نفس المنطقة أو نطاق قريب منها، وإذا لم تجد في نفس المنطقة فوسّع إلى مقدمين مناسبين في مناطق أخرى داخل نفس المدينة، بشرط أن تكون الخدمة نفسها مناسبة.",
-    "إذا كانت منطقة أحد الطرفين غير معروفة، لا تعاقب المطابقة بسبب ذلك.",
-    "",
-    "أعد في matches عنصراً لكل مقدم خدمة مرسل إليك (بما فيهم غير المناسبين بدرجات منخفضة).",
-    "أعد JSON فقط يحتوي على matches، وكل عنصر فيه provider_id وscore وreason.",
-    "reason جملة عربية قصيرة تذكر سبب الملاءمة أو عدمها، ويمكن أن تذكر أن المنطقة مختلفة داخل نفس المدينة إذا كان ذلك مؤثراً.",
-    "طلب العميل:",
-    JSON.stringify(request),
-    "مقدمو الخدمة:",
-    JSON.stringify(providers),
-  ].join("\n");
-}
-
 async function matchBatch(
   apiKey: string,
   request: Record<string, unknown>,
   providers: Array<{ provider_id: string; service: unknown }>,
 ) {
+  // Everything user-authored is bounded and whitelisted here, for both the request_id flow
+  // and the legacy flow, before it is placed in the prompt.
+  const safeRequest = sanitizeRequestForPrompt(request);
+  const safeProviders = sanitizeProviderEntries(providers);
+  const { url, init } = buildGeminiRequest(apiKey, buildMatchPrompt(safeRequest, safeProviders));
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60_000);
   let upstream: Response;
   try {
-    upstream = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" +
-        encodeURIComponent(apiKey),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: "أعد JSON صالح فقط، بدون Markdown أو أي نص خارج كائن JSON." }],
-          },
-          contents: [{ role: "user", parts: [{ text: buildPrompt(request, providers) }] }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                matches: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      provider_id: { type: "STRING" },
-                      score: { type: "NUMBER" },
-                      reason: { type: "STRING" },
-                    },
-                    required: ["provider_id", "score", "reason"],
-                  },
-                },
-              },
-              required: ["matches"],
-            },
-          },
-        }),
-        signal: controller.signal,
-      },
-    );
+    upstream = await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeoutId);
   }
 
   if (!upstream.ok) {
     const detail = await upstream.text();
-    console.error("[match-service-providers] Gemini error:", upstream.status, detail.slice(0, 500));
+    console.error("[match-service-providers] Gemini error:", upstream.status, redactSecrets(detail.slice(0, 300)));
     throw new Error("AI matching failed");
   }
 
@@ -133,18 +83,7 @@ async function matchBatch(
   if (!content.trim()) throw new Error("AI returned empty content");
 
   const parsed = parseAiJson(content);
-  if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as any).matches)) {
-    throw new Error("AI returned invalid match format");
-  }
-
-  const allowedIds = new Set(providers.map((provider) => provider.provider_id));
-  return (parsed as any).matches
-    .filter((item: any) => allowedIds.has(item?.provider_id))
-    .map((item: any) => ({
-      provider_id: item.provider_id,
-      score: Math.max(0, Math.min(100, Number(item.score) || 0)),
-      reason: typeof item.reason === "string" ? item.reason.trim() : "",
-    }));
+  return normalizeMatches(parsed, new Set(providers.map((provider) => provider.provider_id)));
 }
 
 Deno.serve(async (req: Request) => {
@@ -175,8 +114,9 @@ Deno.serve(async (req: Request) => {
 
   let body: { request_id?: unknown; request?: unknown; providers?: unknown };
   try {
-    body = await req.json();
-  } catch {
+    body = (await readJsonBodyLimited(req)) as typeof body;
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return reply({ error: "Request body too large" }, 413);
     return reply({ error: "Invalid JSON body" }, 400);
   }
 
@@ -258,7 +198,7 @@ Deno.serve(async (req: Request) => {
       );
       return reply({ matches });
     } catch (error) {
-      console.error("[match-service-providers] Legacy matching failed:", error);
+      console.error("[match-service-providers] Legacy matching failed:", describeError(error));
       return reply({ error: "AI matching failed" }, 502);
     }
   }
@@ -314,7 +254,7 @@ Deno.serve(async (req: Request) => {
       batches.map((batch) => matchBatch(geminiKey, requestData, batch)),
     );
   } catch (error) {
-    console.error("[match-service-providers] Matching batch failed:", error);
+    console.error("[match-service-providers] Matching batch failed:", describeError(error));
     return reply({ error: "AI matching failed" }, 502);
   }
   const matches = batchResults.flat();
