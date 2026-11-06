@@ -22,6 +22,7 @@ import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { areaPlaceholder } from '@/domain/areaSuggestions';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useTheme } from '@/hooks/use-theme';
+import { getUserMessage } from '@/services/errors';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
