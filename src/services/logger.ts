@@ -19,7 +19,7 @@ const MAX_STACK_LINES = 10;
 
 /** مفاتيح كائنات تحمل أسراراً أو بيانات شخصية أو نصوصاً حرة للمستخدم. */
 const SENSITIVE_KEY =
-  /^(password|pass|passwd|secret|token|authorization|apikey|api_key|api-key|cookie|set-cookie|session|jwt|bearer|email|phone|mobile|full_name|raw_text|description|body|content|comment|additional_info|id_document_url|selfie_url|avatar_url|p_token|push_token|expo_push_token|p_phone|p_body|p_email)$|(_token|_key|_secret|_password)$/i;
+  /^(password|pass|passwd|secret|token|authorization|apikey|api_key|api-key|cookie|set-cookie|session|jwt|bearer|email|phone|mobile|name|first_name|last_name|full_name|address|city|area|region|latitude|longitude|lat|long|postal_code|user_id|provider_id|sender_id|receiver_id|conversation_id|request_id|order_id|id|raw_text|description|body|content|comment|additional_info|id_document_url|selfie_url|avatar_url|p_token|push_token|expo_push_token|p_phone|p_body|p_email)$|(_token|_key|_secret|_password)$/i;
 
 const PATTERNS: Array<[RegExp, string]> = [
   [/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, '[JWT]'],

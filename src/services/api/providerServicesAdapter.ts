@@ -11,6 +11,7 @@
 
 import { supabase } from '@/services/supabase';
 import { logError } from '@/services/logger';
+import { getUserMessage } from '@/services/errors';
 import type { ApiResponse } from '@/types/common';
 
 export interface ProviderServiceRow {
@@ -156,7 +157,7 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     .from('provider_profiles')
     .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
   if (profileError) {
-    return { success: false, error: { code: profileError.code || 'DB_ERROR', message: profileError.message } };
+    return { success: false, error: { code: profileError.code || 'DB_ERROR', message: getUserMessage(profileError, 'generic') } };
   }
 
   // نحفظ أولاً البيانات الأساسية التي كتبها مقدم الخدمة كما هي.
@@ -175,7 +176,7 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     .single();
 
   if (error) {
-    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: getUserMessage(error, 'generic') } };
   }
 
   const structuredDataWithOriginalInput = {
@@ -196,7 +197,7 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     .single();
 
   if (updateError) {
-    return { success: false, error: { code: updateError.code || 'DB_ERROR', message: updateError.message } };
+    return { success: false, error: { code: updateError.code || 'DB_ERROR', message: getUserMessage(updateError, 'generic') } };
   }
 
   // أفضل محاولة (best-effort): تعليم المستخدم كمزوّد؛ فشلها لا يُسقط نجاح إضافة الخدمة نفسها.
@@ -219,7 +220,7 @@ async function mine(): Promise<ApiResponse<ProviderServiceRow[]>> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: getUserMessage(error, 'generic') } };
   }
 
   return { success: true, data: (data ?? []) as ProviderServiceRow[] };
@@ -282,7 +283,7 @@ const structuredData = {
     .single();
 
   if (error) {
-    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: getUserMessage(error, 'generic') } };
   }
 
   return { success: true, data: data as ProviderServiceRow };
@@ -365,7 +366,7 @@ async function remove(id: string): Promise<ApiResponse<{ id: string }>> {
     .maybeSingle();
 
   if (error) {
-    return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+    return { success: false, error: { code: error.code || 'DB_ERROR', message: getUserMessage(error, 'generic') } };
   }
   if (!data) {
     return { success: false, error: { code: 'NOT_DELETED', message: 'لم تُحذف الخدمة من قاعدة البيانات.' } };

@@ -123,8 +123,12 @@ export function classifyError(error: unknown): ErrorKind {
   const status = statusOf(error);
   const code = codeOf(error);
 
-  // Edge Functions
-  if (name === 'FunctionsFetchError' || name === 'FunctionsRelayError') return 'server';
+  // المهلة تُصنّف أولاً حتى لا تُخفى خلف نوع خطأ Edge Function.
+  if (isTimeout(text, status)) return 'timeout';
+
+  // فشل جلب Edge Function يعني غالباً تعذّر الوصول للشبكة، أما Relay فهو فشل بالخدمة.
+  if (name === 'FunctionsFetchError') return 'network';
+  if (name === 'FunctionsRelayError') return 'server';
   if (name === 'FunctionsHttpError') {
     if (status === 401) return 'auth';
     if (status === 403) return 'permission';
@@ -133,7 +137,6 @@ export function classifyError(error: unknown): ErrorKind {
     return 'server';
   }
 
-  if (isTimeout(text, status)) return 'timeout';
   if (isConnectionError(error)) return 'network';
   if (name === 'AuthRetryableFetchError') return 'network';
 

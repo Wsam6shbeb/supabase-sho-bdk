@@ -4,6 +4,7 @@
 
 import { unregisterPushToken } from '@/services/push';
 import { logError } from '@/services/logger';
+import { getUserMessage } from '@/services/errors';
 import { supabase } from '@/services/supabase';
 import type {
   AuthResult,
@@ -95,7 +96,7 @@ function mapError(err: any): ApiError {
   }
   return {
     code: err?.code ?? 'UNKNOWN',
-    message: err?.message ?? 'حدث خطأ غير متوقع',
+    message: getUserMessage(err, 'login'),
   };
 }
 
