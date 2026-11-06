@@ -73,6 +73,7 @@ export default function CandidatesScreen() {
 
     const loadCandidates = async () => {
       setCandidateLoadFailed(false);
+      try {
       // نستخدم RPC لأن قراءة جدول users مباشرة تُحجب بسياسة RLS (users_select_own).
       const { data: rpcRows, error } = await supabase.rpc('get_request_candidates', {
         p_request_id: requestId,
@@ -246,6 +247,11 @@ export default function CandidatesScreen() {
         // إذا كانت قائمة Context فارغة (مثلاً بعد إعادة فتح الصفحة مباشرة)،
         // نستخدم نتائج Supabase كاحتياط، مع الحفاظ على الـprovider_id الصحيح.
         setCandidates(mergedProviders.length > 0 ? mergedProviders : results);
+      }
+      } catch (error) {
+        if (cancelled) return;
+        logError('[Supabase][candidates] خطأ غير متوقع أثناء تحميل المرشحين:', error);
+        setCandidateLoadFailed(true);
       }
     };
 
