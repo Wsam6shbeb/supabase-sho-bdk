@@ -544,31 +544,37 @@ additional_info:
 
   useEffect(() => {
     let alive = true;
-    if (!user?.id) {
-      setProviderProfileLoading(false);
-      setProviderProfileLoadFailed(false);
-      void Promise.resolve().then(() => {
-        if (alive) setMyProviderProfile(null);
-      });
-      return () => {
-        alive = false;
-      };
-    }
-    setProviderProfileLoading(true);
-    setProviderProfileLoadFailed(false);
-    void (async () => {
-      try {
-        await loadMyProviderProfile(user.id);
-        // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
-        const repaired = await api.providerServices.repairIncomplete();
-        if (repaired) await loadMyProviderProfile(user.id);
-      } catch (error) {
-        setProviderProfileLoadFailed(true);
-        logError('[Supabase][providerProfile] فشل إكمال تحميل ملف مقدم الخدمة:', error);
-      } finally {
-        if (alive) setProviderProfileLoading(false);
+    const userId = user?.id;
+
+    // تأجيل تحديثات الحالة إلى ما بعد تنفيذ التأثير لتجنب تحديث state أثناء effect مباشرة.
+    void Promise.resolve().then(() => {
+      if (!alive) return;
+
+      if (!userId) {
+        setProviderProfileLoading(false);
+        setProviderProfileLoadFailed(false);
+        setMyProviderProfile(null);
+        return;
       }
-    })();
+
+      setProviderProfileLoading(true);
+      setProviderProfileLoadFailed(false);
+
+      void (async () => {
+        try {
+          await loadMyProviderProfile(userId);
+          // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
+          const repaired = await api.providerServices.repairIncomplete();
+          if (repaired) await loadMyProviderProfile(userId);
+        } catch (error) {
+          if (alive) setProviderProfileLoadFailed(true);
+          logError('[Supabase][providerProfile] فشل إكمال تحميل ملف مقدم الخدمة:', error);
+        } finally {
+          if (alive) setProviderProfileLoading(false);
+        }
+      })();
+    });
+
     return () => {
       alive = false;
     };
@@ -1555,9 +1561,11 @@ additional_info: skill.additional_info?.trim() || '',
     return { ok: true };
   }, []);
 
+  const providerProfileUserId = user?.id;
+
   const updateProviderProfile = useCallback(
     async (patch: Partial<MyProviderProfile>): Promise<{ ok: boolean; error?: string }> => {
-      if (!user?.id) {
+      if (!providerProfileUserId) {
         return { ok: false, error: 'انتهت جلسة الدخول. سجّل الدخول مجدداً ثم حاول مرة أخرى.' };
       }
       if (!myProviderProfile) {
@@ -1583,7 +1591,7 @@ additional_info: skill.additional_info?.trim() || '',
           const failed = results.find((result) => !result.success);
           if (failed && !failed.success) {
             logError('[Supabase][providerServices] فشل حفظ تعديلات المهارات:', failed.error.message);
-            await loadMyProviderProfile(user.id);
+            await loadMyProviderProfile(providerProfileUserId);
             return { ok: false, error: failed.error.message };
           }
         }
@@ -1593,7 +1601,7 @@ additional_info: skill.additional_info?.trim() || '',
             .from('provider_profiles')
             .upsert(
               {
-                user_id: user.id,
+                user_id: providerProfileUserId,
                 ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
                 ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
               },
@@ -1604,7 +1612,7 @@ additional_info: skill.additional_info?.trim() || '',
 
           if (error || !data) {
             logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
-            if (patch.skills !== undefined) await loadMyProviderProfile(user.id);
+            if (patch.skills !== undefined) await loadMyProviderProfile(providerProfileUserId);
             return {
               ok: false,
               error: error
@@ -1620,7 +1628,7 @@ additional_info: skill.additional_info?.trim() || '',
         logError('[Supabase][providerProfile] خطأ غير متوقع أثناء حفظ التعديلات:', error);
         if (patch.skills !== undefined) {
           try {
-            await loadMyProviderProfile(user.id);
+            await loadMyProviderProfile(providerProfileUserId);
           } catch (refreshError) {
             logError('[Supabase][providerProfile] تعذر تحديث البيانات بعد فشل الحفظ:', refreshError);
           }
@@ -1628,7 +1636,7 @@ additional_info: skill.additional_info?.trim() || '',
         return { ok: false, error: getUserMessage(error, 'generic') };
       }
     },
-    [myProviderProfile, user?.id, loadMyProviderProfile],
+    [myProviderProfile, providerProfileUserId, loadMyProviderProfile],
   );
 
   const toggleAvailability = useCallback(() => {
