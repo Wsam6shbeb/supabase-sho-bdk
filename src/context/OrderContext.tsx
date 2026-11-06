@@ -1525,12 +1525,15 @@ additional_info: skill.additional_info?.trim() || '',
 
   const updateProviderProfile = useCallback(
     async (patch: Partial<MyProviderProfile>): Promise<{ ok: boolean; error?: string }> => {
+      if (!user?.id) {
+        return { ok: false, error: 'انتهت جلسة الدخول. سجّل الدخول مجدداً ثم حاول مرة أخرى.' };
+      }
       if (!myProviderProfile) {
         return { ok: false, error: 'لم يتم العثور على ملف مقدم الخدمة.' };
       }
 
       try {
-        if (user?.id && patch.skills !== undefined) {
+        if (patch.skills !== undefined) {
           const persistedSkills = patch.skills.filter(
             (skill) => skill.id && !skill.id.startsWith('skill_'),
           );
@@ -1552,18 +1555,25 @@ additional_info: skill.additional_info?.trim() || '',
           }
         }
 
-        if (user?.id && (patch.bio !== undefined || patch.is_available !== undefined)) {
+        if (patch.bio !== undefined || patch.is_available !== undefined) {
           const { error } = await supabase
             .from('provider_profiles')
             .update({
-              ...(patch.bio !== undefined ? { bio: patch.bio ?? null } : {}),
+              ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
               ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
             })
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .select('user_id')
+            .maybeSingle();
 
-          if (error) {
+          if (error || !data) {
             logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
-            return { ok: false, error: getUserMessage(error, 'generic') };
+            return {
+              ok: false,
+              error: error
+                ? getUserMessage(error, 'generic')
+                : 'لم يتم العثور على ملف مقدم الخدمة لحفظ التعديلات.',
+            };
           }
         }
 
