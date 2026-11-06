@@ -330,7 +330,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
                     variant="primary"
                     size="sm"
                     onPress={handleAddSkill}
-                    disabled={addingSkill}
+                    disabled={addingSkill || saving}
                     fullWidth={false}
                     style={{ flex: 1 }}
                   />
@@ -424,7 +424,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
                       void handleRemoveSkill(skill.id);
                     }}
                     hitSlop={6}
-                    disabled={removingSkillId !== null}
+                    disabled={saving || removingSkillId !== null}
                   >
                     <Ionicons
                       name={removingSkillId === skill.id ? 'hourglass-outline' : 'trash-outline'}
