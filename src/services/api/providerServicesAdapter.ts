@@ -255,7 +255,7 @@ async function update(
   if (readError || !existing) {
     return {
       success: false,
-      error: { code: readError?.code || 'NOT_FOUND', message: readError?.message || 'الخدمة غير موجودة.' },
+      error: { code: readError?.code || 'NOT_FOUND', message: readError ? getUserMessage(readError, 'generic') : 'الخدمة غير موجودة.' },
     };
   }
 
