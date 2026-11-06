@@ -30,6 +30,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     ScrollView,
     StyleSheet,
@@ -41,7 +42,15 @@ import {
 export default function EditProviderProfileScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
-  const { myProviderProfile, updateProviderProfile, addFirstSkill, removeProviderSkill } = useOrder();
+  const {
+    myProviderProfile,
+    providerProfileLoading,
+    providerProfileLoadFailed,
+    refreshMyProviderProfile,
+    updateProviderProfile,
+    addFirstSkill,
+    removeProviderSkill,
+  } = useOrder();
 
   const [newSkillName, setNewSkillName] = useState('');
   const { city: newSkillCity, setCity: setNewSkillCity, remember: rememberCity } = usePreferredCity();
@@ -85,12 +94,40 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     };
   }, [profile]);
 
-  // Guard
+  // لا نعرض رسالة "لا يوجد ملف" قبل انتهاء التحميل أو عند فشل الاتصال.
+  if (!profile && providerProfileLoading) {
+    return (
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+        <View style={styles.errorWrap}>
+          <ActivityIndicator size="large" color={scheme.primary} />
+          <Text style={[styles.errorText, { color: scheme.text }]}>جارٍ تحميل ملف مقدم الخدمة...</Text>
+        </View>
+      </ScreenSafeArea>
+    );
+  }
+
+  if (!profile && providerProfileLoadFailed) {
+    return (
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+        <View style={styles.errorWrap}>
+          <Ionicons name="cloud-offline-outline" size={64} color={scheme.danger} />
+          <Text style={[styles.errorText, { color: scheme.text }]}>
+            تعذر تحميل ملف مقدم الخدمة. تحقق من اتصالك ثم أعد المحاولة.
+          </Text>
+          <AppButton
+            title="إعادة المحاولة"
+            variant="primary"
+            size="md"
+            onPress={refreshMyProviderProfile}
+          />
+        </View>
+      </ScreenSafeArea>
+    );
+  }
+
   if (!profile) {
     return (
-      <ScreenSafeArea
-        style={[styles.safe, { backgroundColor: scheme.background }]}
-      >
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
