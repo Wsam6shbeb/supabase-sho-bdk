@@ -85,3 +85,4 @@ supabase/.temp/
 .cursor/
 mcp.json
 # google-services.json 
+supabase/functions/_tests/deno.lock 
