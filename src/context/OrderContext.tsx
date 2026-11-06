@@ -1551,12 +1551,13 @@ additional_info: skill.additional_info?.trim() || '',
           const failed = results.find((result) => !result.success);
           if (failed && !failed.success) {
             logError('[Supabase][providerServices] فشل حفظ تعديلات المهارات:', failed.error.message);
+            await loadMyProviderProfile(user.id);
             return { ok: false, error: failed.error.message };
           }
         }
 
         if (patch.bio !== undefined || patch.is_available !== undefined) {
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('provider_profiles')
             .update({
               ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
@@ -1568,6 +1569,7 @@ additional_info: skill.additional_info?.trim() || '',
 
           if (error || !data) {
             logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
+            if (patch.skills !== undefined) await loadMyProviderProfile(user.id);
             return {
               ok: false,
               error: error
@@ -1584,7 +1586,7 @@ additional_info: skill.additional_info?.trim() || '',
         return { ok: false, error: getUserMessage(error, 'generic') };
       }
     },
-    [myProviderProfile, user?.id],
+    [myProviderProfile, user?.id, loadMyProviderProfile],
   );
 
   const toggleAvailability = useCallback(() => {
