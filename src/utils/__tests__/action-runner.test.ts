@@ -24,7 +24,7 @@ describe('createActionRunner', () => {
     const pending = new Promise<string>((resolve) => {
       finish = resolve;
     });
-    const action = jest.fn(() => pending);
+    const action = jest.fn((_input: string) => pending);
     const runner = createActionRunner(action);
 
     const first = runner.run('same operation');
@@ -39,7 +39,7 @@ describe('createActionRunner', () => {
   });
 
   it('does not repeat an operation after it has succeeded', async () => {
-    const action = jest.fn().mockResolvedValue('done');
+    const action = jest.fn(async (_input: string) => 'done');
     const runner = createActionRunner(action);
 
     await runner.run('request');
