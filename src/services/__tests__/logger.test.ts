@@ -21,6 +21,13 @@ describe('developer log sanitization', () => {
     expect(result.operation).toBe('sendMessage');
   });
 
+  it('preserves the complete stack trace while redacting sensitive values', () => {
+    const error = new Error('failure');
+    error.stack = Array.from({ length: 16 }, (_, index) => `frame-${index}`).join('\\n');
+    const result = sanitize(error) as { stack?: string };
+    expect(result.stack).toContain('frame-15');
+  });
+
   it('redacts tokens, email addresses, and phone numbers inside strings', () => {
     const value = sanitize('Bearer abc.def token=private person@example.com +963955123456');
     expect(value).not.toContain('abc.def');

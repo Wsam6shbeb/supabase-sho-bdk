@@ -12,10 +12,9 @@
 
 type Level = 'ERROR' | 'WARN' | 'INFO';
 
-const MAX_STRING = 1000;
-const MAX_DEPTH = 4;
-const MAX_ITEMS = 20;
-const MAX_STACK_LINES = 10;
+const MAX_STRING = 4000;
+const MAX_DEPTH = 6;
+const MAX_ITEMS = 50;
 
 /** مفاتيح كائنات تحمل أسراراً أو بيانات شخصية أو نصوصاً حرة للمستخدم. */
 const SENSITIVE_KEY =
@@ -37,10 +36,10 @@ function isDev(): boolean {
   return typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 }
 
-export function sanitizeString(value: string): string {
+export function sanitizeString(value: string, maxLength = MAX_STRING): string {
   let out = value;
   for (const [pattern, replacement] of PATTERNS) out = out.replace(pattern, replacement);
-  if (out.length > MAX_STRING) out = `${out.slice(0, MAX_STRING)}…[truncated ${out.length - MAX_STRING}]`;
+  if (out.length > maxLength) out = `${out.slice(0, maxLength)}…[truncated ${out.length - maxLength}]`;
   return out;
 }
 
@@ -65,7 +64,7 @@ function describeError(error: Error, seen: WeakSet<object>, depth: number): Reco
   if (extra.context !== undefined) out.response = sanitize(extra.context, seen, depth + 1);
   if (extra.cause !== undefined) out.cause = sanitize(extra.cause, seen, depth + 1);
   if (error.stack) {
-    out.stack = sanitizeString(error.stack.split('\n').slice(0, MAX_STACK_LINES).join('\n'));
+    out.stack = sanitizeString(error.stack, Number.POSITIVE_INFINITY);
   }
   return out;
 }
