@@ -455,7 +455,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const lastAgreementRef = useRef<{ id: string; state: string } | null>(null);
 
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
-  const [providerProfileLoading, setProviderProfileLoading] = useState(false);
+  const [providerProfileLoading, setProviderProfileLoading] = useState(true);
   const [providerProfileLoadFailed, setProviderProfileLoadFailed] = useState(false);
 
   const loadMyProviderProfile = useCallback(async (userId: string) => {
