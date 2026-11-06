@@ -20,6 +20,7 @@ export default function VerifyAccountScreen() {
   const { status, submittedAt, rejectionReason, loading, loadFailed, refresh, submit } = useMyVerification();
   const [idPhoto, setIdPhoto] = useState<Photo | null>(null);
   const [selfie, setSelfie] = useState<Photo | null>(null);
+  const [confirmed, setConfirmed] = useState({ id: false, selfie: false });
   const [submitting, setSubmitting] = useState(false);
   const [retrying, setRetrying] = useState(false);
 
@@ -33,8 +34,7 @@ export default function VerifyAccountScreen() {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         cameraType: target === 'selfie' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back,
-        allowsEditing: true,
-        aspect: target === 'selfie' ? [1, 1] : [4, 3],
+        // لا نفتح محرر القص بعد التصوير؛ نعرض الصورة داخل صفحة التوثيق ليختار المستخدم.
         quality: 0.5,
         base64: true,
       });
@@ -42,6 +42,7 @@ export default function VerifyAccountScreen() {
       if (asset?.base64) {
         const photo = { uri: asset.uri, base64: asset.base64 };
         target === 'id' ? setIdPhoto(photo) : setSelfie(photo);
+        setConfirmed(current => ({ ...current, [target]: false }));
       }
     } catch {
       Alert.alert('خطأ', 'تعذّر فتح الكاميرا');
@@ -49,7 +50,7 @@ export default function VerifyAccountScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!idPhoto || !selfie) {
+    if (!idPhoto || !selfie || !confirmed.id || !confirmed.selfie) {
       Alert.alert('مطلوب', t('verification.requiredPhotos'));
       return;
     }
@@ -62,6 +63,7 @@ export default function VerifyAccountScreen() {
       }
       setIdPhoto(null);
       setSelfie(null);
+      setConfirmed({ id: false, selfie: false });
       setRetrying(false);
     } finally {
       setSubmitting(false);
@@ -92,12 +94,19 @@ export default function VerifyAccountScreen() {
     <View style={styles.header}><GuardedPressable onPress={() => router.back()} hitSlop={8}><Ionicons name="arrow-forward" size={26} color={scheme.primary} /></GuardedPressable><Text style={[styles.headerTitle, { color: scheme.text }]}>{t('verification.title')}</Text><View style={{ width: 26 }} /></View>
     <View style={styles.centerIntro}><Ionicons name="shield-checkmark" size={48} color={scheme.primary} /><Text style={[styles.centerTitle, { color: scheme.text }]}>{t('verification.notVerifiedTitle')}</Text><Text style={[styles.subtitle, { color: scheme.textSecondary }]}>{t('verification.notVerifiedSubtitle')}</Text></View>
     <AppCard padding="four" elevation="sm" style={styles.card}><Text style={[styles.sectionTitle, { color: scheme.text }]}>{t('verification.benefitsTitle')}</Text>{[1,2,3].map(i => <View key={i} style={styles.benefit}><Ionicons name="checkmark-circle" size={20} color={scheme.success}/><Text style={{ color: scheme.textSecondary, flex: 1 }}>{t(`verification.benefit${i}`)}</Text></View>)}</AppCard>
-    {([{key:'id',photo:idPhoto,set:setIdPhoto,title:t('verification.step1Title'),subtitle:t('verification.step1Subtitle')},{key:'selfie',photo:selfie,set:setSelfie,title:t('verification.step2Title'),subtitle:t('verification.step2Subtitle')}] as const).map(item => <AppCard key={item.key} padding="four" elevation="sm" style={styles.card}>
+    {([{key:'id',photo:idPhoto,title:t('verification.step1Title'),subtitle:t('verification.step1Subtitle')},{key:'selfie',photo:selfie,title:t('verification.step2Title'),subtitle:t('verification.step2Subtitle')}] as const).map(item => <AppCard key={item.key} padding="four" elevation="sm" style={styles.card}>
       <Text style={[styles.sectionTitle, { color: scheme.text }]}>{item.title}</Text><Text style={[styles.hint, { color: scheme.textSecondary }]}>{item.subtitle}</Text>
-      <GuardedPressable onPress={() => pickImage(item.key)} style={[styles.upload, { backgroundColor: scheme.backgroundElement, borderColor: item.photo ? scheme.success : scheme.border }]}>{item.photo ? <><Image source={{ uri: item.photo.uri }} style={styles.preview}/><View style={[styles.change,{backgroundColor:scheme.primary}]}><Text style={{color:scheme.primaryContrast}}>{t('verification.changeBtn')}</Text></View></> : <><Ionicons name={item.key==='id'?'camera-outline':'person-circle-outline'} size={36} color={scheme.textSecondary}/><Text style={{color:scheme.textSecondary}}>{t('verification.uploadBtn')}</Text></>}</GuardedPressable>
+      {item.photo ? <>
+        <View style={[styles.upload, { backgroundColor: scheme.backgroundElement, borderColor: confirmed[item.key] ? scheme.success : scheme.border }]}><Image source={{ uri: item.photo.uri }} style={styles.preview}/></View>
+        <View style={styles.photoActions}>
+          <GuardedPressable onPress={() => setConfirmed(current => ({ ...current, [item.key]: true }))} style={[styles.photoAction, { backgroundColor: confirmed[item.key] ? scheme.success : scheme.primary }]}><Ionicons name="checkmark-circle" size={18} color={scheme.primaryContrast}/><Text style={{color:scheme.primaryContrast,fontWeight:FontWeights.semibold}}>{confirmed[item.key] ? 'تم اعتماد الصورة' : 'استخدام الصورة'}</Text></GuardedPressable>
+          <GuardedPressable onPress={() => pickImage(item.key)} style={[styles.photoAction, { backgroundColor: scheme.backgroundElement, borderColor: scheme.border, borderWidth: 1 }]}><Ionicons name="camera-reverse-outline" size={18} color={scheme.text}/><Text style={{color:scheme.text,fontWeight:FontWeights.semibold}}>إعادة التصوير</Text></GuardedPressable>
+        </View>
+        <Text style={[styles.photoNote,{color:scheme.textTertiary}]}>{confirmed[item.key] ? 'الصورة جاهزة، ولن تُرفع إلا عند إرسال طلب التوثيق.' : 'راجع الصورة ثم اضغط «استخدام الصورة» لاعتمادها.'}</Text>
+      </> : <GuardedPressable onPress={() => pickImage(item.key)} style={[styles.upload, { backgroundColor: scheme.backgroundElement, borderColor: scheme.border }]}><Ionicons name={item.key==='id'?'camera-outline':'person-circle-outline'} size={36} color={scheme.textSecondary}/><Text style={{color:scheme.textSecondary}}>{t('verification.uploadBtn')}</Text></GuardedPressable>}
     </AppCard>)}
     <Text style={[styles.privacy, { color: scheme.textTertiary }]}>صورتاك لا يراهما أي مستخدم آخر. يراجعهما مسؤول مخوّل فقط، ونحتفظ بهما لأغراض السلامة، وقد تُسلَّمان للجهات المختصة بطلب رسمي.</Text>
-    <AppButton title={submitting ? t('verification.submittingBtn') : t('verification.submitBtn')} variant="primary" size="lg" onPress={handleSubmit} loading={submitting} disabled={submitting || !idPhoto || !selfie} style={{marginTop:Spacing.four}} />
+    <AppButton title={submitting ? t('verification.submittingBtn') : t('verification.submitBtn')} variant="primary" size="lg" onPress={handleSubmit} loading={submitting} disabled={submitting || !idPhoto || !selfie || !confirmed.id || !confirmed.selfie} style={{marginTop:Spacing.four}} />
   </ScrollView></ScreenSafeArea>;
 }
 
@@ -113,6 +122,9 @@ const styles = StyleSheet.create({
   benefit:{flexDirection:'row',alignItems:'center',gap:Spacing.two,marginTop:Spacing.two},
   hint:{fontSize:FontSizes.sm,writingDirection:'rtl',marginBottom:Spacing.three,lineHeight:FontSizes.base+4},
   upload:{height:160,borderRadius:Radii.lg,borderWidth:2,borderStyle:'dashed',alignItems:'center',justifyContent:'center',overflow:'hidden',gap:Spacing.two},
+  photoActions:{flexDirection:'row',gap:Spacing.two,marginTop:Spacing.two},
+  photoAction:{flex:1,minHeight:44,borderRadius:Radii.md,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:Spacing.one,paddingHorizontal:Spacing.two},
+  photoNote:{fontSize:FontSizes.xs,textAlign:'center',marginTop:Spacing.two,writingDirection:'rtl'},
   preview:{width:'100%',height:'100%',resizeMode:'cover'}, change:{position:'absolute',bottom:Spacing.two,right:Spacing.two,paddingHorizontal:Spacing.three,paddingVertical:Spacing.one,borderRadius:Radii.md},
   privacy:{fontSize:FontSizes.xs,writingDirection:'rtl',textAlign:'center',lineHeight:FontSizes.sm+4,marginTop:Spacing.two,paddingHorizontal:Spacing.two}
 });
