@@ -1597,18 +1597,46 @@ additional_info: skill.additional_info?.trim() || '',
         }
 
         if (patch.bio !== undefined || patch.is_available !== undefined) {
-          const { data, error } = await supabase
+          const profileUpdates = {
+            ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
+            ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
+          };
+
+          // UPDATE فقط: لا نحدّث user_id ولا نحتاج صلاحية UPDATE عليه.
+          let { data, error } = await supabase
             .from('provider_profiles')
-            .upsert(
-              {
-                user_id: providerProfileUserId,
-                ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
-                ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
-              },
-              { onConflict: 'user_id' },
-            )
+            .update(profileUpdates)
+            .eq('user_id', providerProfileUserId)
             .select('user_id')
             .single();
+
+          // نسمح بالـ INSERT فقط عندما يؤكد PostgREST أن الصف غير موجود.
+          const profileRowMissing =
+            error?.code === 'PGRST116' &&
+            /0 rows/i.test(`${error.details ?? ''} ${error.message ?? ''}`);
+
+          if (profileRowMissing) {
+            const { error: insertError } = await supabase
+              .from('provider_profiles')
+              .insert({ user_id: providerProfileUserId })
+              .select('user_id')
+              .single();
+
+            if (insertError && insertError.code !== '23505') {
+              error = insertError;
+              data = null;
+            } else {
+              // إذا سبقنا طلب متزامن وأنشأ الصف، فالتحديث التالي يعالجه أيضاً.
+              const retry = await supabase
+                .from('provider_profiles')
+                .update(profileUpdates)
+                .eq('user_id', providerProfileUserId)
+                .select('user_id')
+                .single();
+              data = retry.data;
+              error = retry.error;
+            }
+          }
 
           if (error || !data) {
             logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
