@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/app-double-tap-protection
+      - معالجة-الأخطاء
   pull_request:
     branches:
       - main
