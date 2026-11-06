@@ -1,5 +1,5 @@
 // توحيد أخطاء طبقات API: التفاصيل في سجل المطوّر والرسائل للمستخدم بالعربية.
-import { getUserMessage, messageForKind } from '@/services/errors';
+import { getUserMessage } from '@/services/errors';
 import { logError } from '@/services/logger';
 import { isOffline } from '@/services/networkStatus';
 
@@ -23,6 +23,6 @@ export function dbFailure(
 export function unauthenticated(message: string): AdapterFailure {
   return {
     success: false,
-    error: { code: 'UNAUTHENTICATED', message: isOffline() ? messageForKind('network') : message },
+    error: { code: 'UNAUTHENTICATED', message: isOffline() ? getUserMessage({ message: 'Network request failed' }, 'load') : message },
   };
 }
