@@ -592,6 +592,8 @@ additional_info:
         api.wallet.getTransactions(),
       ]);
       setWalletLoadFailed(!summary.success || !ledger.success);
+      if (!summary.success) logError('[wallet] فشل تحميل ملخص المحفظة:', summary.error);
+      if (!ledger.success) logError('[wallet] فشل تحميل سجل الحركات:', ledger.error);
       if (summary.success) {
         const next = Number(summary.data.balance ?? 0);
         const prev = balanceRef.current;

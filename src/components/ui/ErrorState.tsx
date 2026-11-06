@@ -19,7 +19,7 @@ import { useState } from 'react';
 export interface ErrorStateProps {
   title?: string;
   message?: string;
-  onRetry?: () => void | Promise<void>;
+  onRetry?: () => unknown;
   retryLabel?: string;
   fullscreen?: boolean;
 }
