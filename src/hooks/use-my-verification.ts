@@ -21,18 +21,23 @@ export function useMyVerification() {
 
   const [data, setData] = useState<MyVerification>(EMPTY_VERIFICATION);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!userId) {
       setData(EMPTY_VERIFICATION);
+      setLoadFailed(false);
       setLoading(false);
       return;
     }
     try {
-      setData(await fetchMyVerification(userId));
+      const next = await fetchMyVerification(userId);
+      setData(next);
+      setLoadFailed(false);
     } catch (err) {
       // عند الفشل نُبقي آخر حالة معروفة بدل إظهار "غير موثّق" خطأً
-      logError('[verification] تعذّر جلب حالة التوثيق:', (err as { message?: string })?.message);
+      logError('[verification] تعذّر جلب حالة التوثيق:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -60,6 +65,7 @@ export function useMyVerification() {
     rejectionReason: data.rejectionReason,
     isVerified: data.status === 'verified',
     loading,
+    loadFailed,
     refresh,
     submit,
   };

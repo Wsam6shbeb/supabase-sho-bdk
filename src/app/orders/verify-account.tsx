@@ -1,4 +1,5 @@
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
@@ -16,7 +17,7 @@ interface Photo { uri: string; base64: string }
 
 export default function VerifyAccountScreen() {
   const scheme = Colors[useTheme()];
-  const { status, submittedAt, rejectionReason, loading, submit } = useMyVerification();
+  const { status, submittedAt, rejectionReason, loading, loadFailed, refresh, submit } = useMyVerification();
   const [idPhoto, setIdPhoto] = useState<Photo | null>(null);
   const [selfie, setSelfie] = useState<Photo | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +69,8 @@ export default function VerifyAccountScreen() {
   };
 
   if (loading) return <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}><View style={styles.center}><ActivityIndicator size="large" color={scheme.primary} /></View></ScreenSafeArea>;
+
+  if (loadFailed) return <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}><ErrorState title="تعذر تحميل حالة التوثيق" message="لم نتمكن من تحميل البيانات حالياً." onRetry={refresh} /></ScreenSafeArea>;
 
   if (status === 'verified' || status === 'under_review' || (status === 'rejected' && !retrying)) {
     const verified = status === 'verified';
