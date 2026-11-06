@@ -81,8 +81,7 @@ async function analyzeProviderService(input: {
       if (error) {
         const status = Number((error as any)?.context?.status ?? (error as any)?.status);
         retryableFailure =
-          !Number.isFinite(status) || status === 408 || status === 425 ||
-          status === 429 || (status >= 500 && status <= 599);
+          !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
         logError(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
       } else if (!data?.structured_data || typeof data.structured_data !== 'object') {
         // استجابة غير صالحة ليست عطلاً مؤقتاً؛ لا نكرر الطلب.
@@ -93,8 +92,7 @@ async function analyzeProviderService(input: {
     } catch (error) {
       const status = Number((error as any)?.context?.status ?? (error as any)?.status);
       retryableFailure =
-        !Number.isFinite(status) || status === 408 || status === 425 ||
-        status === 429 || (status >= 500 && status <= 599);
+        !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
       logError(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
     }
 
