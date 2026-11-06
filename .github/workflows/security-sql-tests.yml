@@ -1,0 +1,55 @@
+name: Security SQL regression tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - security/launch-hardening
+
+jobs:
+  postgres-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: security_scratch
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d security_scratch"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Build isolated scratch schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/security_scratch
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f supabase/tests/sql/fixture/local_fixture.sql
+      - name: Apply migrations to scratch database only
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/security_scratch
+        run: |
+          for migration in \
+            supabase/migrations/20261102084036_add_ai_rate_limits.sql \
+            supabase/migrations/20261102120000_add_match_rate_limit.sql \
+            supabase/migrations/20261105090000_lock_candidates_to_server_writes.sql \
+            supabase/migrations/20261105091000_bound_provider_candidate_payload.sql \
+            supabase/migrations/20261105092000_bound_provider_service_inputs.sql \
+            supabase/migrations/20261105093000_phone_guard_structured_data.sql
+          do
+            psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Run SQL security regression tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/security_scratch
+          WITH_FIXTURE: "1"
+        run: bash supabase/tests/sql/run_local.sh "$DATABASE_URL"
