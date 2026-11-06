@@ -1583,6 +1583,13 @@ additional_info: skill.additional_info?.trim() || '',
         return { ok: true };
       } catch (error) {
         logError('[Supabase][providerProfile] خطأ غير متوقع أثناء حفظ التعديلات:', error);
+        if (patch.skills !== undefined) {
+          try {
+            await loadMyProviderProfile(user.id);
+          } catch (refreshError) {
+            logError('[Supabase][providerProfile] تعذر تحديث البيانات بعد فشل الحفظ:', refreshError);
+          }
+        }
         return { ok: false, error: getUserMessage(error, 'generic') };
       }
     },
