@@ -5,6 +5,7 @@
 // ===============================================================
 
 import { buildProviderServiceInfo } from '@/domain/providerServices';
+import { logError } from '@/services/logger';
 import { getConversationAgreement, type DbAgreement } from '@/services/agreements';
 import { fetchMyConversations, type InboxConversation } from '@/services/chat';
 import { logFetchFailure } from '@/services/networkStatus';
@@ -221,7 +222,7 @@ export async function loadMyConversations(userId: string): Promise<HydratedChats
       agreement,
     };
   } catch (err) {
-    console.error('[hydrate] خطأ غير متوقع أثناء استعادة المحادثات:', err);
+    logError('[hydrate] خطأ غير متوقع أثناء استعادة المحادثات:', err);
     return null;
   }
 }
