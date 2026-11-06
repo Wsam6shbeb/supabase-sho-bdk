@@ -306,7 +306,11 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
       >
         {/* Header */}
         <View style={styles.header}>
-          <GuardedPressable onPress={() => router.back()} hitSlop={8}>
+          <GuardedPressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            disabled={saving || addingSkill || removingSkillId !== null}
+          >
             <Ionicons name="arrow-forward" size={26} color={scheme.text} />
           </GuardedPressable>
           <Text style={[styles.headerTitle, { color: scheme.text }]}>
@@ -333,6 +337,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
                   scrollRef.current?.scrollTo({ y: 0, animated: true });
                 }}
                 hitSlop={6}
+                disabled={saving || addingSkill || removingSkillId !== null}
               >
                 <Ionicons name="add-circle" size={26} color={scheme.primary} />
               </GuardedPressable>
