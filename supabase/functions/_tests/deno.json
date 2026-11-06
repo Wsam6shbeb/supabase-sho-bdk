@@ -1,0 +1,6 @@
+{
+  "nodeModulesDir": "none",
+  "imports": {
+    "jsr:@supabase/functions-js/edge-runtime.d.ts": "./stubs/edge_runtime_stub.ts"
+  }
+}
