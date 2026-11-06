@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { logError } from '@/services/logger';
 import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { supabase } from '@/services/supabase';
@@ -61,7 +62,7 @@ export default function CandidatesScreen() {
   // بدلاً من الاعتماد على قائمة موجودة فقط في الذاكرة المحلية.
   useEffect(() => {
     if (!requestId) {
-      console.error('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
+      logError('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
       return;
     }
 
@@ -96,7 +97,7 @@ export default function CandidatesScreen() {
       if (cancelled) return;
 
       if (error) {
-        console.error('[Supabase][candidates] فشل تحميل المرشحين:', error.message);
+        logError('[Supabase][candidates] فشل تحميل المرشحين:', error.message);
         return;
       }
 
@@ -116,7 +117,7 @@ export default function CandidatesScreen() {
         : { data: [], error: null };
 
       if (servicesError) {
-        console.error('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError.message);
+        logError('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError.message);
       }
 
       const servicesByProvider = new Map<string, any[]>();
