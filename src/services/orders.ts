@@ -4,6 +4,7 @@
 // ===============================================================
 
 import { logFetchFailure } from '@/services/networkStatus';
+import { getUserMessage } from '@/services/errors';
 import { supabase } from '@/services/supabase';
 import { OrderStatus } from '@/types/common';
 import type { Order } from '@/types/orders';
@@ -25,7 +26,7 @@ export function orderErrorMessage(code: string | null): string {
     case 'REASON_REQUIRED':
       return 'اكتب سبب البلاغ.';
     default:
-      return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
+      return getUserMessage({ code: code ?? undefined, message: code ?? '' }, 'generic');
   }
 }
 

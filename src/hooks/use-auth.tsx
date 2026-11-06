@@ -368,7 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (oauthError) {
         const apiErr = {
           code: params.get('error') ?? hashParams.get('error') ?? 'GOOGLE_OAUTH_ERROR',
-          message: oauthError,
+          message: getUserMessage({ message: oauthError }, 'login'),
         };
         setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
         return null;

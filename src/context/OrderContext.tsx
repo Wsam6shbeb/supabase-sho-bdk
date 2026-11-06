@@ -10,7 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { DEFAULT_CITY } from '@/config/location';
-import { logError, logWarn } from '@/services/logger';
+import { logError, logInfo, logWarn } from '@/services/logger';
 import { sharePhone as shareMyPhone } from '@/services/phone';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
@@ -313,7 +313,7 @@ async function createServiceRequestInSupabase(params: {
       throw new Error('تعذر إنشاء طلب الخدمة في قاعدة البيانات. حاول مرة أخرى.');
     }
 
-    console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
+    logInfo('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح.');
 
     const analysis = params.analysis ?? await analyzeServiceRequest({
       description: params.description,
@@ -356,7 +356,7 @@ async function createServiceRequestInSupabase(params: {
       if (fallbackUpdateError) {
         logError('[Supabase][startOrder] فشل حفظ fallback:', fallbackUpdateError.message);
       } else {
-        console.log('[Supabase][startOrder] تم حفظ fallback بدون AI:', data.id);
+        logInfo('[Supabase][startOrder] تم حفظ المعالجة البديلة دون تحليل AI.');
       }
 
       return { id: data.id, ai_failed: true };
@@ -379,7 +379,7 @@ async function createServiceRequestInSupabase(params: {
       throw new Error('تعذر حفظ تحليل طلب الخدمة. حاول مرة أخرى.');
     }
 
-    console.log('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي:', data.id);
+    logInfo('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي.');
 
     return { id: data.id, ai_failed: false };
   } catch (err) {

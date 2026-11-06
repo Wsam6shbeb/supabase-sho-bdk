@@ -4,6 +4,7 @@
 // ===============================================================
 
 import { supabase } from '@/services/supabase';
+import { getUserMessage } from '@/services/errors';
 
 export function walletErrorMessage(code: string | null): string {
   switch (code) {
@@ -14,7 +15,7 @@ export function walletErrorMessage(code: string | null): string {
     case 'NOT_A_PROVIDER':
       return 'يجب أن تسجّل خدمة أولاً لتحصل على المكافأة.';
     default:
-      return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
+      return getUserMessage({ code: code ?? undefined, message: code ?? '' }, 'generic');
   }
 }
 
