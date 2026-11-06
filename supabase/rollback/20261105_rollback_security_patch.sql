@@ -68,14 +68,14 @@ DECLARE
 BEGIN
   v_def := pg_get_functiondef('public.get_provider_candidates(uuid,integer)'::regprocedure);
   IF position('bound_provider_service_json' IN v_def) > 0 THEN
-    SELECT string_agg(regexp_replace(tok, '([][(){}.*+?^$|\\\\])', '\\\\\\1', 'g'), '\\s+')
+    SELECT string_agg(regexp_replace(tok, '([][(){}.*+?^$|\\])', '\\\1', 'g'), '\s+')
       INTO v_pattern
-    FROM regexp_split_to_table(btrim(v_bounded), '\\s+') AS tok;
+    FROM regexp_split_to_table(btrim(v_bounded), '\s+') AS tok;
     SELECT count(*) INTO v_matches FROM regexp_matches(v_def, v_pattern, 'g');
     IF v_matches <> 1 THEN
       RAISE EXCEPTION 'bounded services block found % times (need 1); restore get_provider_candidates manually', v_matches;
     END IF;
-    EXECUTE regexp_replace(v_def, v_pattern, replace(v_original, E'\\\\', E'\\\\\\\\'));
+    EXECUTE regexp_replace(v_def, v_pattern, replace(v_original, E'\\', E'\\\\'));
   END IF;
 END
 $rollback$;
