@@ -195,7 +195,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     if (hasPhoneInBio || hasPhoneInSkill || hasPhoneInSkillLocation || hasPhoneInNewLocation) {
       Alert.alert(
         'رقم الهاتف غير مسموح',
-        'احذف رقم الهاتف من نبذة عنك أو من حقل المدينة أو المنطقة قبل الحفظ.',
+        'احذف رقم الهاتف من النبذة أو اسم المهارة أو المدينة أو المنطقة قبل الحفظ.',
       );
       return;
     }
