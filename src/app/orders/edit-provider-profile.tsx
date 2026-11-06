@@ -218,6 +218,12 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   const handleSave = async () => {
     if (saving) return;
 
+    // تحقّق من المهارة الجديدة قبل حفظ بقية الملف حتى لا يحدث حفظ جزئي غير مقصود.
+    if (showAddSkill && newSkillName.trim() && !newSkillCity.trim()) {
+      Alert.alert('المدينة مطلوبة', 'حدد المدينة التي تقدم فيها الخدمة الجديدة قبل حفظ بقية التعديلات.');
+      return;
+    }
+
     const hasPhoneInBio = containsPhoneNumber(bioDraft);
     const hasPhoneInSkill = profile.skills.some((skill) =>
       containsPhoneNumber(skillNames[skill.id] ?? skill.name),
