@@ -11,6 +11,7 @@
 
 import { DEFAULT_CITY } from '@/config/location';
 import { logError, logInfo, logWarn } from '@/services/logger';
+import { getUserMessage } from '@/services/errors';
 import { sharePhone as shareMyPhone } from '@/services/phone';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
@@ -188,7 +189,7 @@ export interface OrderContextValue {
 
   addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
   removeProviderSkill: (skillId: string) => Promise<{ ok: boolean; error?: string }>;
-  updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
+  updateProviderProfile: (patch: Partial<MyProviderProfile>) => Promise<{ ok: boolean; error?: string }>;
   toggleAvailability: () => void;
 
   /** يشحن الرصيد عبر السيرفر (مغلق افتراضياً حتى تتوفر بوابة دفع). */
@@ -1522,45 +1523,59 @@ additional_info: skill.additional_info?.trim() || '',
     return { ok: true };
   }, []);
 
-  const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
-    setMyProviderProfile((prev) => {
-      if (!prev) return null;
+  const updateProviderProfile = useCallback(
+    async (patch: Partial<MyProviderProfile>): Promise<{ ok: boolean; error?: string }> => {
+      if (!myProviderProfile) {
+        return { ok: false, error: 'لم يتم العثور على ملف مقدم الخدمة.' };
+      }
 
-      if (user?.id && patch.skills !== undefined) {
-        for (const skill of patch.skills) {
-          if (!skill.id || skill.id.startsWith('skill_')) continue;
-          if (skill.service_area === undefined && skill.additional_info === undefined) continue;
-          void api.providerServices.update(skill.id, {
-  city: skill.city?.trim() || DEFAULT_CITY,
-  area: skill.area?.trim() || '',
-  service_area: skill.service_area?.trim() || '',
-  additional_info: skill.additional_info,
-          }).then((result) => {
-            if (!result.success) {
-              logError('[Supabase][providerServices] فشل حفظ موقع الخدمة:', result.error.message);
-            }
-          });
+      try {
+        if (user?.id && patch.skills !== undefined) {
+          const persistedSkills = patch.skills.filter(
+            (skill) => skill.id && !skill.id.startsWith('skill_'),
+          );
+          const results = await Promise.all(
+            persistedSkills.map((skill) =>
+              api.providerServices.update(skill.id, {
+                description: skill.description?.trim() || skill.name.trim(),
+                city: skill.city?.trim() || DEFAULT_CITY,
+                area: skill.area?.trim() || '',
+                service_area: skill.service_area?.trim() || '',
+                additional_info: skill.additional_info,
+              }),
+            ),
+          );
+          const failed = results.find((result) => !result.success);
+          if (failed && !failed.success) {
+            logError('[Supabase][providerServices] فشل حفظ تعديلات المهارات:', failed.error.message);
+            return { ok: false, error: failed.error.message };
+          }
         }
-      }
 
-      if (user?.id && (patch.bio !== undefined || patch.is_available !== undefined)) {
-        void supabase
-          .from('provider_profiles')
-          .update({
-            ...(patch.bio !== undefined ? { bio: patch.bio ?? null } : {}),
-            ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
-          })
-          .eq('user_id', user.id)
-          .then(({ error }) => {
-            if (error) {
-              logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error.message);
-            }
-          });
-      }
+        if (user?.id && (patch.bio !== undefined || patch.is_available !== undefined)) {
+          const { error } = await supabase
+            .from('provider_profiles')
+            .update({
+              ...(patch.bio !== undefined ? { bio: patch.bio ?? null } : {}),
+              ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
+            })
+            .eq('user_id', user.id);
 
-      return { ...prev, ...patch };
-    });
-  }, [user]);
+          if (error) {
+            logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
+            return { ok: false, error: getUserMessage(error, 'generic') };
+          }
+        }
+
+        setMyProviderProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+        return { ok: true };
+      } catch (error) {
+        logError('[Supabase][providerProfile] خطأ غير متوقع أثناء حفظ التعديلات:', error);
+        return { ok: false, error: getUserMessage(error, 'generic') };
+      }
+    },
+    [myProviderProfile, user?.id],
+  );
 
   const toggleAvailability = useCallback(() => {
     setMyProviderProfile((prev) => {
