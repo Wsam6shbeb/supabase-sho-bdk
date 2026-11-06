@@ -20,6 +20,7 @@ import { areaPlaceholder } from '@/domain/areaSuggestions';
 import { PHONE_IN_TEXT_MESSAGE, containsPhoneNumber } from '@/domain/chatSafety';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useOrder } from '@/context/OrderContext';
+import { getUserMessage } from '@/services/errors';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -72,19 +73,30 @@ export default function BecomeProviderScreen() {
     if (submitting) return;
     setSubmitting(true);
     rememberCity(trimmedCity);
-    const result = await addFirstSkill({
-      id: `skill_${Date.now()}`,
-      name: trimmed,
-      description: trimmed,
-      city: trimmedCity,
-      area: trimmedArea,
-      service_area: [trimmedCity, trimmedArea].filter(Boolean).join(' '),
-      additional_info: additionalInfo.trim(),
-    });
-
+    let result: Awaited<ReturnType<typeof addFirstSkill>>;
+    try {
+      result = await addFirstSkill({
+        id: `skill_${Date.now()}`,
+        name: trimmed,
+        description: trimmed,
+        city: trimmedCity,
+        area: trimmedArea,
+        service_area: [trimmedCity, trimmedArea].filter(Boolean).join(' '),
+        additional_info: additionalInfo.trim(),
+      });
+    } catch (error) {
+      setError(getUserMessage(error, 'generic'));
+      setSubmitting(false);
+      return;
+    }
     setSubmitting(false);
+
     if (result.clarificationQuestion) {
       setError(result.clarificationQuestion);
+      return;
+    }
+    if (result.error) {
+      setError(result.error);
       return;
     }
 

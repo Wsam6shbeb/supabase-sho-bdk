@@ -149,7 +149,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     } catch (error) {
       Alert.alert(
         'تعذر حفظ المهارة',
-        error instanceof Error ? error.message : 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+        getUserMessage(error, 'generic'),
       );
       return false;
     } finally {

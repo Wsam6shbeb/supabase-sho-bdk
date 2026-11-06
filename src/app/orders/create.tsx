@@ -23,6 +23,7 @@ import {
     Spacing,
 } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
+import { getUserMessage } from '@/services/errors';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -169,7 +170,7 @@ export default function CreateOrderScreen() {
         },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر إنشاء طلب الخدمة. حاول مرة أخرى.');
+      setError(getUserMessage(err, 'createOrder'));
     }
   };
 
