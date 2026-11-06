@@ -268,10 +268,17 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
         };
       });
 
-      const result = await updateProviderProfile({
-        bio: bioDraft.trim(),
+      const nextBio = bioDraft.trim();
+      const savedBio = profile.bio?.trim() ?? '';
+      const profilePatch: { skills: typeof updatedSkills; bio?: string } = {
         skills: updatedSkills,
-      });
+      };
+      // لا نرسل النبذة إطلاقاً إذا لم تتغير؛ حفظ المهارات لا يحتاج تعديل provider_profiles.
+      if (nextBio !== savedBio) {
+        profilePatch.bio = nextBio;
+      }
+
+      const result = await updateProviderProfile(profilePatch);
       if (!result.ok) {
         Alert.alert('تعذر حفظ التعديلات', result.error ?? 'لم يتم حفظ التعديلات. حاول مرة أخرى.');
         return;
