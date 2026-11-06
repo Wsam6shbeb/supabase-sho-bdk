@@ -16,10 +16,11 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
-import { useOrder, type ProviderSkill } from '@/context/OrderContext';
+import { useOrder } from '@/context/OrderContext';
 import { DEFAULT_CITY } from '@/config/location';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { areaPlaceholder } from '@/domain/areaSuggestions';
+import { containsPhoneNumber } from '@/domain/chatSafety';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useTheme } from '@/hooks/use-theme';
 import { getUserMessage } from '@/services/errors';
@@ -30,7 +31,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
     KeyboardAvoidingView,
-    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -38,13 +38,6 @@ import {
 } from 'react-native';
 
 // [شرح الدالة: EditProviderProfileScreen] يعرض نموذج تعديل مهارات وبيانات ملف مقدم الخدمة.
-const containsPhoneNumber = (value: string) => {
-  const normalized = value
-    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
-  return /[0-9](?:[\s()+\-./]*[0-9]){7,}/.test(normalized);
-};
-
 export default function EditProviderProfileScreen() {
   const theme = useTheme();
   const scheme = Colors[theme];
@@ -56,6 +49,9 @@ export default function EditProviderProfileScreen() {
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [saved, setSaved] = useState(false);
   const [addingSkill, setAddingSkill] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [removingSkillId, setRemovingSkillId] = useState<string | null>(null);
+  const [bioDraft, setBioDraft] = useState(myProviderProfile?.bio ?? '');
   const scrollRef = useRef<ScrollView>(null);
   const keyboardVisible = useKeyboardVisible();
  const [skillCities, setSkillCities] = useState<Record<string, string>>({});
@@ -68,6 +64,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!profile) return;
     let active = true;
+    setBioDraft(profile.bio ?? '');
     void Promise.resolve().then(() => {
       if (!active) return;
       setSkillCities(
@@ -115,12 +112,17 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
     const city = newSkillCity.trim();
     const area = newSkillArea.trim();
 
-    if (!trimmed || !city || addingSkill) {
-      if (!city) Alert.alert('المدينة مطلوبة', 'اكتب المدينة التي تقدم فيها الخدمة.');
+    if (addingSkill) return false;
+    if (!trimmed) {
+      Alert.alert('المهارة مطلوبة', 'اكتب اسم المهارة أو الخدمة التي تقدمها.');
+      return false;
+    }
+    if (!city) {
+      Alert.alert('المدينة مطلوبة', 'اكتب المدينة التي تقدم فيها الخدمة.');
       return false;
     }
 
-    if (containsPhoneNumber(city) || containsPhoneNumber(area)) {
+    if (containsPhoneNumber(trimmed) || containsPhoneNumber(city) || containsPhoneNumber(area)) {
       Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في حقل المدينة أو المنطقة.');
       return false;
     }
@@ -160,24 +162,37 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
 
 // [شرح الدالة: handleRemoveSkill] يحذف مهارة محددة من قائمة المهارات.
   const handleRemoveSkill = async (skillId: string) => {
-    const result = await removeProviderSkill(skillId);
-    if (!result.ok) {
-      Alert.alert('تعذر حذف المهارة', result.error ?? 'لم يتم حذف المهارة. حاول مرة أخرى.');
+    if (removingSkillId) return;
+    setRemovingSkillId(skillId);
+    try {
+      const result = await removeProviderSkill(skillId);
+      if (!result.ok) {
+        Alert.alert('تعذر حذف المهارة', result.error ?? 'لم يتم حذف المهارة. حاول مرة أخرى.');
+      }
+    } catch (error) {
+      Alert.alert('تعذر حذف المهارة', getUserMessage(error, 'generic'));
+    } finally {
+      setRemovingSkillId(null);
     }
   };
 
 // [شرح الدالة: handleSave] يحفظ التعديلات الحالية ويرسلها إلى طبقة البيانات.
   const handleSave = async () => {
-    const hasPhoneInBio = containsPhoneNumber(profile.bio ?? '');
+    if (saving) return;
+
+    const hasPhoneInBio = containsPhoneNumber(bioDraft);
+    const hasPhoneInSkill = profile.skills.some((skill) =>
+      containsPhoneNumber(skillNames[skill.id] ?? skill.name),
+    );
     const hasPhoneInSkillLocation = profile.skills.some((skill) =>
       containsPhoneNumber(skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY) ||
       containsPhoneNumber(skillAreas[skill.id] ?? skill.area ?? ''),
     );
     const hasPhoneInNewLocation =
       showAddSkill &&
-      (containsPhoneNumber(newSkillCity) || containsPhoneNumber(newSkillArea));
+      (containsPhoneNumber(newSkillName) || containsPhoneNumber(newSkillCity) || containsPhoneNumber(newSkillArea));
 
-    if (hasPhoneInBio || hasPhoneInSkillLocation || hasPhoneInNewLocation) {
+    if (hasPhoneInBio || hasPhoneInSkill || hasPhoneInSkillLocation || hasPhoneInNewLocation) {
       Alert.alert(
         'رقم الهاتف غير مسموح',
         'احذف رقم الهاتف من نبذة عنك أو من حقل المدينة أو المنطقة قبل الحفظ.',
@@ -185,33 +200,55 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
       return;
     }
 
-    updateProviderProfile({
-      skills: profile.skills.map((skill) => ({
-        ...skill,
-        name: skillNames[skill.id] ?? skill.name,
-      city: skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY,
-area: skillAreas[skill.id] ?? skill.area ?? '',
-service_area: [
-  skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY,
-  skillAreas[skill.id] ?? skill.area ?? '',
-]
-  .filter(Boolean)
-  .join(' '),
-      })),
-    });
-
-    // إذا كتب المستخدم مهارة جديدة ولم يضغط "إضافة"، نضيفها الآن بدل أن تضيع بصمت.
-    // (نحفظ تعديلات المهارات الحالية أولاً، ثم الإضافة تعيد تحميل القائمة من قاعدة البيانات.)
-    if (showAddSkill && newSkillName.trim()) {
-      const added = await handleAddSkill();
-      if (!added) return;
+    const invalidSkillName = profile.skills.some(
+      (skill) => !(skillNames[skill.id] ?? skill.name).trim(),
+    );
+    if (invalidSkillName) {
+      Alert.alert('اسم المهارة مطلوب', 'لا تترك اسم أي مهارة فارغاً.');
+      return;
     }
 
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      router.back();
-    }, 1200);
+    setSaving(true);
+    try {
+      const updatedSkills = profile.skills.map((skill) => {
+        const name = (skillNames[skill.id] ?? skill.name).trim();
+        const city = (skillCities[skill.id] ?? skill.city ?? DEFAULT_CITY).trim();
+        const area = (skillAreas[skill.id] ?? skill.area ?? '').trim();
+        return {
+          ...skill,
+          name,
+          description: name,
+          city,
+          area,
+          service_area: [city, area].filter(Boolean).join(' '),
+        };
+      });
+
+      const result = await updateProviderProfile({
+        bio: bioDraft.trim(),
+        skills: updatedSkills,
+      });
+      if (!result.ok) {
+        Alert.alert('تعذر حفظ التعديلات', result.error ?? 'لم يتم حفظ التعديلات. حاول مرة أخرى.');
+        return;
+      }
+
+      // إذا كتب المستخدم مهارة جديدة ولم يضغط "إضافة"، نضيفها بعد حفظ التعديلات الحالية.
+      if (showAddSkill && newSkillName.trim()) {
+        const added = await handleAddSkill();
+        if (!added) return;
+      }
+
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        router.back();
+      }, 1200);
+    } catch (error) {
+      Alert.alert('تعذر حفظ التعديلات', getUserMessage(error, 'generic'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -382,10 +419,18 @@ service_area: [
                   </View>
 
                   <GuardedPressable
-                    onPress={() => handleRemoveSkill(skill.id)}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      void handleRemoveSkill(skill.id);
+                    }}
                     hitSlop={6}
+                    disabled={removingSkillId !== null}
                   >
-                    <Ionicons name="trash-outline" size={20} color={scheme.danger} />
+                    <Ionicons
+                      name={removingSkillId === skill.id ? 'hourglass-outline' : 'trash-outline'}
+                      size={20}
+                      color={scheme.danger}
+                    />
                   </GuardedPressable>
                 </GuardedPressable>
               );
@@ -399,13 +444,13 @@ service_area: [
             </Text>
             <AppTextInput
               placeholder={t('home.becomeProvider.bioPlaceholder')}
-              value={profile.bio ?? ''}
+              value={bioDraft}
               onChangeText={(v) => {
                 if (containsPhoneNumber(v)) {
                   Alert.alert('رقم الهاتف غير مسموح', 'لا تضع رقم هاتف في نبذة عنك.');
                   return;
                 }
-                updateProviderProfile({ bio: v });
+                setBioDraft(v);
               }}
               multiline
               numberOfLines={3}
@@ -426,10 +471,12 @@ service_area: [
             </View>
           ) : (
             <AppButton
-              title={t('home.editProfile.saveBtn')}
+              title={saving ? 'جارٍ الحفظ...' : t('home.editProfile.saveBtn')}
               variant="primary"
               size="lg"
               onPress={handleSave}
+              loading={saving}
+              disabled={saving || addingSkill || removingSkillId !== null}
               leadingIcon={
                 <Ionicons name="checkmark" size={20} color={scheme.primaryContrast} />
               }
