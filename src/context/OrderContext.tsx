@@ -122,6 +122,8 @@ export interface OrderContextValue {
 
   balance: number;
   transactions: Transaction[];
+  walletLoadFailed: boolean;
+  refreshWallet: () => Promise<void>;
   isLowBalance: boolean;
   isCriticalBalance: boolean;
 
@@ -576,30 +578,40 @@ additional_info:
 
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [walletLoadFailed, setWalletLoadFailed] = useState(false);
   const balanceRef = useRef<number | null>(null);
 
   const refreshWallet = useCallback(async () => {
-    if (!api.wallet) return;
-    const [summary, ledger] = await Promise.all([
-      api.wallet.getSummary(),
-      api.wallet.getTransactions(),
-    ]);
-    if (summary.success) {
-      const next = Number(summary.data.balance ?? 0);
-      const prev = balanceRef.current;
-      balanceRef.current = next;
-      setBalance(next);
-      // تنبيه عند هبوط الرصيد تحت الحد (لا عند أول تحميل)
-      if (prev !== null && prev >= CRITICAL_BALANCE_THRESHOLD && next < CRITICAL_BALANCE_THRESHOLD) {
-        pushNotification({
-          type: 'balance_low',
-          title: 'رصيدك منخفض',
-          body: 'رصيدك أقل من الحد الأدنى. أضف رصيداً لتستمر في استقبال الطلبات.',
-          route: '/(drawer)/(tabs)/wallet',
-        });
-      }
+    if (!api.wallet) {
+      setWalletLoadFailed(true);
+      return;
     }
-    if (ledger.success) setTransactions(ledger.data);
+    try {
+      const [summary, ledger] = await Promise.all([
+        api.wallet.getSummary(),
+        api.wallet.getTransactions(),
+      ]);
+      setWalletLoadFailed(!summary.success || !ledger.success);
+      if (summary.success) {
+        const next = Number(summary.data.balance ?? 0);
+        const prev = balanceRef.current;
+        balanceRef.current = next;
+        setBalance(next);
+        // تنبيه عند هبوط الرصيد تحت الحد (لا عند أول تحميل)
+        if (prev !== null && prev >= CRITICAL_BALANCE_THRESHOLD && next < CRITICAL_BALANCE_THRESHOLD) {
+          pushNotification({
+            type: 'balance_low',
+            title: 'رصيدك منخفض',
+            body: 'رصيدك أقل من الحد الأدنى. أضف رصيداً لتستمر في استقبال الطلبات.',
+            route: '/(drawer)/(tabs)/wallet',
+          });
+        }
+      }
+      if (ledger.success) setTransactions(ledger.data);
+    } catch (error) {
+      logError('[wallet] فشل تحديث بيانات المحفظة:', error);
+      setWalletLoadFailed(true);
+    }
   }, [pushNotification]);
 
   // الرصيد والحركات من السيرفر عند الدخول، ولحظياً عند أي تغيير (موافقة اتفاق، شحن، مكافأة)
@@ -1598,6 +1610,8 @@ additional_info: skill.additional_info?.trim() || '',
       welcomeBonusReceived: myProviderProfile?.welcome_bonus_received ?? false,
       balance,
       transactions,
+      walletLoadFailed,
+      refreshWallet,
       isLowBalance,
       isCriticalBalance,
       verificationStatus,
@@ -1655,6 +1669,8 @@ additional_info: skill.additional_info?.trim() || '',
       myProviderProfile,
       balance,
       transactions,
+      walletLoadFailed,
+      refreshWallet,
       isLowBalance,
       isCriticalBalance,
       verificationStatus,
