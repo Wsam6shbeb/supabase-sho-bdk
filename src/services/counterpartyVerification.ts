@@ -77,8 +77,10 @@ export async function requestCounterpartyVerification(
     const { error } = await db.rpc('request_counterparty_verification', {
       p_conversation_id: conversationId,
     });
-    return error ? { ok: false, error: error.message } : { ok: true, error: null };
+    if (error) logWarn('[verification] تعذر طلب توثيق الطرف الآخر', { code: error.code, message: error.message });
+    return error ? { ok: false, error: error.code || 'VERIFICATION_REQUEST_FAILED' } : { ok: true, error: null };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'NETWORK_ERROR' };
+    logWarn('[verification] فشل طلب توثيق الطرف الآخر بسبب غير متوقع', { errorType: err instanceof Error ? err.name : 'UnknownError' });
+    return { ok: false, error: 'NETWORK_ERROR' };
   }
 }
