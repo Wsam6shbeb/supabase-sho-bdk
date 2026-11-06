@@ -266,8 +266,23 @@ async function update(
     ? existing.structured_data
     : {};
 
+const nextDescription = input.description?.trim() || existing.description;
+const existingSkills = asStringArray(existingStructuredData.skills);
+const nextSkills = existingSkills.length
+  ? existingSkills.map((skill) => (
+      skill.trim().toLocaleLowerCase() === existing.description.trim().toLocaleLowerCase()
+        ? nextDescription
+        : skill
+    ))
+  : [nextDescription];
+if (!nextSkills.some((skill) => skill.trim().toLocaleLowerCase() === nextDescription.toLocaleLowerCase())) {
+  nextSkills.unshift(nextDescription);
+}
+
 const structuredData = {
   ...existingStructuredData,
+  service: nextDescription,
+  skills: [...new Set(nextSkills)],
   city,
   area: area || null,
   service_area: serviceArea,
