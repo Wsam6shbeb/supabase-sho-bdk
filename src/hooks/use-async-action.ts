@@ -1,5 +1,5 @@
 // ===============================================================
-// useAsyncAction — تنفيذ عملية غير متزامنة مع: حالة تحميل، منع تكرار، ورسالة خطأ مناسبة،
+// useAsyncAction — تنفيذ عملية غير متزامنة مع: حالة تحميل، منع تكرار، ورسالة خطأ مناسبة,
 // وإعادة محاولة تنفذ نفس العملية بنفس المدخلات.
 //
 //   const send = useAsyncAction(sendMessage, { context: 'sendMessage' });
@@ -11,7 +11,7 @@
 import { describeError, type ErrorContext, type ErrorInfo } from '@/services/errors';
 import { logError } from '@/services/logger';
 import { createActionRunner, type ActionState, type RunResult } from '@/utils/action-runner';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 interface Options {
   /** اسم العملية للسجل (للمطوّر فقط). */
@@ -24,26 +24,11 @@ export function useAsyncAction<A extends unknown[], R>(
   { operation = 'action', context = 'generic' }: Options = {},
 ) {
   const [state, setState] = useState<ActionState>({ status: 'idle', error: null });
-  const mounted = useRef(true);
-  const actionRef = useRef(action);
-  actionRef.current = action;
 
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
+  // يرتبط الـ runner بنسخة action الحالية، بدون قراءة أو تعديل refs أثناء الرسم.
   const runner = useMemo(
-    () =>
-      createActionRunner<A, R>(
-        (...args) => actionRef.current(...args),
-        (next) => {
-          if (mounted.current) setState(next);
-        },
-      ),
-    [],
+    () => createActionRunner<A, R>(action, setState),
+    [action],
   );
 
   const run = useCallback(
