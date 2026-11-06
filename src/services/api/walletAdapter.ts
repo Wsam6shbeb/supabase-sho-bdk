@@ -10,6 +10,7 @@
 import { supabase } from '@/services/supabase';
 import type { ApiResponse } from '@/types/common';
 import type { Transaction, TransactionReason } from '@/types/wallet';
+import { dbFailure, unauthenticated } from '@/services/api/adapterErrors';
 
 // تحويل نوع القيد بجدول ledger_entries إلى سبب المعاملة المستخدم بالواجهة.
 const LEDGER_TYPE_TO_REASON: Record<string, TransactionReason> = {
@@ -37,7 +38,7 @@ export const wallet = {
   async getSummary(): Promise<ApiResponse<{ balance: number; alert_level: 'red' | 'yellow' | null; updated_at: string }>> {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return { success: false, error: { code: 'UNAUTHENTICATED', message: 'يجب تسجيل الدخول لعرض المحفظة.' } };
+      return unauthenticated('يجب تسجيل الدخول لعرض المحفظة.');
     }
     const { data, error } = await supabase
       .from('wallets')
@@ -45,7 +46,7 @@ export const wallet = {
       .eq('user_id', userId)
       .maybeSingle();
     if (error) {
-      return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+      return dbFailure('wallet.getSummary', error);
     }
     return {
       success: true,
@@ -69,7 +70,7 @@ export const wallet = {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) {
-      return { success: false, error: { code: error.code || 'DB_ERROR', message: error.message } };
+      return dbFailure('wallet.getTransactions', error);
     }
     const transactions: Transaction[] = (data ?? []).map((row) => ({
       id: String(row.id),
