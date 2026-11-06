@@ -230,7 +230,7 @@ async function mine(): Promise<ApiResponse<ProviderServiceRow[]>> {
 // service_area يبقى محفوظاً مؤقتاً للتوافق مع المطابقة والبيانات القديمة.
 async function update(
   id: string,
-  input: { city: string; area?: string; service_area: string; additional_info?: string },
+  input: { description?: string; city: string; area?: string; service_area: string; additional_info?: string },
 ): Promise<ApiResponse<ProviderServiceRow>> {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -276,7 +276,10 @@ const structuredData = {
 
   const { data, error } = await supabase
     .from('provider_services')
-    .update({ structured_data: structuredData })
+    .update({
+      ...(input.description !== undefined ? { description: input.description.trim() } : {}),
+      structured_data: structuredData,
+    })
     .eq('id', id)
     .eq('provider_id', userId)
     .select()
