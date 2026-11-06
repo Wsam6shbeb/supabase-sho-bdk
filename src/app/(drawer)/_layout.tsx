@@ -4,6 +4,7 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights } from '@/constants/theme';
+import { logError } from '@/services/logger';
 import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -84,7 +85,7 @@ function DrawerContent(props: any) {
         await Share.share({ message: SHARE_MESSAGE, url: SHARE_URL, title: 'شارك تطبيق شو بدك؟' });
       } catch (err) {
         // على الويب قد لا تتوفر المشاركة في المتصفح؛ لا نريد انهيار التطبيق
-        console.error('[share] تعذرت مشاركة التطبيق:', (err as { message?: string })?.message);
+        logError('[share] تعذرت مشاركة التطبيق:', (err as { message?: string })?.message);
       }
     })();
   };
