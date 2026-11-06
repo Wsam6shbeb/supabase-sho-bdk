@@ -51,7 +51,7 @@ export async function openConversation(
     p_provider_id: providerId,
   });
   if (error || !data) {
-    return { id: null, error: error?.message ?? 'EMPTY_RESULT' };
+    return { id: null, error: error?.code ?? 'EMPTY_RESULT' };
   }
   return { id: data as string, error: null };
 }
@@ -96,11 +96,11 @@ export async function sendMessage(params: {
 
     if (error) {
       // 23505 = نفس client_dedupe_key أُرسل سابقاً (الرسالة موجودة فعلاً)
-      return { message: null, error: error.code === '23505' ? 'DUPLICATE' : error.message };
+      return { message: null, error: error.code === '23505' ? 'DUPLICATE' : error.code || 'SEND_FAILED' };
     }
     return { message: data as DbMessage, error: null };
   } catch (err) {
-    return { message: null, error: err instanceof Error ? err.message : 'NETWORK_ERROR' };
+    return { message: null, error: 'NETWORK_ERROR' };
   }
 }
 
@@ -250,7 +250,7 @@ export async function archiveConversation(
   // تكرار الأرشفة لا يعد فشلاً؛ قد يكون الطلب السابق نجح وانقطع الرد.
   if (error && error.code !== '23505') {
     logFetchFailure('chat', 'فشلت أرشفة المحادثة', error);
-    return { ok: false, error: error.message };
+    return { ok: false, error: 'ARCHIVE_FAILED' };
   }
   return { ok: true };
 }
@@ -266,7 +266,7 @@ export async function unarchiveConversation(
 
   if (error) {
     logFetchFailure('chat', 'فشل إلغاء أرشفة المحادثة', error);
-    return { ok: false, error: error.message };
+    return { ok: false, error: 'UNARCHIVE_FAILED' };
   }
   return { ok: true };
 }
