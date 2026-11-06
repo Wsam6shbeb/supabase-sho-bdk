@@ -12,6 +12,7 @@
 import { AppButton } from '@/components/ui/AppButton';
 import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppCard } from '@/components/ui/AppCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
@@ -37,6 +38,8 @@ export default function WalletTab() {
   const {
     balance,
     transactions,
+    walletLoadFailed,
+    refreshWallet,
     isLowBalance,
     isCriticalBalance,
   } = useOrder();
@@ -116,6 +119,14 @@ export default function WalletTab() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
+            {walletLoadFailed ? (
+              <ErrorState
+                fullscreen={false}
+                title="تعذر تحميل بيانات المحفظة"
+                message="لم نتمكن من تحميل البيانات حالياً."
+                onRetry={refreshWallet}
+              />
+            ) : null}
             <AppCard padding="four" elevation="md" style={styles.balanceCard}>
               <Text style={[styles.balanceLabel, { color: scheme.textSecondary }]}>
                 {t('wallet.currentBalance')}

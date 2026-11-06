@@ -10,6 +10,8 @@
 // ═══════════════════════════════════════════════════════════
 
 import { DEFAULT_CITY } from '@/config/location';
+import { logError, logInfo, logWarn } from '@/services/logger';
+import { getUserMessage } from '@/services/errors';
 import { sharePhone as shareMyPhone } from '@/services/phone';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
@@ -116,11 +118,16 @@ export interface OrderContextValue {
   orderHistory: Order[];
 
   myProviderProfile: MyProviderProfile | null;
+  providerProfileLoading: boolean;
+  providerProfileLoadFailed: boolean;
+  refreshMyProviderProfile: () => Promise<void>;
   hasProviderProfile: boolean;
   welcomeBonusReceived: boolean;
 
   balance: number;
   transactions: Transaction[];
+  walletLoadFailed: boolean;
+  refreshWallet: () => Promise<void>;
   isLowBalance: boolean;
   isCriticalBalance: boolean;
 
@@ -185,7 +192,7 @@ export interface OrderContextValue {
 
   addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
   removeProviderSkill: (skillId: string) => Promise<{ ok: boolean; error?: string }>;
-  updateProviderProfile: (patch: Partial<MyProviderProfile>) => void;
+  updateProviderProfile: (patch: Partial<MyProviderProfile>) => Promise<{ ok: boolean; error?: string }>;
   toggleAvailability: () => void;
 
   /** يشحن الرصيد عبر السيرفر (مغلق افتراضياً حتى تتوفر بوابة دفع). */
@@ -256,12 +263,12 @@ async function analyzeServiceRequest(input: {
     });
 
     if (error) {
-      console.error('[Supabase][startOrder] فشل تحليل طلب الخدمة بالذكاء الاصطناعي:', error.message);
+      logError('[Supabase][startOrder] فشل تحليل طلب الخدمة بالذكاء الاصطناعي:', error.message);
       return null;
     }
 
     if (!data?.structured_data) {
-      console.error('[Supabase][startOrder] تحليل طلب الخدمة لم يُرجع structured_data.');
+      logError('[Supabase][startOrder] تحليل طلب الخدمة لم يُرجع structured_data.');
       return null;
     }
 
@@ -275,7 +282,7 @@ async function analyzeServiceRequest(input: {
           : null,
     };
   } catch (err) {
-    console.error('[Supabase][startOrder] خطأ أثناء تحليل طلب الخدمة بالذكاء الاصطناعي:', err);
+    logError('[Supabase][startOrder] خطأ أثناء تحليل طلب الخدمة بالذكاء الاصطناعي:', err);
     return null;
   }
 }
@@ -308,11 +315,11 @@ async function createServiceRequestInSupabase(params: {
       .single();
 
     if (error) {
-      console.error('[Supabase][startOrder] فشل إنشاء طلب الخدمة:', error.message, params);
+      logError('[Supabase][startOrder] فشل إنشاء طلب الخدمة:', error.message, params);
       throw new Error('تعذر إنشاء طلب الخدمة في قاعدة البيانات. حاول مرة أخرى.');
     }
 
-    console.log('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح:', data.id);
+    logInfo('[Supabase][startOrder] تم إنشاء طلب الخدمة بنجاح.');
 
     const analysis = params.analysis ?? await analyzeServiceRequest({
       description: params.description,
@@ -322,7 +329,7 @@ async function createServiceRequestInSupabase(params: {
 
     // ⭐ إذا فشل AI: نكمل بـ fallback بدون ما نوقف العملية
     if (!analysis) {
-      console.warn('[Supabase][startOrder] تحليل AI فشل، سيتم استخدام النص الخام كـ fallback.');
+      logWarn('[Supabase][startOrder] تحليل AI فشل، سيتم استخدام النص الخام كـ fallback.');
 
       const fallbackStructuredData: Json = {
         service: params.description,
@@ -353,9 +360,9 @@ async function createServiceRequestInSupabase(params: {
         .eq('requester_id', params.requesterId);
 
       if (fallbackUpdateError) {
-        console.error('[Supabase][startOrder] فشل حفظ fallback:', fallbackUpdateError.message);
+        logError('[Supabase][startOrder] فشل حفظ fallback:', fallbackUpdateError.message);
       } else {
-        console.log('[Supabase][startOrder] تم حفظ fallback بدون AI:', data.id);
+        logInfo('[Supabase][startOrder] تم حفظ المعالجة البديلة دون تحليل AI.');
       }
 
       return { id: data.id, ai_failed: true };
@@ -374,15 +381,15 @@ async function createServiceRequestInSupabase(params: {
       .eq('requester_id', params.requesterId);
 
     if (updateError) {
-      console.error('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
+      logError('[Supabase][startOrder] فشل حفظ تحليل طلب الخدمة:', updateError.message);
       throw new Error('تعذر حفظ تحليل طلب الخدمة. حاول مرة أخرى.');
     }
 
-    console.log('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي:', data.id);
+    logInfo('[Supabase][startOrder] تم حفظ تحليل طلب الخدمة بالذكاء الاصطناعي.');
 
     return { id: data.id, ai_failed: false };
   } catch (err) {
-    console.error('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
+    logError('[Supabase][startOrder] خطأ أثناء إنشاء طلب الخدمة:', err);
     if (err instanceof Error && err.message.includes('تعذر إنشاء طلب الخدمة')) {
       throw err;
     }
@@ -398,14 +405,14 @@ async function syncOpenChatToSupabase(
 ): Promise<string | null> {
   try {
     if (!requesterId) {
-      console.error('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
+      logError('[Supabase][openChat] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء المحادثة.');
       return null;
     }
 
     const { id, error } = await openConversation(orderId, providerId);
 
     if (error || !id) {
-      console.error('[Supabase][openChat] فشل فتح المحادثة:', error, {
+      logError('[Supabase][openChat] فشل فتح المحادثة:', error, {
         threadId: thread.id,
         orderId,
         providerId,
@@ -416,7 +423,7 @@ async function syncOpenChatToSupabase(
     console.log('[Supabase][openChat] المحادثة جاهزة:', id);
     return id;
   } catch (err) {
-    console.error('[Supabase][openChat] خطأ غير متوقع أثناء فتح المحادثة:', err);
+    logError('[Supabase][openChat] خطأ غير متوقع أثناء فتح المحادثة:', err);
     return null;
   }
 }
@@ -448,6 +455,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const lastAgreementRef = useRef<{ id: string; state: string } | null>(null);
 
   const [myProviderProfile, setMyProviderProfile] = useState<MyProviderProfile | null>(null);
+  const [providerProfileLoading, setProviderProfileLoading] = useState(true);
+  const [providerProfileLoadFailed, setProviderProfileLoadFailed] = useState(false);
 
   const loadMyProviderProfile = useCallback(async (userId: string) => {
     try {
@@ -465,20 +474,24 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (profileResult.error) {
-        console.error('[Supabase][providerProfile] فشل قراءة ملف مقدم الخدمة:', profileResult.error.message);
+        setProviderProfileLoadFailed(true);
+        logError('[Supabase][providerProfile] فشل قراءة ملف مقدم الخدمة:', profileResult.error.message);
         return;
       }
 
       if (servicesResult.error) {
-        console.error('[Supabase][providerServices] فشل قراءة خدمات مقدم الخدمة:', servicesResult.error.message);
+        setProviderProfileLoadFailed(true);
+        logError('[Supabase][providerServices] فشل قراءة خدمات مقدم الخدمة:', servicesResult.error.message);
         return;
       }
 
       if (!profileResult.data && (servicesResult.data?.length ?? 0) === 0) {
         setMyProviderProfile(null);
+        setProviderProfileLoadFailed(false);
         return;
       }
 
+      setProviderProfileLoadFailed(false);
       setMyProviderProfile({
         skills: (servicesResult.data ?? []).map((service) => ({
           id: service.id,
@@ -524,29 +537,58 @@ additional_info:
         welcome_bonus_received: false,
       });
     } catch (err) {
-      console.error('[Supabase][providerProfile] خطأ غير متوقع أثناء تحميل ملف مقدم الخدمة:', err);
+      setProviderProfileLoadFailed(true);
+      logError('[Supabase][providerProfile] خطأ غير متوقع أثناء تحميل ملف مقدم الخدمة:', err);
     }
   }, []);
 
   useEffect(() => {
     let alive = true;
-    if (!user?.id) {
-      void Promise.resolve().then(() => {
-        if (alive) setMyProviderProfile(null);
-      });
-      return () => {
-        alive = false;
-      };
-    }
-    void (async () => {
-      await loadMyProviderProfile(user.id);
-      // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
-      const repaired = await api.providerServices.repairIncomplete();
-      if (repaired) await loadMyProviderProfile(user.id);
-    })();
+    const userId = user?.id;
+
+    // تأجيل تحديثات الحالة إلى ما بعد تنفيذ التأثير لتجنب تحديث state أثناء effect مباشرة.
+    void Promise.resolve().then(() => {
+      if (!alive) return;
+
+      if (!userId) {
+        setProviderProfileLoading(false);
+        setProviderProfileLoadFailed(false);
+        setMyProviderProfile(null);
+        return;
+      }
+
+      setProviderProfileLoading(true);
+      setProviderProfileLoadFailed(false);
+
+      void (async () => {
+        try {
+          await loadMyProviderProfile(userId);
+          // أكمل تحليل أي خدمة محفوظة بدون بيانات منظمة (يحتاجها محرك المطابقة)، ثم أعد التحميل إن تغيّر شيء.
+          const repaired = await api.providerServices.repairIncomplete();
+          if (repaired) await loadMyProviderProfile(userId);
+        } catch (error) {
+          if (alive) setProviderProfileLoadFailed(true);
+          logError('[Supabase][providerProfile] فشل إكمال تحميل ملف مقدم الخدمة:', error);
+        } finally {
+          if (alive) setProviderProfileLoading(false);
+        }
+      })();
+    });
+
     return () => {
       alive = false;
     };
+  }, [user?.id, loadMyProviderProfile]);
+
+  const refreshMyProviderProfile = useCallback(async () => {
+    if (!user?.id) return;
+    setProviderProfileLoading(true);
+    setProviderProfileLoadFailed(false);
+    try {
+      await loadMyProviderProfile(user.id);
+    } finally {
+      setProviderProfileLoading(false);
+    }
   }, [user?.id, loadMyProviderProfile]);
 
   const [verificationStatus, setVerificationStatus] =
@@ -575,30 +617,42 @@ additional_info:
 
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [walletLoadFailed, setWalletLoadFailed] = useState(false);
   const balanceRef = useRef<number | null>(null);
 
   const refreshWallet = useCallback(async () => {
-    if (!api.wallet) return;
-    const [summary, ledger] = await Promise.all([
-      api.wallet.getSummary(),
-      api.wallet.getTransactions(),
-    ]);
-    if (summary.success) {
-      const next = Number(summary.data.balance ?? 0);
-      const prev = balanceRef.current;
-      balanceRef.current = next;
-      setBalance(next);
-      // تنبيه عند هبوط الرصيد تحت الحد (لا عند أول تحميل)
-      if (prev !== null && prev >= CRITICAL_BALANCE_THRESHOLD && next < CRITICAL_BALANCE_THRESHOLD) {
-        pushNotification({
-          type: 'balance_low',
-          title: 'رصيدك منخفض',
-          body: 'رصيدك أقل من الحد الأدنى. أضف رصيداً لتستمر في استقبال الطلبات.',
-          route: '/(drawer)/(tabs)/wallet',
-        });
-      }
+    if (!api.wallet) {
+      setWalletLoadFailed(true);
+      return;
     }
-    if (ledger.success) setTransactions(ledger.data);
+    try {
+      const [summary, ledger] = await Promise.all([
+        api.wallet.getSummary(),
+        api.wallet.getTransactions(),
+      ]);
+      setWalletLoadFailed(!summary.success || !ledger.success);
+      if (!summary.success) logError('[wallet] فشل تحميل ملخص المحفظة:', summary.error);
+      if (!ledger.success) logError('[wallet] فشل تحميل سجل الحركات:', ledger.error);
+      if (summary.success) {
+        const next = Number(summary.data.balance ?? 0);
+        const prev = balanceRef.current;
+        balanceRef.current = next;
+        setBalance(next);
+        // تنبيه عند هبوط الرصيد تحت الحد (لا عند أول تحميل)
+        if (prev !== null && prev >= CRITICAL_BALANCE_THRESHOLD && next < CRITICAL_BALANCE_THRESHOLD) {
+          pushNotification({
+            type: 'balance_low',
+            title: 'رصيدك منخفض',
+            body: 'رصيدك أقل من الحد الأدنى. أضف رصيداً لتستمر في استقبال الطلبات.',
+            route: '/(drawer)/(tabs)/wallet',
+          });
+        }
+      }
+      if (ledger.success) setTransactions(ledger.data);
+    } catch (error) {
+      logError('[wallet] فشل تحديث بيانات المحفظة:', error);
+      setWalletLoadFailed(true);
+    }
   }, [pushNotification]);
 
   // الرصيد والحركات من السيرفر عند الدخول، ولحظياً عند أي تغيير (موافقة اتفاق، شحن، مكافأة)
@@ -997,7 +1051,7 @@ additional_info:
           });
         });
       } else {
-        console.error('[Supabase][requestProviderAgain] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة/المحادثة.');
+        logError('[Supabase][requestProviderAgain] لا يوجد مستخدم مسجّل دخول، تم تجاوز إنشاء طلب الخدمة/المحادثة.');
       }
 
       return order;
@@ -1099,14 +1153,14 @@ additional_info:
       // العمولة النهائية تُحسب في الخادم؛ السعر يُستخرج فقط من عبارات سعر صريحة.
       const { agreement, error } = await requestAgreement(conversationId, agreedPriceCandidate);
       if (error || !agreement) {
-        console.error('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
+        logError('[Supabase][customerAgrees] فشل طلب الاتفاق:', error);
         return { ok: false, error: agreementErrorMessage(error) };
       }
 
       // الزبون اختار "شارك رقمي": نسجّل ذلك؛ الطرف الآخر لا يراه إلا بعد موافقته على الاتفاق.
       if (shareMyPhoneWithProvider) {
         const shared = await shareMyPhone(conversationId);
-        if (!shared.ok) console.error('[Supabase][customerAgrees] تعذرت مشاركة الرقم:', shared.error);
+        if (!shared.ok) logError('[Supabase][customerAgrees] تعذرت مشاركة الرقم:', shared.error);
       }
 
       clearTimer();
@@ -1186,7 +1240,7 @@ additional_info:
     if (pendingAgreementId) {
       const { error } = await cancelAgreement(pendingAgreementId);
       if (error) {
-        console.error('[Supabase][cancelAgreement] فشل إلغاء الاتفاق:', error);
+        logError('[Supabase][cancelAgreement] فشل إلغاء الاتفاق:', error);
         Alert.alert('', agreementErrorMessage(error));
         return;
       }
@@ -1220,7 +1274,7 @@ additional_info:
     // البلاغ يُسجَّل في السيرفر أولاً؛ لا نغلق الطلب محلياً إذا فشل
     const { ok, error } = await reportNonExecutionOnServer(dto.order_id, dto.reason);
     if (!ok) {
-      console.error('[Supabase][reportNonExecution] فشل تسجيل البلاغ:', error);
+      logError('[Supabase][reportNonExecution] فشل تسجيل البلاغ:', error);
       return { ok: false, error: orderErrorMessage(error) };
     }
 
@@ -1289,7 +1343,7 @@ additional_info:
     // الإنهاء يتم في السيرفر أولاً؛ لا نغيّر الحالة المحلية إذا فشل
     const { ok, error } = await completeRequest(currentOrder.id);
     if (!ok) {
-      console.error('[Supabase][completeOrder] فشل إنهاء الخدمة:', error);
+      logError('[Supabase][completeOrder] فشل إنهاء الخدمة:', error);
       return { ok: false, error: orderErrorMessage(error) };
     }
 
@@ -1330,7 +1384,7 @@ additional_info:
       });
       // ALREADY_RATED: التقييم محفوظ سابقاً، نعتبرها نجاحاً ونزامن السجل
       if (!ok && !(error ?? '').includes('ALREADY_RATED')) {
-        console.error('[Supabase][rateOrder] فشل حفظ التقييم:', error);
+        logError('[Supabase][rateOrder] فشل حفظ التقييم:', error);
         return { ok: false, error: orderErrorMessage(error) };
       }
 
@@ -1477,7 +1531,7 @@ additional_info: skill.additional_info?.trim() || '',
       if (isFirstSkill) {
         const bonus = await claimWelcomeBonus();
         if (bonus.error) {
-          console.error('[Supabase][welcomeBonus] فشل منح المكافأة:', bonus.error);
+          logError('[Supabase][welcomeBonus] فشل منح المكافأة:', bonus.error);
         } else if (bonus.granted) {
           welcomeBonus = true;
           setMyProviderProfile((prev) => (prev ? { ...prev, welcome_bonus_received: true } : prev));
@@ -1507,45 +1561,83 @@ additional_info: skill.additional_info?.trim() || '',
     return { ok: true };
   }, []);
 
-  const updateProviderProfile = useCallback((patch: Partial<MyProviderProfile>) => {
-    setMyProviderProfile((prev) => {
-      if (!prev) return null;
+  const providerProfileUserId = user?.id;
 
-      if (user?.id && patch.skills !== undefined) {
-        for (const skill of patch.skills) {
-          if (!skill.id || skill.id.startsWith('skill_')) continue;
-          if (skill.service_area === undefined && skill.additional_info === undefined) continue;
-          void api.providerServices.update(skill.id, {
-  city: skill.city?.trim() || DEFAULT_CITY,
-  area: skill.area?.trim() || '',
-  service_area: skill.service_area?.trim() || '',
-  additional_info: skill.additional_info,
-          }).then((result) => {
-            if (!result.success) {
-              console.error('[Supabase][providerServices] فشل حفظ موقع الخدمة:', result.error.message);
-            }
-          });
+  const updateProviderProfile = useCallback(
+    async (patch: Partial<MyProviderProfile>): Promise<{ ok: boolean; error?: string }> => {
+      if (!providerProfileUserId) {
+        return { ok: false, error: 'انتهت جلسة الدخول. سجّل الدخول مجدداً ثم حاول مرة أخرى.' };
+      }
+      if (!myProviderProfile) {
+        return { ok: false, error: 'لم يتم العثور على ملف مقدم الخدمة.' };
+      }
+
+      try {
+        if (patch.skills !== undefined) {
+          const persistedSkills = patch.skills.filter(
+            (skill) => skill.id && !skill.id.startsWith('skill_'),
+          );
+          const results = await Promise.all(
+            persistedSkills.map((skill) =>
+              api.providerServices.update(skill.id, {
+                description: skill.description?.trim() || skill.name.trim(),
+                city: skill.city?.trim() || DEFAULT_CITY,
+                area: skill.area?.trim() || '',
+                service_area: skill.service_area?.trim() || '',
+                additional_info: skill.additional_info,
+              }),
+            ),
+          );
+          const failed = results.find((result) => !result.success);
+          if (failed && !failed.success) {
+            logError('[Supabase][providerServices] فشل حفظ تعديلات المهارات:', failed.error.message);
+            await loadMyProviderProfile(providerProfileUserId);
+            return { ok: false, error: failed.error.message };
+          }
         }
-      }
 
-      if (user?.id && (patch.bio !== undefined || patch.is_available !== undefined)) {
-        void supabase
-          .from('provider_profiles')
-          .update({
-            ...(patch.bio !== undefined ? { bio: patch.bio ?? null } : {}),
-            ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
-          })
-          .eq('user_id', user.id)
-          .then(({ error }) => {
-            if (error) {
-              console.error('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error.message);
-            }
-          });
-      }
+        if (patch.bio !== undefined || patch.is_available !== undefined) {
+          const { data, error } = await supabase
+            .from('provider_profiles')
+            .upsert(
+              {
+                user_id: providerProfileUserId,
+                ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
+                ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
+              },
+              { onConflict: 'user_id' },
+            )
+            .select('user_id')
+            .single();
 
-      return { ...prev, ...patch };
-    });
-  }, [user]);
+          if (error || !data) {
+            logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
+            if (patch.skills !== undefined) await loadMyProviderProfile(providerProfileUserId);
+            return {
+              ok: false,
+              error: error
+                ? getUserMessage(error, 'generic')
+                : 'لم يتم العثور على ملف مقدم الخدمة لحفظ التعديلات.',
+            };
+          }
+        }
+
+        setMyProviderProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+        return { ok: true };
+      } catch (error) {
+        logError('[Supabase][providerProfile] خطأ غير متوقع أثناء حفظ التعديلات:', error);
+        if (patch.skills !== undefined) {
+          try {
+            await loadMyProviderProfile(providerProfileUserId);
+          } catch (refreshError) {
+            logError('[Supabase][providerProfile] تعذر تحديث البيانات بعد فشل الحفظ:', refreshError);
+          }
+        }
+        return { ok: false, error: getUserMessage(error, 'generic') };
+      }
+    },
+    [myProviderProfile, providerProfileUserId, loadMyProviderProfile],
+  );
 
   const toggleAvailability = useCallback(() => {
     setMyProviderProfile((prev) => {
@@ -1560,7 +1652,7 @@ additional_info: skill.additional_info?.trim() || '',
           .eq('user_id', user.id)
           .then(({ error }) => {
             if (error) {
-              console.error('[Supabase][providerProfile] فشل حفظ حالة التوفر:', error.message);
+              logError('[Supabase][providerProfile] فشل حفظ حالة التوفر:', error.message);
             }
           });
       }
@@ -1593,10 +1685,15 @@ additional_info: skill.additional_info?.trim() || '',
       approvalRemainingSeconds,
       orderHistory,
       myProviderProfile,
+      providerProfileLoading,
+      providerProfileLoadFailed,
+      refreshMyProviderProfile,
       hasProviderProfile: !!myProviderProfile && myProviderProfile.skills.length > 0,
       welcomeBonusReceived: myProviderProfile?.welcome_bonus_received ?? false,
       balance,
       transactions,
+      walletLoadFailed,
+      refreshWallet,
       isLowBalance,
       isCriticalBalance,
       verificationStatus,
@@ -1652,8 +1749,13 @@ additional_info: skill.additional_info?.trim() || '',
       approvalRemainingSeconds,
       orderHistory,
       myProviderProfile,
+      providerProfileLoading,
+      providerProfileLoadFailed,
+      refreshMyProviderProfile,
       balance,
       transactions,
+      walletLoadFailed,
+      refreshWallet,
       isLowBalance,
       isCriticalBalance,
       verificationStatus,

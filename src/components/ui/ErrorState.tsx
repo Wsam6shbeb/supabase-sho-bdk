@@ -14,11 +14,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton } from './AppButton';
+import { useState } from 'react';
 
 export interface ErrorStateProps {
   title?: string;
   message?: string;
-  onRetry?: () => void;
+  onRetry?: () => unknown;
   retryLabel?: string;
   fullscreen?: boolean;
 }
@@ -33,6 +34,17 @@ export function ErrorState({
 }: ErrorStateProps) {
   const theme = useTheme();
   const scheme = Colors[theme];
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    if (!onRetry || retrying) return;
+    setRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   return (
     <View
@@ -68,7 +80,9 @@ export function ErrorState({
             title={retryLabel ?? t('common.retry')}
             variant="primary"
             size="md"
-            onPress={onRetry}
+            onPress={handleRetry}
+            loading={retrying}
+            disabled={retrying}
             style={{ minWidth: 180 }}
           />
         </View>

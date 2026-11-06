@@ -4,6 +4,8 @@
 // ===============================================================
 
 import { logFetchFailure } from '@/services/networkStatus';
+import { getUserMessage } from '@/services/errors';
+import { logError } from '@/services/logger';
 import { supabase } from '@/services/supabase';
 import { OrderStatus } from '@/types/common';
 import type { Order } from '@/types/orders';
@@ -25,7 +27,7 @@ export function orderErrorMessage(code: string | null): string {
     case 'REASON_REQUIRED':
       return 'اكتب سبب البلاغ.';
     default:
-      return 'حدث خطأ في الاتصال. حاول مرة أخرى.';
+      return getUserMessage({ code: code ?? undefined, message: code ?? '' }, 'generic');
   }
 }
 
@@ -35,9 +37,11 @@ export async function completeRequest(
 ): Promise<{ ok: boolean; error: string | null }> {
   try {
     const { error } = await supabase.rpc('complete_request', { p_request_id: requestId });
-    return error ? { ok: false, error: error.message } : { ok: true, error: null };
+    if (error) logError('[orders] فشل إتمام الطلب:', error);
+    return error ? { ok: false, error: error.code || 'ORDER_ERROR' } : { ok: true, error: null };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'NETWORK_ERROR' };
+    logError('[orders] خطأ غير متوقع أثناء إتمام الطلب:', err);
+    return { ok: false, error: 'NETWORK_ERROR' };
   }
 }
 
@@ -55,9 +59,11 @@ export async function submitRating(params: {
       p_comment: params.comment ?? undefined,
       p_tags: params.tags ?? undefined,
     });
-    return error ? { ok: false, error: error.message } : { ok: true, error: null };
+    if (error) logError('[orders] فشل إرسال التقييم:', error);
+    return error ? { ok: false, error: error.code || 'RATING_ERROR' } : { ok: true, error: null };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'NETWORK_ERROR' };
+    logError('[orders] خطأ غير متوقع أثناء إرسال التقييم:', err);
+    return { ok: false, error: 'NETWORK_ERROR' };
   }
 }
 
@@ -186,8 +192,10 @@ export async function reportNonExecution(
       p_request_id: requestId,
       p_reason: reason,
     });
-    return error ? { ok: false, error: error.message } : { ok: true, error: null };
+    if (error) logError('[orders] فشل تسجيل بلاغ عدم التنفيذ:', error);
+    return error ? { ok: false, error: error.code || 'REPORT_ERROR' } : { ok: true, error: null };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'NETWORK_ERROR' };
+    logError('[orders] خطأ غير متوقع أثناء تسجيل البلاغ:', err);
+    return { ok: false, error: 'NETWORK_ERROR' };
   }
 }

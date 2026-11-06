@@ -10,10 +10,12 @@
 // ═══════════════════════════════════════════════════════════
 
 import { ScreenSafeArea } from '@/components/ui/ScreenSafeArea';
+import { logError } from '@/services/logger';
 import { GuardedPressable } from '@/components/ui/GuardedPressable';
 import { AppButton } from '@/components/ui/AppButton';
 import { supabase } from '@/services/supabase';
 import { AppCard } from '@/components/ui/AppCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 import {
     Colors,
     FontSizes,
@@ -30,7 +32,7 @@ import { formatRating } from '@/domain/rating';
 import type { ServiceProvider } from '@/types/orders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     FlatList,
     Image,
@@ -56,18 +58,22 @@ export default function CandidatesScreen() {
   const requestId = typeof params.request_id === 'string' ? params.request_id : '';
 
   const [warning, setWarning] = useState<'MAX_CHATS' | 'ALREADY_AGREED' | 'BLOCKED' | null>(null);
+  const [candidateLoadFailed, setCandidateLoadFailed] = useState(false);
+  const retryCandidatesRef = useRef<(() => Promise<void>) | null>(null);
 
   // تحميل المرشحين من Supabase حتى تصبح قاعدة البيانات مصدر الحقيقة للشاشة،
   // بدلاً من الاعتماد على قائمة موجودة فقط في الذاكرة المحلية.
   useEffect(() => {
     if (!requestId) {
-      console.error('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
+      logError('[Supabase][candidates] لا يوجد request_id، لن يتم تحميل المرشحين من قاعدة البيانات.');
       return;
     }
 
     let cancelled = false;
 
     const loadCandidates = async () => {
+      setCandidateLoadFailed(false);
+      try {
       // نستخدم RPC لأن قراءة جدول users مباشرة تُحجب بسياسة RLS (users_select_own).
       const { data: rpcRows, error } = await supabase.rpc('get_request_candidates', {
         p_request_id: requestId,
@@ -96,7 +102,8 @@ export default function CandidatesScreen() {
       if (cancelled) return;
 
       if (error) {
-        console.error('[Supabase][candidates] فشل تحميل المرشحين:', error.message);
+        logError('[Supabase][candidates] فشل تحميل المرشحين:', error);
+        setCandidateLoadFailed(true);
         return;
       }
 
@@ -116,7 +123,9 @@ export default function CandidatesScreen() {
         : { data: [], error: null };
 
       if (servicesError) {
-        console.error('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError.message);
+        logError('[Supabase][candidates] فشل تحميل خدمات مقدمي الخدمة:', servicesError);
+        setCandidateLoadFailed(true);
+        return;
       }
 
       const servicesByProvider = new Map<string, any[]>();
@@ -239,14 +248,24 @@ export default function CandidatesScreen() {
         // نستخدم نتائج Supabase كاحتياط، مع الحفاظ على الـprovider_id الصحيح.
         setCandidates(mergedProviders.length > 0 ? mergedProviders : results);
       }
+      } catch (error) {
+        if (cancelled) return;
+        logError('[Supabase][candidates] خطأ غير متوقع أثناء تحميل المرشحين:', error);
+        setCandidateLoadFailed(true);
+      }
     };
 
+    retryCandidatesRef.current = loadCandidates;
     void loadCandidates();
 
     return () => {
       cancelled = true;
     };
   }, [requestId, setCandidates]);
+
+  const retryCandidates = async () => {
+    await retryCandidatesRef.current?.();
+  };
 
   // ═══════════════════════════════════════════════════════════
   // فتح محادثة
@@ -469,6 +488,18 @@ export default function CandidatesScreen() {
   // ═══════════════════════════════════════════════════════════
   // Empty state
   // ═══════════════════════════════════════════════════════════
+  if (providers.length === 0 && candidateLoadFailed) {
+    return (
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+        <ErrorState
+          title="تعذر تحميل مقدمي الخدمة"
+          message="لم نتمكن من تحميل البيانات حالياً."
+          onRetry={retryCandidates}
+        />
+      </ScreenSafeArea>
+    );
+  }
+
   if (providers.length === 0) {
     return (
       <ScreenSafeArea
@@ -513,6 +544,15 @@ export default function CandidatesScreen() {
       <Text style={[styles.subtitle, { color: scheme.textSecondary }]}>
         {t('orders.candidates.subtitle')}
       </Text>
+
+      {candidateLoadFailed ? (
+        <ErrorState
+          fullscreen={false}
+          title="تعذر تحديث بيانات مقدمي الخدمة"
+          message="لم نتمكن من تحميل البيانات حالياً."
+          onRetry={retryCandidates}
+        />
+      ) : null}
 
       {/* تحذير */}
       {warning && (

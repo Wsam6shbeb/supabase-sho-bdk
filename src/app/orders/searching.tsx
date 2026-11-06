@@ -9,6 +9,7 @@
 // شاشة البحث عن مقدمي الخدمة
 // ═══════════════════════════════════════════════════════════
 import { useEffect, useRef, useState } from 'react';
+import { logError, logWarn } from '@/services/logger';
 import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/ui/LoadingState';
@@ -65,7 +66,7 @@ export default function SearchingScreen() {
             .maybeSingle();
 
           if (requestError) {
-            console.error('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
+            logError('[Supabase][searching] فشل قراءة تحليل طلب الخدمة:', requestError.message);
             break;
           }
 
@@ -77,7 +78,7 @@ export default function SearchingScreen() {
         }
 
                 if (!requestStructuredData) {
-          console.warn('[Supabase][searching] تحليل طلب الخدمة لم يكتمل بعد، سيتم استخدام النص الخام كاحتياط.');
+          logWarn('[Supabase][searching] تحليل طلب الخدمة لم يكتمل بعد، سيتم استخدام النص الخام كاحتياط.');
         } else if (requestStructuredData.ai_failed === true) {
           // ⭐ الـ AI فشل أثناء إنشاء الطلب → نعرض banner
           setShowAiBanner(true);
@@ -96,7 +97,7 @@ export default function SearchingScreen() {
         );
 
         if (candidateError) {
-          console.error('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
+          logError('[Supabase][searching] فشل التضييق الأولي للمرشحين:', candidateError.message);
           searchFailed = true;
         } else {
           providersData = (candidateRows ?? []).map((row: any) => ({
@@ -134,7 +135,7 @@ export default function SearchingScreen() {
           .limit(10);
 
         if (fallbackError) {
-          console.error('[Supabase][searching] فشل جلب المرشحين الاحتياطي:', fallbackError.message);
+          logError('[Supabase][searching] فشل جلب المرشحين الاحتياطي:', fallbackError.message);
           setIsSearching(false);
           return;
         }
@@ -172,7 +173,7 @@ export default function SearchingScreen() {
         );
 
         if (matchError) {
-          console.error('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
+          logError('[Supabase][searching] فشل محرك المطابقة بالذكاء الاصطناعي:', matchError.message);
 
           if ((matchError as any).context?.status === 429) {
             rateLimitWasExceeded = true;
@@ -183,7 +184,7 @@ export default function SearchingScreen() {
         } else if (Array.isArray(matchData?.matches)) {
           aiMatches = matchData.matches as Array<{ provider_id: string; score: number; reason: string }>;
         } else {
-          console.error('[Supabase][searching] استجابة محرك المطابقة غير صالحة.');
+          logError('[Supabase][searching] استجابة محرك المطابقة غير صالحة.');
           searchFailed = true;
         }
 
