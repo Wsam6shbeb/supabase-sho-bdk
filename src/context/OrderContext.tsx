@@ -1591,13 +1591,16 @@ additional_info: skill.additional_info?.trim() || '',
         if (patch.bio !== undefined || patch.is_available !== undefined) {
           const { data, error } = await supabase
             .from('provider_profiles')
-            .update({
-              ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
-              ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
-            })
-            .eq('user_id', user.id)
+            .upsert(
+              {
+                user_id: user.id,
+                ...(patch.bio !== undefined ? { bio: patch.bio?.trim() || null } : {}),
+                ...(patch.is_available !== undefined ? { is_available: patch.is_available } : {}),
+              },
+              { onConflict: 'user_id' },
+            )
             .select('user_id')
-            .maybeSingle();
+            .single();
 
           if (error || !data) {
             logError('[Supabase][providerProfile] فشل حفظ تعديل الملف:', error);
