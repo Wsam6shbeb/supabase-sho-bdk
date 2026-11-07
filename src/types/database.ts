@@ -160,31 +160,31 @@ export type Database = {
         Row: {
           id: number
           user_id: string
-          operation: "analyze_service_request" | "analyze_provider_service"
-          error_code: "GEMINI_RATE_LIMITED"
-          http_status: 429
+          operation: string
+          error_code: string
+          http_status: number
           attempt_count: number
-          platform: "android" | "ios" | "web" | "windows" | "macos"
+          platform: string
           created_at: string
         }
         Insert: {
           id?: never
           user_id?: string
-          operation: "analyze_service_request" | "analyze_provider_service"
-          error_code: "GEMINI_RATE_LIMITED"
-          http_status: 429
+          operation: string
+          error_code: string
+          http_status: number
           attempt_count: number
-          platform: "android" | "ios" | "web" | "windows" | "macos"
+          platform: string
           created_at?: string
         }
         Update: {
           id?: never
-          user_id?: never
-          operation?: "analyze_service_request" | "analyze_provider_service"
-          error_code?: "GEMINI_RATE_LIMITED"
-          http_status?: 429
+          user_id?: string
+          operation?: string
+          error_code?: string
+          http_status?: number
           attempt_count?: number
-          platform?: "android" | "ios" | "web" | "windows" | "macos"
+          platform?: string
           created_at?: string
         }
         Relationships: []
