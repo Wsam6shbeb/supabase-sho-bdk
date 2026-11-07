@@ -85,7 +85,7 @@ export default function DisclaimerScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
       edges={['top', 'bottom']}
     >
       <ScrollView contentContainerStyle={styles.content}>
