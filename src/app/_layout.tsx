@@ -9,6 +9,7 @@
 // Layout الرئيسي للتطبيق
 // ═══════════════════════════════════════════════════════════
 
+import { AppWallpaper } from '@/components/ui/AppWallpaper';
 import { ConnectionBanner } from '@/components/ui/ConnectionBanner';
 import { LoadingState } from '@/components/ui/LoadingState';
 import * as WebBrowser from 'expo-web-browser';
@@ -19,7 +20,7 @@ import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
-import { I18nManager, ImageBackground, View, useColorScheme } from 'react-native';
+import { I18nManager, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -96,11 +97,8 @@ function RootStack() {
 
   return (
     <ThemeProvider value={adaptedTheme}>
-      <ImageBackground
-        source={require('../../assets/images/app-background.png')}
-        resizeMode="cover"
-        style={{ flex: 1 }}
-      >
+      <View style={{ flex: 1, backgroundColor: scheme.background }}>
+        <AppWallpaper isDark={colorScheme === 'dark'} />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -134,7 +132,7 @@ function RootStack() {
         </Stack>
         <AppEntry />
         <PhoneGate />
-      </ImageBackground>
+      </View>
     </ThemeProvider>
   );
 }
