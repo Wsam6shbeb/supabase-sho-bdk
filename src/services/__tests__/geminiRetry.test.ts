@@ -42,6 +42,18 @@ describe('Gemini rate-limit retry helper', () => {
     expect(supabase.from).not.toHaveBeenCalled();
   });
 
+  it('preserves one short retry for a thrown transient provider-network error', async () => {
+    const invoke = jest.fn()
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce({ data: { structured_data: { service: 'تصليح' } }, error: null });
+
+    const resultPromise = invokeGeminiWithRetry('analyze_provider_service', invoke);
+    await jest.runAllTimersAsync();
+
+    await expect(resultPromise).resolves.toEqual({ structured_data: { service: 'تصليح' } });
+    expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
   it('logs one safe operational record after the initial call and three retries fail', async () => {
     const invoke = jest.fn().mockResolvedValue({ data: null, error: rateLimitError });
     const onRetry = jest.fn();
