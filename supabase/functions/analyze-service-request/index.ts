@@ -120,7 +120,7 @@ async function requestGemini(apiKey: string, prompt: string): Promise<{ content:
   try {
     result = await response.json();
   } catch {
-    return { error: "AI returned an unreadable response" };
+    return { error: "AI returned an unreadable response", status: 502, code: "GEMINI_UPSTREAM_ERROR" };
   }
   const content = result?.candidates?.[0]?.content?.parts
     ?.map((part: any) => part?.text ?? "")
