@@ -191,7 +191,7 @@ export interface OrderContextValue {
   /** يعيد تحميل سجل الطلبات من السيرفر (يُستعمل بعد التقييم وعند فتح تبويب الطلبات). */
   refreshOrderHistory: () => Promise<void>;
 
-  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
+  addFirstSkill: (skill: ProviderSkill & { price_min?: number; price_max?: number; service_area: string; additional_info?: string }, onRetry?: (retryNumber: number) => void) => Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }>;
   removeProviderSkill: (skillId: string) => Promise<{ ok: boolean; error?: string }>;
   updateProviderProfile: (patch: Partial<MyProviderProfile>) => Promise<{ ok: boolean; error?: string }>;
   toggleAvailability: () => void;
@@ -1497,7 +1497,7 @@ additional_info:
   }, [pushNotification, refreshOrderHistory]);
 
   const addFirstSkill = useCallback(
-    async (skill: ProviderSkill & { price_min?: number; price_max?: number }): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }> => {
+    async (skill: ProviderSkill & { price_min?: number; price_max?: number }, onRetry?: (retryNumber: number) => void): Promise<{ welcomeBonus: boolean; clarificationQuestion?: string; error?: string }> => {
       const currentProfile = myProviderProfile;
       const isFirstSkill = !currentProfile || currentProfile.skills.length === 0;
 
