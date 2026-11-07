@@ -102,7 +102,7 @@ export default function ProfileScreen() {
 
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <ScrollView
         contentContainerStyle={styles.content}
