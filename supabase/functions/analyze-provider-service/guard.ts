@@ -71,10 +71,15 @@ export async function refundAiDailyQuota(userId: string, bucket: string): Promis
     console.error("[guard] daily quota refund unavailable: server configuration is incomplete");
     return;
   }
-  const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error } = await admin.rpc("refund_ai_daily_rate_limit", {
-    p_user_id: userId,
-    p_bucket: bucket,
-  });
-  if (error) console.error("[guard] daily quota refund failed");
+  try {
+    const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error } = await admin.rpc("refund_ai_daily_rate_limit", {
+      p_user_id: userId,
+      p_bucket: bucket,
+    });
+    if (error) console.error("[guard] daily quota refund failed");
+  } catch {
+    // A refund failure must never replace Gemini's original 429 response.
+    console.error("[guard] daily quota refund failed");
+  }
 }
