@@ -156,6 +156,39 @@ export type Database = {
           },
         ]
       }
+      app_error_log: {
+        Row: {
+          id: number
+          user_id: string
+          operation: "analyze_service_request" | "analyze_provider_service"
+          error_code: "GEMINI_RATE_LIMITED"
+          http_status: 429
+          attempt_count: number
+          platform: "android" | "ios" | "web" | "windows" | "macos"
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          user_id?: string
+          operation: "analyze_service_request" | "analyze_provider_service"
+          error_code: "GEMINI_RATE_LIMITED"
+          http_status: 429
+          attempt_count: number
+          platform: "android" | "ios" | "web" | "windows" | "macos"
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          user_id?: never
+          operation?: "analyze_service_request" | "analyze_provider_service"
+          error_code?: "GEMINI_RATE_LIMITED"
+          http_status?: 429
+          attempt_count?: number
+          platform?: "android" | "ios" | "web" | "windows" | "macos"
+          created_at?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           blocked_id: string
