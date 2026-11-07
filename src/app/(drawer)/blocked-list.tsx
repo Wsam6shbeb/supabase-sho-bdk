@@ -54,7 +54,7 @@ export default function BlockedListScreen() {
 
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       {/* Header */}
       <View style={styles.header}>
