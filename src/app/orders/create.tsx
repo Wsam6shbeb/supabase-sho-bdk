@@ -24,6 +24,7 @@ import {
 } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { getUserMessage } from '@/services/errors';
+import { GEMINI_BUSY_MESSAGE } from '@/services/geminiRetry';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
@@ -82,9 +83,9 @@ export default function CreateOrderScreen() {
         description: finalDescription,
         service_area: area,
         additional_info: additionalInfo.trim(),
-      });
+      }, () => setError(GEMINI_BUSY_MESSAGE));
       if (!analysis) {
-        setError('تعذّر تحليل الطلب حالياً. لم ننشئ الطلب بعد؛ حاول مرة أخرى.');
+        setError('تعذّر إكمال تحليل الطلب بعد عدة محاولات. لم ننشئ الطلب؛ يرجى المحاولة لاحقاً.');
         return;
       }
       if (analysis.needs_clarification) {

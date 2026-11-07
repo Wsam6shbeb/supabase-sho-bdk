@@ -61,3 +61,25 @@ export async function authenticateAndLimit(
   }
   return { userId: data.user.id };
 }
+
+// Refund only the daily AI quota after Gemini itself returns HTTP 429.
+// The per-minute counter is intentionally kept to preserve burst protection.
+export async function refundAiDailyQuota(userId: string, bucket: string): Promise<void> {
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) {
+    console.error("[guard] daily quota refund unavailable: server configuration is incomplete");
+    return;
+  }
+  try {
+    const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error } = await admin.rpc("refund_ai_daily_rate_limit", {
+      p_user_id: userId,
+      p_bucket: bucket,
+    });
+    if (error) console.error("[guard] daily quota refund failed");
+  } catch {
+    // A refund failure must never replace Gemini's original 429 response.
+    console.error("[guard] daily quota refund failed");
+  }
+}

@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { authenticateAndLimit, corsHeaders, json } from "./guard.ts";
+import { authenticateAndLimit, corsHeaders, json, refundAiDailyQuota } from "./guard.ts";
 import {
   buildCorrectionPrompt,
   extractJsonObject,
@@ -86,7 +86,7 @@ ${sanitizeUserText(additionalInfo || "لا يوجد", MAX_ADDITIONAL_INFO)}
 - أعد جميع الحقول الموجودة في المثال وبالأنواع نفسها.`;
 }
 
-async function requestGemini(apiKey: string, prompt: string): Promise<{ content: string } | { error: string }> {
+async function requestGemini(apiKey: string, prompt: string): Promise<{ content: string } | { error: string; status: number; code: string; retry_after_seconds?: number }> {
   const response = await fetch(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
     {
@@ -105,14 +105,22 @@ async function requestGemini(apiKey: string, prompt: string): Promise<{ content:
 
   if (!response.ok) {
     console.error("[analyze-service-request] Gemini failed:", response.status);
-    return { error: "AI request failed" };
+    if (response.status === 429) {
+      return {
+        error: "Gemini is temporarily rate limited",
+        status: 429,
+        code: "GEMINI_RATE_LIMITED",
+        retry_after_seconds: 20,
+      };
+    }
+    return { error: "AI request failed", status: 502, code: "GEMINI_UPSTREAM_ERROR" };
   }
 
   let result: any;
   try {
     result = await response.json();
   } catch {
-    return { error: "AI returned an unreadable response" };
+    return { error: "AI returned an unreadable response", status: 502, code: "GEMINI_UPSTREAM_ERROR" };
   }
   const content = result?.candidates?.[0]?.content?.parts
     ?.map((part: any) => part?.text ?? "")
@@ -177,14 +185,20 @@ Deno.serve(async (req: Request) => {
 
     const originalPrompt = buildPrompt(requestText, serviceArea, additionalInfo);
     const firstAttempt = await requestGemini(apiKey, originalPrompt);
-    if ("error" in firstAttempt) return json({ error: firstAttempt.error }, 502);
+    if ("error" in firstAttempt) {
+      if (firstAttempt.code === "GEMINI_RATE_LIMITED") await refundAiDailyQuota(guard.userId, "analyze-service-request");
+      return json({ error: firstAttempt.error, code: firstAttempt.code, retry_after_seconds: firstAttempt.retry_after_seconds }, firstAttempt.status);
+    }
 
     let validation = parseAndValidate(firstAttempt.content);
     if (!validation.data) {
       console.warn("[analyze-service-request] AI output schema invalid; requesting one correction.");
       const correctionPrompt = buildCorrectionPrompt(originalPrompt, validation.errors, firstAttempt.content);
       const correctionAttempt = await requestGemini(apiKey, correctionPrompt);
-      if ("error" in correctionAttempt) return json({ error: correctionAttempt.error }, 502);
+      if ("error" in correctionAttempt) {
+        if (correctionAttempt.code === "GEMINI_RATE_LIMITED") await refundAiDailyQuota(guard.userId, "analyze-service-request");
+        return json({ error: correctionAttempt.error, code: correctionAttempt.code, retry_after_seconds: correctionAttempt.retry_after_seconds }, correctionAttempt.status);
+      }
       validation = parseAndValidate(correctionAttempt.content);
     }
 

@@ -156,6 +156,39 @@ export type Database = {
           },
         ]
       }
+      app_error_log: {
+        Row: {
+          id: number
+          user_id: string
+          operation: string
+          error_code: string
+          http_status: number
+          attempt_count: number
+          platform: string
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          user_id?: string
+          operation: string
+          error_code: string
+          http_status: number
+          attempt_count: number
+          platform: string
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          user_id?: string
+          operation?: string
+          error_code?: string
+          http_status?: number
+          attempt_count?: number
+          platform?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           blocked_id: string

@@ -12,6 +12,7 @@
 import { supabase } from '@/services/supabase';
 import { logError } from '@/services/logger';
 import { getUserMessage } from '@/services/errors';
+import { invokeGeminiWithRetry } from '@/services/geminiRetry';
 import type { ApiResponse } from '@/types/common';
 
 export interface ProviderServiceRow {
@@ -48,6 +49,7 @@ export interface CreateProviderServiceInput {
   area?: string;
   service_area: string;
   additional_info?: string;
+  onRetry?: (retryNumber: number) => void;
 }
 
 // [شرح الدالة: getCurrentUserId] يجلب معرّف المستخدم الحالي من جلسة Supabase.
@@ -56,56 +58,31 @@ async function getCurrentUserId(): Promise<string | null> {
   return data.user?.id ?? null;
 }
 
-// [شرح الدالة: analyzeProviderService] يرسل وصف الخدمة إلى Edge Function لتحليله بالذكاء الاصطناعي.
-// نعيد المحاولة مرة واحدة عند الفشل (الخدمة قد تكون مشغولة لحظياً)، ولا نحفظ الخدمة إذا فشل التحليل
-// نهائياً؛ حتى تبقى بياناتها المنظمة (التصنيف/الخدمة/المهارات/المرادفات) مكتملة وصالحة للمطابقة.
-const AI_ANALYSIS_ATTEMPTS = 2;
-const AI_ANALYSIS_RETRY_DELAY_MS = 800;
-
+// [شرح الدالة: analyzeProviderService] يرسل وصف الخدمة إلى Edge Function ويعيد المحاولة عند تجاوز حصة Gemini فقط.
 async function analyzeProviderService(input: {
   service: string;
   service_area: string;
   additional_info?: string;
+  onRetry?: (retryNumber: number) => void;
 }): Promise<ProviderServiceRow['structured_data']> {
-  for (let attempt = 1; attempt <= AI_ANALYSIS_ATTEMPTS; attempt += 1) {
-    let retryableFailure = false;
-    try {
-      const { data, error } = await supabase.functions.invoke('analyze-provider-service', {
-        body: {
-          service_text: input.service,
-          service_area: input.service_area,
-          additional_info: input.additional_info ?? '',
-        },
-      });
+  const data = await invokeGeminiWithRetry<{ structured_data: ProviderServiceRow['structured_data'] }>(
+    'analyze_provider_service',
+    () => supabase.functions.invoke('analyze-provider-service', {
+      body: {
+        service_text: input.service,
+        service_area: input.service_area,
+        additional_info: input.additional_info ?? '',
+      },
+    }),
+    input.onRetry,
+  );
 
-      if (error) {
-        const status = Number((error as any)?.context?.status ?? (error as any)?.status);
-        retryableFailure =
-          !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
-        logError(`[Supabase][providerServices][AI] فشل تحليل الخدمة (محاولة ${attempt}):`, error.message);
-      } else if (!data?.structured_data || typeof data.structured_data !== 'object') {
-        // استجابة غير صالحة ليست عطلاً مؤقتاً؛ لا نكرر الطلب.
-        logError(`[Supabase][providerServices][AI] لم تصل بيانات منظمة صالحة (محاولة ${attempt}).`);
-      } else {
-        return data.structured_data as ProviderServiceRow['structured_data'];
-      }
-    } catch (error) {
-      const status = Number((error as any)?.context?.status ?? (error as any)?.status);
-      retryableFailure =
-        !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
-      logError(`[Supabase][providerServices][AI] خطأ غير متوقع أثناء تحليل الخدمة (محاولة ${attempt}):`, error);
-    }
-
-    if (attempt < AI_ANALYSIS_ATTEMPTS && retryableFailure) {
-      await new Promise((resolve) => setTimeout(resolve, AI_ANALYSIS_RETRY_DELAY_MS));
-    } else {
-      break;
-    }
+  if (!data?.structured_data || typeof data.structured_data !== 'object') {
+    logError('[Supabase][providerServices][AI] تعذر تحليل الخدمة.');
+    return null;
   }
-
-  return null;
+  return data.structured_data as ProviderServiceRow['structured_data'];
 }
-
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -156,9 +133,10 @@ async function create(input: CreateProviderServiceInput): Promise<ApiResponse<Pr
     service: description,
     service_area: serviceArea,
     additional_info: input.additional_info?.trim() ?? '',
+    onRetry: input.onRetry,
   });
   if (!analysis) {
-    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إضافة الخدمة حالياً بسبب انشغال مؤقت. حاول مرة أخرى بعد قليل.' } };
+    return { success: false, error: { code: 'AI_ANALYSIS_FAILED', message: 'تعذر إكمال تحليل الخدمة بعد عدة محاولات. لم تُحفظ الخدمة؛ يرجى المحاولة لاحقاً.' } };
   }
   const structuredData = normalizeAnalysis(analysis, description);
 
