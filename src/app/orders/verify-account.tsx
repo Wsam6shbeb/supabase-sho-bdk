@@ -70,9 +70,9 @@ export default function VerifyAccountScreen() {
     }
   };
 
-  if (loading) return <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}><View style={styles.center}><ActivityIndicator size="large" color={scheme.primary} /></View></ScreenSafeArea>;
+  if (loading) return <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}><View style={styles.center}><ActivityIndicator size="large" color={scheme.primary} /></View></ScreenSafeArea>;
 
-  if (loadFailed) return <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}><ErrorState title="تعذر تحميل حالة التوثيق" message="لم نتمكن من تحميل البيانات حالياً." onRetry={refresh} /></ScreenSafeArea>;
+  if (loadFailed) return <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}><ErrorState title="تعذر تحميل حالة التوثيق" message="لم نتمكن من تحميل البيانات حالياً." onRetry={refresh} /></ScreenSafeArea>;
 
   if (status === 'verified' || status === 'under_review' || (status === 'rejected' && !retrying)) {
     const verified = status === 'verified';
@@ -81,7 +81,7 @@ export default function VerifyAccountScreen() {
     const icon = verified ? 'checkmark-circle' : pending ? 'time' : 'close-circle';
     const title = verified ? t('verification.verifiedTitle') : pending ? t('verification.underReviewTitle') : t('verification.rejectedTitle');
     const subtitle = verified ? t('verification.verifiedSubtitle') : pending ? t('verification.underReviewSubtitle') : (rejectionReason ?? t('verification.rejectedSubtitle'));
-    return <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}><View style={styles.center}>
+    return <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}><View style={styles.center}>
       <Ionicons name={icon} size={76} color={color} />
       <Text style={[styles.centerTitle, { color: scheme.text }]}>{title}</Text>
       <Text style={[styles.subtitle, { color: scheme.textSecondary }]}>{subtitle}</Text>
@@ -90,7 +90,7 @@ export default function VerifyAccountScreen() {
     </View></ScreenSafeArea>;
   }
 
-  return <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  return <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <View style={styles.header}><GuardedPressable onPress={() => router.back()} hitSlop={8}><Ionicons name="arrow-forward" size={26} color={scheme.primary} /></GuardedPressable><Text style={[styles.headerTitle, { color: scheme.text }]}>{t('verification.title')}</Text><View style={{ width: 26 }} /></View>
     <View style={styles.centerIntro}><Ionicons name="shield-checkmark" size={48} color={scheme.primary} /><Text style={[styles.centerTitle, { color: scheme.text }]}>{t('verification.notVerifiedTitle')}</Text><Text style={[styles.subtitle, { color: scheme.textSecondary }]}>{t('verification.notVerifiedSubtitle')}</Text></View>
     <AppCard padding="four" elevation="sm" style={styles.card}><Text style={[styles.sectionTitle, { color: scheme.text }]}>{t('verification.benefitsTitle')}</Text>{[1,2,3].map(i => <View key={i} style={styles.benefit}><Ionicons name="checkmark-circle" size={20} color={scheme.success}/><Text style={{ color: scheme.textSecondary, flex: 1 }}>{t(`verification.benefit${i}`)}</Text></View>)}</AppCard>
