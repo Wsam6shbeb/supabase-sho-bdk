@@ -118,7 +118,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={KEYBOARD_AVOIDING_BEHAVIOR}
