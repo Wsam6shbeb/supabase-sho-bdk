@@ -35,7 +35,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog
-AS $
+AS $$
 BEGIN
   IF auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid() THEN
     RAISE EXCEPTION 'app_error_log user mismatch';
