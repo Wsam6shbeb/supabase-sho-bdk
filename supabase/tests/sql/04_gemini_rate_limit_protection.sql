@@ -67,7 +67,7 @@ DO $$
 BEGIN
   IF (SELECT count(*) FROM public.app_error_log
       WHERE user_id = '22222222-2222-4222-8222-222222222222'
-        AND created_at >= clock_timestamp() - interval '10 minutes') <> 1 THEN
+        AND created_at >= clock_timestamp() - interval '1 hour') <> 1 THEN
     RAISE EXCEPTION 'error log throttle did not keep exactly one row';
   END IF;
 END;
