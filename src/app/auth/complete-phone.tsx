@@ -56,7 +56,7 @@ export default function CompletePhoneScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {isEdit && (
