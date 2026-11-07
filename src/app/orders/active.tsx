@@ -31,7 +31,7 @@ export default function ActiveOrderScreen() {
 
   if (!currentOrder || currentOrder.status !== OrderStatus.ACTIVE || !currentOrder.provider_id) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <View style={styles.empty}>
           <Ionicons name="briefcase-outline" size={64} color={scheme.textTertiary} />
           <Text style={[styles.title, { color: scheme.text }]}>{t('orders.active.notFoundTitle')}</Text>
@@ -67,7 +67,7 @@ export default function ActiveOrderScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]}>
       <View style={[styles.header, { borderBottomColor: scheme.border }]}>
         <AppButton title={t('common.back')} variant="ghost" size="sm" onPress={() => router.back()} />
         <Text style={[styles.headerTitle, { color: scheme.text }]}>{t('orders.active.title')}</Text>
