@@ -49,7 +49,7 @@ export default function ProviderProfileScreen() {
 
   if (!provider) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
@@ -155,7 +155,7 @@ export default function ProviderProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]}>
       <View style={styles.content}>
         {/* Header — سهم رجوع بدل الإغلاق */}
         <View style={styles.header}>
