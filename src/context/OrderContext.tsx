@@ -257,7 +257,7 @@ async function analyzeServiceRequest(
   },
   onRetry?: (retryNumber: number) => void,
 ): Promise<ServiceRequestAnalysis | null> {
-  const data = await invokeGeminiWithRetry(
+  const data = await invokeGeminiWithRetry<ServiceRequestAnalysis>(
     'analyze_service_request',
     () => supabase.functions.invoke('analyze-service-request', {
       body: {
