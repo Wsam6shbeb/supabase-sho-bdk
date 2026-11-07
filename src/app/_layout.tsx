@@ -87,7 +87,7 @@ function RootStack() {
     colors: {
       ...navTheme.colors,
       primary: scheme.primary,
-      background: scheme.background,
+      background: 'transparent',
       card: scheme.backgroundElevated,
       text: scheme.text,
       border: scheme.border,
