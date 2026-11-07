@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the SQL tests against a SCRATCH PostgreSQL (never the Supabase project).
-#   ./run_local.sh postgresql://postgres@localhost:5432/scratch            # tests 01-03 only (any DB)
+#   ./run_local.sh postgresql://postgres@localhost:5432/scratch            # tests 01-04 (any DB)
 #   WITH_FIXTURE=1 ./run_local.sh postgresql://postgres@localhost/scratch  # also fixture/10-12 (DB loaded from fixture/local_fixture.sql)
 set -euo pipefail
 URL="${1:?usage: run_local.sh <postgres-url>}"
