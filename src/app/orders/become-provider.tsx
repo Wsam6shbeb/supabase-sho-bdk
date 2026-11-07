@@ -111,7 +111,7 @@ export default function BecomeProviderScreen() {
 
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
