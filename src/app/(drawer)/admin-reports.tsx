@@ -109,7 +109,7 @@ export default function AdminReportsScreen() {
 
   if (!user?.is_admin) {
     return (
-      <View style={[styles.center, { backgroundColor: scheme.background }]}>
+      <View style={[styles.center, { backgroundColor: 'transparent' }]}>
         <Text style={[styles.empty, { color: scheme.textSecondary }]}>غير مصرّح لك بهذه الشاشة.</Text>
       </View>
     );
@@ -268,7 +268,7 @@ export default function AdminReportsScreen() {
   };
 
   return (
-    <View style={[styles.flex, { backgroundColor: scheme.background }]}>
+    <View style={[styles.flex, { backgroundColor: 'transparent' }]}>
       <View style={styles.tabs}>
         {(['open', 'all'] as const).map((key) => (
           <GuardedPressable

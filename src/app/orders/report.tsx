@@ -80,7 +80,7 @@ export default function ReportScreen() {
   if (submitted) {
     return (
       <ScreenSafeArea
-        style={[styles.safe, { backgroundColor: scheme.background }]}
+        style={[styles.safe, { backgroundColor: 'transparent' }]}
       >
         <View style={styles.successWrap}>
           <View
@@ -114,7 +114,7 @@ export default function ReportScreen() {
   // ═══════════════════════════════════════════════════════════
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}

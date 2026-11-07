@@ -66,7 +66,7 @@ export default function RateOrderScreen() {
   if (!order) {
     return (
       <ScreenSafeArea
-        style={[styles.safe, { backgroundColor: scheme.background }]}
+        style={[styles.safe, { backgroundColor: 'transparent' }]}
       >
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
@@ -136,7 +136,7 @@ export default function RateOrderScreen() {
   if (submitted) {
     return (
       <ScreenSafeArea
-        style={[styles.safe, { backgroundColor: scheme.background }]}
+        style={[styles.safe, { backgroundColor: 'transparent' }]}
       >
         <View style={styles.successWrap}>
           <View
@@ -176,7 +176,7 @@ export default function RateOrderScreen() {
 
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}

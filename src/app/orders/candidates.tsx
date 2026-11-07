@@ -490,7 +490,7 @@ export default function CandidatesScreen() {
   // ═══════════════════════════════════════════════════════════
   if (providers.length === 0 && candidateLoadFailed) {
     return (
-      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <ErrorState
           title="تعذر تحميل مقدمي الخدمة"
           message="لم نتمكن من تحميل البيانات حالياً."
@@ -503,7 +503,7 @@ export default function CandidatesScreen() {
   if (providers.length === 0) {
     return (
       <ScreenSafeArea
-        style={[styles.safe, { backgroundColor: scheme.background }]}
+        style={[styles.safe, { backgroundColor: 'transparent' }]}
       >
         <View style={styles.emptyContainer}>
           <Ionicons name="search" size={64} color={scheme.textTertiary} />
@@ -529,7 +529,7 @@ export default function CandidatesScreen() {
   // ═══════════════════════════════════════════════════════════
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <View style={styles.header}>
         <GuardedPressable onPress={() => router.back()} hitSlop={8}>

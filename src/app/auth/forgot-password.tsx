@@ -85,7 +85,7 @@ export default function ForgotPasswordScreen() {
       : scheme.textSecondary;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={KEYBOARD_AVOIDING_BEHAVIOR}

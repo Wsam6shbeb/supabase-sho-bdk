@@ -52,7 +52,7 @@ export default function WelcomeBonusScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
       edges={['top', 'bottom']}
     >
       <View style={styles.content}>

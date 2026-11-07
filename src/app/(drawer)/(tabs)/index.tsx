@@ -141,7 +141,7 @@ export default function HomeTab() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
       edges={['top']}
     >
       <ScrollView

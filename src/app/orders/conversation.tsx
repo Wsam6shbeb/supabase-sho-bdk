@@ -230,7 +230,7 @@ export default function ConversationScreen() {
   if (access === 'denied') return <WrongAccountNotice />;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: scheme.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={KEYBOARD_AVOIDING_BEHAVIOR}

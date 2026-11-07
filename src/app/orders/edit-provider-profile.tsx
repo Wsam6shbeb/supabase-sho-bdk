@@ -97,7 +97,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
   // لا نعرض رسالة "لا يوجد ملف" قبل انتهاء التحميل أو عند فشل الاتصال.
   if (!profile && providerProfileLoading) {
     return (
-      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <View style={styles.errorWrap}>
           <ActivityIndicator size="large" color={scheme.primary} />
           <Text style={[styles.errorText, { color: scheme.text }]}>جارٍ تحميل ملف مقدم الخدمة...</Text>
@@ -108,7 +108,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
 
   if (!profile && providerProfileLoadFailed) {
     return (
-      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <View style={styles.errorWrap}>
           <Ionicons name="cloud-offline-outline" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
@@ -127,7 +127,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
 
   if (!profile) {
     return (
-      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
@@ -305,7 +305,7 @@ const [skillAreas, setSkillAreas] = useState<Record<string, string>>({});
 
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}

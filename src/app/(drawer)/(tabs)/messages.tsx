@@ -278,7 +278,7 @@ export default function MessagesTab() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
       edges={['top']}
     >
       <View style={styles.header}>

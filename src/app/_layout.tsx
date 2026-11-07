@@ -19,7 +19,7 @@ import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
-import { I18nManager, View, useColorScheme } from 'react-native';
+import { I18nManager, ImageBackground, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -87,7 +87,7 @@ function RootStack() {
     colors: {
       ...navTheme.colors,
       primary: scheme.primary,
-      background: scheme.background,
+      background: 'transparent',
       card: scheme.backgroundElevated,
       text: scheme.text,
       border: scheme.border,
@@ -96,39 +96,45 @@ function RootStack() {
 
   return (
     <ThemeProvider value={adaptedTheme}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: scheme.background },
-        }}
+      <ImageBackground
+        source={require('../../assets/images/app-background.png')}
+        resizeMode="cover"
+        style={{ flex: 1 }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/login" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="auth/complete-phone" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
-        <Stack.Screen name="auth/register" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="auth/forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
-        <Stack.Screen name="auth/verify-email" options={{ headerShown: false, animation: 'slide_from_right' }} />
-        <Stack.Screen name="auth/reset-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
-        <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-        <Stack.Screen name="orders/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/searching" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="orders/candidates" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/provider-profile" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/chat" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/conversation" options={{ headerShown: false, animation: 'slide_from_right' }} />
-        <Stack.Screen name="orders/rate" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/report-problem" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/become-provider" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/welcome-bonus" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="orders/edit-provider-profile" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/verify-account" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/report" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        {/* ⭐ جديد */}
-        <Stack.Screen name="orders/disclaimer" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="orders/request-again" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-      </Stack>
-      <AppEntry />
-      <PhoneGate />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/login" options={{ headerShown: false, animation: 'fade' }} />
+          <Stack.Screen name="auth/complete-phone" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
+          <Stack.Screen name="auth/register" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="auth/forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
+          <Stack.Screen name="auth/verify-email" options={{ headerShown: false, animation: 'slide_from_right' }} />
+          <Stack.Screen name="auth/reset-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
+          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+          <Stack.Screen name="orders/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/searching" options={{ headerShown: false, animation: 'fade' }} />
+          <Stack.Screen name="orders/candidates" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/provider-profile" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/chat" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/conversation" options={{ headerShown: false, animation: 'slide_from_right' }} />
+          <Stack.Screen name="orders/rate" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/report-problem" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/become-provider" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/welcome-bonus" options={{ headerShown: false, animation: 'fade' }} />
+          <Stack.Screen name="orders/edit-provider-profile" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/verify-account" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/report" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          {/* ⭐ جديد */}
+          <Stack.Screen name="orders/disclaimer" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="orders/request-again" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        </Stack>
+        <AppEntry />
+        <PhoneGate />
+      </ImageBackground>
     </ThemeProvider>
   );
 }
