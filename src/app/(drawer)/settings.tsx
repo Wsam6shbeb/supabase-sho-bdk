@@ -155,7 +155,7 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: scheme.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
     >
       {/* Notifications */}
