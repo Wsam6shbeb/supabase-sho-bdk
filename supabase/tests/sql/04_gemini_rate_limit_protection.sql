@@ -25,6 +25,13 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'app_error_log_user_created_at_idx'
+  ) THEN
+    RAISE EXCEPTION 'app_error_log user/time index is missing';
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
     WHERE tgname = 'app_error_log_insert_throttle'
       AND tgrelid = 'public.app_error_log'::regclass
