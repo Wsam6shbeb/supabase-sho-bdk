@@ -23,7 +23,7 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out your project
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://expo.github.io/router/docs).
 
 ## Feature brief: Browse services (شو بدك)
 
@@ -32,8 +32,14 @@ You can start developing by editing the files inside the **app** directory. This
 ### Agreed goal
 Add a second way for customers to find a provider: browse providers and choose one manually, in addition to the existing **اطلب خدمة** flow.
 
-### Home screen
-Keep the existing **قدّم خدمة** button full width. Keep the existing **اطلب خدمة** button and its behavior. Add a separate **تصفّح الخدمات** button below it. Do not replace either existing path.
+### Home screen — exact button order
+The home screen must show **three separate buttons**, stacked vertically in this exact order:
+
+1. **قدّم خدمة** — the top button, full screen width.
+2. **اطلب خدمة** — directly underneath the first button; preserve its current behavior.
+3. **تصفّح الخدمات** — underneath the second button; tapping it opens the new service-browsing screen described below.
+
+Do not combine these buttons, change their order, or replace either existing action. The third button is the entry point to browse providers manually.
 
 ### Browse screen
 When the customer taps **تصفّح الخدمات**, open a new screen with filters at the top and provider results below.
