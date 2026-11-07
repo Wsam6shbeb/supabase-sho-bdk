@@ -21,6 +21,12 @@ async function isGeminiRateLimit(error: unknown): Promise<boolean> {
   }
 }
 
+function isProviderTransientFailure(error: unknown): boolean {
+  const status = Number((error as { context?: { status?: unknown }; status?: unknown } | null)?.context?.status ??
+    (error as { status?: unknown } | null)?.status);
+  return !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
+}
+
 async function reportExhausted(operation: 'analyze_service_request' | 'analyze_provider_service'): Promise<void> {
   try {
     const { error } = await supabase.from('app_error_log').insert({
@@ -52,10 +58,7 @@ export async function invokeGeminiWithRetry<T>(
       if (!error) return data;
       if (!(await isGeminiRateLimit(error))) {
         // احتفظ بمحاولة الخدمة المؤقتة القصيرة التي كانت موجودة سابقاً لمسار مهارات مقدم الخدمة.
-        const status = Number((error as { context?: { status?: unknown }; status?: unknown } | null)?.context?.status ??
-          (error as { status?: unknown } | null)?.status);
-        const transient = !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
-        if (operation === 'analyze_provider_service' && transient && providerTransientRetries < 1) {
+        if (operation === 'analyze_provider_service' && isProviderTransientFailure(error) && providerTransientRetries < 1) {
           providerTransientRetries += 1;
           await new Promise((resolve) => setTimeout(resolve, 800));
           attempt -= 1;
@@ -65,6 +68,13 @@ export async function invokeGeminiWithRetry<T>(
         return null;
       }
     } catch (error) {
+      // حافظ على إعادة المحاولة القصيرة السابقة لأخطاء الشبكة المؤقتة في مسار مقدم الخدمة.
+      if (operation === 'analyze_provider_service' && isProviderTransientFailure(error) && providerTransientRetries < 1) {
+        providerTransientRetries += 1;
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        attempt -= 1;
+        continue;
+      }
       logError('[Gemini]', operation, 'تعذر تنفيذ استدعاء التحليل:', error);
       return null;
     }
