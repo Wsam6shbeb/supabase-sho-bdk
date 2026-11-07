@@ -59,6 +59,9 @@ $$;
 REVOKE ALL ON FUNCTION private.guard_app_error_log_insert() FROM PUBLIC, anon, authenticated, service_role;
 
 DROP TRIGGER IF EXISTS app_error_log_insert_throttle ON public.app_error_log;
+CREATE INDEX IF NOT EXISTS app_error_log_user_created_at_idx
+  ON public.app_error_log (user_id, created_at DESC);
+
 CREATE TRIGGER app_error_log_insert_throttle
 BEFORE INSERT ON public.app_error_log
 FOR EACH ROW
