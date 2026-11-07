@@ -3,7 +3,7 @@ import { supabase } from '@/services/supabase';
 import { logError } from '@/services/logger';
 
 export const GEMINI_BUSY_MESSAGE =
-  'الخوادم مشغولة جداً، سنحاول إعادة إرسال طلبك تلقائياً خلال أقل من دقيقة.';
+  'الخوادم مشغولة جداً، سنحاول إعادة إرسال طلبك تلقائياً خلال دقيقة تقريباً.';
 
 const GEMINI_RETRY_DELAY_MS = 20_000;
 const GEMINI_MAX_RETRIES = 3;
