@@ -19,7 +19,7 @@ import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
-import { I18nManager, View, useColorScheme } from 'react-native';
+import { I18nManager, ImageBackground, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -96,10 +96,15 @@ function RootStack() {
 
   return (
     <ThemeProvider value={adaptedTheme}>
+      <ImageBackground
+        source={require('../../assets/images/app-background.png')}
+        resizeMode="cover"
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+      />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: scheme.background },
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
