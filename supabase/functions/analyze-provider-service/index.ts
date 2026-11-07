@@ -61,7 +61,7 @@ function buildPrompt(serviceText: string, serviceArea: string, additionalInfo: s
   ].join("\n");
 }
 
-async function requestGemini(apiKey: string, prompt: string): Promise<{ content: string } | { error: string }> {
+async function requestGemini(apiKey: string, prompt: string): Promise<{ content: string } | { error: string; status: number; code: string; retry_after_seconds?: number }> {
   const response = await fetch(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
     {
@@ -80,7 +80,15 @@ async function requestGemini(apiKey: string, prompt: string): Promise<{ content:
 
   if (!response.ok) {
     console.error("[analyze-provider-service] Gemini failed:", response.status);
-    return { error: "AI request failed" };
+    if (response.status === 429) {
+      return {
+        error: "Gemini is temporarily rate limited",
+        status: 429,
+        code: "GEMINI_RATE_LIMITED",
+        retry_after_seconds: 20,
+      };
+    }
+    return { error: "AI request failed", status: 502, code: "GEMINI_UPSTREAM_ERROR" };
   }
 
   let result: any;
@@ -152,14 +160,14 @@ Deno.serve(async (req: Request) => {
 
     const originalPrompt = buildPrompt(serviceText, serviceArea, additionalInfo);
     const firstAttempt = await requestGemini(apiKey, originalPrompt);
-    if ("error" in firstAttempt) return json({ error: firstAttempt.error }, 502);
+    if ("error" in firstAttempt) return json({ error: firstAttempt.error, code: firstAttempt.code, retry_after_seconds: firstAttempt.retry_after_seconds }, firstAttempt.status);
 
     let validation = parseAndValidate(firstAttempt.content);
     if (!validation.data) {
       console.warn("[analyze-provider-service] AI output schema invalid; requesting one correction.");
       const correctionPrompt = buildCorrectionPrompt(originalPrompt, validation.errors, firstAttempt.content);
       const correctionAttempt = await requestGemini(apiKey, correctionPrompt);
-      if ("error" in correctionAttempt) return json({ error: correctionAttempt.error }, 502);
+      if ("error" in correctionAttempt) return json({ error: correctionAttempt.error, code: correctionAttempt.code, retry_after_seconds: correctionAttempt.retry_after_seconds }, correctionAttempt.status);
       validation = parseAndValidate(correctionAttempt.content);
     }
 
