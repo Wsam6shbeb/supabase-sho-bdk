@@ -44,8 +44,9 @@ jobs:
             supabase/migrations/20261105090000_lock_candidates_to_server_writes.sql \
             supabase/migrations/20261105091000_bound_provider_candidate_payload.sql \
             supabase/migrations/20261105092000_bound_provider_service_inputs.sql \
-            supabase/migrations/20261105093000_phone_guard_structured_data.sql
+            supabase/migrations/20261105093000_phone_guard_structured_data.sql \
             supabase/migrations/20261107110000_add_app_error_log.sql \
+            supabase/migrations/20261107120000_protect_gemini_quota_and_error_log.sql
             supabase/migrations/20261107120000_protect_gemini_quota_and_error_log.sql
           do
             psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$migration"
