@@ -1,9 +1,9 @@
-jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
 jest.mock('@/services/logger', () => ({ logError: jest.fn() }));
 jest.mock('@/services/supabase', () => ({
   supabase: { from: jest.fn() },
 }));
 
+import { Platform } from 'react-native';
 import { invokeGeminiWithRetry } from '@/services/geminiRetry';
 import { supabase } from '@/services/supabase';
 
@@ -59,7 +59,7 @@ describe('Gemini rate-limit retry helper', () => {
       error_code: 'GEMINI_RATE_LIMITED',
       http_status: 429,
       attempt_count: 4,
-      platform: 'android',
+      platform: Platform.OS,
     });
   });
 
