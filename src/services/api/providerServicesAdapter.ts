@@ -65,7 +65,7 @@ async function analyzeProviderService(input: {
   additional_info?: string;
   onRetry?: (retryNumber: number) => void;
 }): Promise<ProviderServiceRow['structured_data']> {
-  const data = await invokeGeminiWithRetry(
+  const data = await invokeGeminiWithRetry<{ structured_data: ProviderServiceRow['structured_data'] }>(
     'analyze_provider_service',
     () => supabase.functions.invoke('analyze-provider-service', {
       body: {
