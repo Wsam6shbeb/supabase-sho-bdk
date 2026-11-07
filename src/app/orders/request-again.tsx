@@ -49,7 +49,7 @@ export default function RequestAgainScreen() {
   // Guard
   if (!provider) {
     return (
-      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: 'transparent' }]}>
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle" size={64} color={scheme.danger} />
           <Text style={[styles.errorText, { color: scheme.text }]}>
@@ -99,7 +99,7 @@ export default function RequestAgainScreen() {
 
   return (
     <ScreenSafeArea
-      style={[styles.safe, { backgroundColor: scheme.background }]}
+      style={[styles.safe, { backgroundColor: 'transparent' }]}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
