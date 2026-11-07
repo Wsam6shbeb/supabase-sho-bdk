@@ -21,6 +21,7 @@ import { PHONE_IN_TEXT_MESSAGE, containsPhoneNumber } from '@/domain/chatSafety'
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useOrder } from '@/context/OrderContext';
 import { getUserMessage } from '@/services/errors';
+import { GEMINI_BUSY_MESSAGE } from '@/services/geminiRetry';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -83,7 +84,7 @@ export default function BecomeProviderScreen() {
         area: trimmedArea,
         service_area: [trimmedCity, trimmedArea].filter(Boolean).join(' '),
         additional_info: additionalInfo.trim(),
-      });
+      }, () => setError(GEMINI_BUSY_MESSAGE));
     } catch (error) {
       setError(getUserMessage(error, 'generic'));
       setSubmitting(false);
