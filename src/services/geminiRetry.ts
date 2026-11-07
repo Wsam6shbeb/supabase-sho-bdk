@@ -11,11 +11,11 @@ const GEMINI_MAX_RETRIES = 3;
 type FunctionResult<T> = { data: T | null; error: unknown | null };
 
 async function isGeminiRateLimit(error: unknown): Promise<boolean> {
-  const context = (error as { context?: Response } | null)?.context;
+  const context = (error as { context?: { status?: unknown; clone?: () => { json: () => Promise<unknown> } } } | null)?.context;
   if (!context || context.status !== 429 || typeof context.clone !== 'function') return false;
   try {
-    const payload = await context.clone().json();
-    return payload?.code === 'GEMINI_RATE_LIMITED';
+    const payload = await context.clone().json() as { code?: unknown };
+    return payload.code === 'GEMINI_RATE_LIMITED';
   } catch {
     return false;
   }
