@@ -45,11 +45,22 @@ export async function invokeGeminiWithRetry<T>(
   invoke: () => Promise<FunctionResult<T>>,
   onRetry?: (retryNumber: number) => void,
 ): Promise<T | null> {
+  let providerTransientRetries = 0;
   for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt += 1) {
     try {
       const { data, error } = await invoke();
       if (!error) return data;
       if (!(await isGeminiRateLimit(error))) {
+        // احتفظ بمحاولة الخدمة المؤقتة القصيرة التي كانت موجودة سابقاً لمسار مهارات مقدم الخدمة.
+        const status = Number((error as { context?: { status?: unknown }; status?: unknown } | null)?.context?.status ??
+          (error as { status?: unknown } | null)?.status);
+        const transient = !Number.isFinite(status) || status === 408 || status === 425 || (status >= 500 && status <= 599);
+        if (operation === 'analyze_provider_service' && transient && providerTransientRetries < 1) {
+          providerTransientRetries += 1;
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          attempt -= 1;
+          continue;
+        }
         logError('[Gemini]', operation, 'فشل التحليل دون أن يكون خطأ تجاوز حصة Gemini.');
         return null;
       }
