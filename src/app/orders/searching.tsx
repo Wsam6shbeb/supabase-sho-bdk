@@ -13,7 +13,7 @@ import { logError, logWarn } from '@/services/logger';
 import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { LoadingState } from '@/components/ui/LoadingState';
-import { Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BrandColors, Colors, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     top: 16,
     left: Spacing.four,
     right: Spacing.four,
-    backgroundColor: '#F59E0B',
+    backgroundColor: BrandColors.urgent,
     borderRadius: 12,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,

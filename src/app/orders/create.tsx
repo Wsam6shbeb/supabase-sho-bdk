@@ -16,6 +16,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppTextInput } from '@/components/ui/AppTextInput';
 import {
+    BrandColors,
     Colors,
     FontSizes,
     FontWeights,
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
   clarificationCard: {
     marginTop: Spacing.four,
     borderWidth: 2,
-    borderColor: '#2563EB',
+    borderColor: BrandColors.primary,
   },
   clarificationHeader: {
     flexDirection: 'row',
