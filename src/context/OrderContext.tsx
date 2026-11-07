@@ -15,6 +15,7 @@ import { getUserMessage } from '@/services/errors';
 import { sharePhone as shareMyPhone } from '@/services/phone';
 import { api } from '@/services/api';
 import { supabase } from '@/services/supabase';
+import { invokeGeminiWithRetry } from '@/services/geminiRetry';
 import { createRealtimeChannel } from '@/services/realtime';
 import { useChatDelivery } from '@/hooks/use-chat-delivery';
 import { openConversation } from '@/services/chat';
@@ -152,7 +153,7 @@ export interface OrderContextValue {
     description: string;
     service_area: string;
     additional_info?: string;
-  }) => Promise<ServiceRequestAnalysis | null>;
+  }, onRetry?: (retryNumber: number) => void) => Promise<ServiceRequestAnalysis | null>;
   startOrder: (params: {
     description: string;
     service_area: string;
@@ -248,43 +249,40 @@ export interface ServiceRequestAnalysis {
   clarification_question: string | null;
 }
 
-async function analyzeServiceRequest(input: {
-  description: string;
-  serviceArea: string;
-  additionalInfo?: string;
-}): Promise<ServiceRequestAnalysis | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke('analyze-service-request', {
+async function analyzeServiceRequest(
+  input: {
+    description: string;
+    serviceArea: string;
+    additionalInfo?: string;
+  },
+  onRetry?: (retryNumber: number) => void,
+): Promise<ServiceRequestAnalysis | null> {
+  const data = await invokeGeminiWithRetry(
+    'analyze_service_request',
+    () => supabase.functions.invoke('analyze-service-request', {
       body: {
         request_text: input.description,
         service_area: input.serviceArea,
         additional_info: input.additionalInfo ?? '',
       },
-    });
+    }),
+    onRetry,
+  );
 
-    if (error) {
-      logError('[Supabase][startOrder] فشل تحليل طلب الخدمة بالذكاء الاصطناعي:', error.message);
-      return null;
-    }
-
-    if (!data?.structured_data) {
-      logError('[Supabase][startOrder] تحليل طلب الخدمة لم يُرجع structured_data.');
-      return null;
-    }
-
-    return {
-      structured_data: data.structured_data,
-      ai_confidence: typeof data.ai_confidence === 'number' ? data.ai_confidence : null,
-      needs_clarification: data.needs_clarification === true,
-      clarification_question:
-        typeof data.clarification_question === 'string' && data.clarification_question.trim()
-          ? data.clarification_question.trim()
-          : null,
-    };
-  } catch (err) {
-    logError('[Supabase][startOrder] خطأ أثناء تحليل طلب الخدمة بالذكاء الاصطناعي:', err);
+  if (!data?.structured_data) {
+    logError('[Supabase][startOrder] تعذر تحليل طلب الخدمة بالذكاء الاصطناعي.');
     return null;
   }
+
+  return {
+    structured_data: data.structured_data,
+    ai_confidence: typeof data.ai_confidence === 'number' ? data.ai_confidence : null,
+    needs_clarification: data.needs_clarification === true,
+    clarification_question:
+      typeof data.clarification_question === 'string' && data.clarification_question.trim()
+        ? data.clarification_question.trim()
+        : null,
+  };
 }
 
 async function createServiceRequestInSupabase(params: {
@@ -928,12 +926,15 @@ additional_info:
   // Order
   // ═══════════════════════════════════════════════════════════
   const analyzeOrderRequest = useCallback(
-    (params: { description: string; service_area: string; additional_info?: string }) =>
+    (
+      params: { description: string; service_area: string; additional_info?: string },
+      onRetry?: (retryNumber: number) => void,
+    ) =>
       analyzeServiceRequest({
         description: params.description,
         serviceArea: params.service_area,
         additionalInfo: params.additional_info,
-      }),
+      }, onRetry),
     [],
   );
 
