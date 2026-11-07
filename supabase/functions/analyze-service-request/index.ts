@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { authenticateAndLimit, corsHeaders, json } from "./guard.ts";
+import { authenticateAndLimit, corsHeaders, json, refundAiDailyQuota } from "./guard.ts";
 import {
   buildCorrectionPrompt,
   extractJsonObject,
@@ -185,14 +185,20 @@ Deno.serve(async (req: Request) => {
 
     const originalPrompt = buildPrompt(requestText, serviceArea, additionalInfo);
     const firstAttempt = await requestGemini(apiKey, originalPrompt);
-    if ("error" in firstAttempt) return json({ error: firstAttempt.error, code: firstAttempt.code, retry_after_seconds: firstAttempt.retry_after_seconds }, firstAttempt.status);
+    if ("error" in firstAttempt) {
+      if (firstAttempt.code === "GEMINI_RATE_LIMITED") await refundAiDailyQuota(guard.userId, "analyze-service-request");
+      return json({ error: firstAttempt.error, code: firstAttempt.code, retry_after_seconds: firstAttempt.retry_after_seconds }, firstAttempt.status);
+    }
 
     let validation = parseAndValidate(firstAttempt.content);
     if (!validation.data) {
       console.warn("[analyze-service-request] AI output schema invalid; requesting one correction.");
       const correctionPrompt = buildCorrectionPrompt(originalPrompt, validation.errors, firstAttempt.content);
       const correctionAttempt = await requestGemini(apiKey, correctionPrompt);
-      if ("error" in correctionAttempt) return json({ error: correctionAttempt.error, code: correctionAttempt.code, retry_after_seconds: correctionAttempt.retry_after_seconds }, correctionAttempt.status);
+      if ("error" in correctionAttempt) {
+        if (correctionAttempt.code === "GEMINI_RATE_LIMITED") await refundAiDailyQuota(guard.userId, "analyze-service-request");
+        return json({ error: correctionAttempt.error, code: correctionAttempt.code, retry_after_seconds: correctionAttempt.retry_after_seconds }, correctionAttempt.status);
+      }
       validation = parseAndValidate(correctionAttempt.content);
     }
 
