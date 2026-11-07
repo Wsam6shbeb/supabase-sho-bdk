@@ -28,7 +28,7 @@ $$;
 REVOKE ALL ON FUNCTION public.refund_ai_daily_rate_limit(uuid, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.refund_ai_daily_rate_limit(uuid, text) TO service_role;
 
--- A user can store at most one terminal Gemini failure every ten minutes.
+-- A user can store at most one terminal Gemini failure every one hour.
 -- Advisory locking makes the check atomic even when inserts arrive concurrently.
 CREATE OR REPLACE FUNCTION private.guard_app_error_log_insert()
 RETURNS trigger
@@ -47,7 +47,7 @@ BEGIN
     SELECT 1
     FROM public.app_error_log AS existing
     WHERE existing.user_id = NEW.user_id
-      AND existing.created_at >= clock_timestamp() - interval '10 minutes'
+      AND existing.created_at >= clock_timestamp() - interval '1 hour'
   ) THEN
     RETURN NULL;
   END IF;
