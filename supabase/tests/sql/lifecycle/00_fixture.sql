@@ -20,7 +20,11 @@ create type public.request_state as enum ('draft','submitted','clarification','m
 create type public.conversation_state as enum ('negotiating','agreement_pending','active','locked_temp','read_only');
 create type public.agreement_state as enum ('pending','active','rejected','expired','cancelled');
 
-create table public.users (id uuid primary key, full_name text);
+create table public.users (id uuid primary key, full_name text, status text not null default 'active', deleted_at timestamptz, rating_avg numeric, rating_count integer not null default 0);
+create table public.blocks (blocker_id uuid not null, blocked_id uuid not null, created_at timestamptz not null default now());
+create function public.current_user_is_active() returns boolean language sql stable security definer set search_path to 'public','pg_temp' as $$
+  select exists (select 1 from public.users u where u.id = auth.uid() and u.status = 'active' and u.deleted_at is null)
+$$;
 create table public.service_requests (
   id uuid primary key default gen_random_uuid(),
   requester_id uuid not null references public.users(id),
@@ -56,6 +60,17 @@ create table public.messages (
   body text not null,
   message_type text not null default 'text'
 );
+create table public.provider_profiles (user_id uuid primary key references public.users(id), is_available boolean not null default true);
+create table public.provider_services (
+  id uuid primary key default gen_random_uuid(),
+  provider_id uuid not null references public.users(id),
+  is_active boolean not null default true,
+  description text,
+  structured_data jsonb,
+  created_at timestamptz not null default now()
+);
+create table public.wallets (user_id uuid primary key references public.users(id), available_balance numeric not null default 0);
+create table public.app_settings (key text primary key, value jsonb not null);
 create table public.notifications_log (id bigserial primary key, user_id uuid, title text);
 
 create or replace function public._post_system_message(p_conversation_id uuid, p_sender uuid, p_body text)
