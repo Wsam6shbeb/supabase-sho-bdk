@@ -6,6 +6,7 @@ import { unregisterPushToken } from '@/services/push';
 import { logError } from '@/services/logger';
 import { getUserMessage } from '@/services/errors';
 import { supabase } from '@/services/supabase';
+import { decideAuthEventAction } from '@/utils/auth-events';
 import type {
   AuthResult,
   ForgotPasswordDto,
@@ -23,7 +24,7 @@ import type {
 } from '@/types/auth';
 import type { ApiError, Region } from '@/types/common';
 import { VerificationStatus } from '@/types/common';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -160,6 +161,9 @@ async function ensureUserProfile(sbUser: any) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
+  // معرّف آخر مستخدم حمّلنا ملفه. يمنع إعادة تحميل الملف وبناء كائن user جديد مع كل
+  // تجديد للتوكن أو حدث دخول مكرر لنفس المستخدم (كان يرجّع التطبيق للرئيسية).
+  const loadedUserIdRef = useRef<string | null>(null);
 
   // مراقبة حالة الجلسة
   useEffect(() => {
@@ -191,8 +195,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         if (session?.user) {
+          loadedUserIdRef.current = session.user.id;
           const user = await loadUserProfile(session.user);
           if (user.status === 'suspended' || user.status === 'deleted') {
+            loadedUserIdRef.current = null;
             await supabase.auth.signOut({ scope: 'local' });
             if (!cancelled) setState((p) => ({ ...p, user: null, token: null, isInitialized: true, isLoading: false, lastError: { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' } }));
             return;
@@ -225,33 +231,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-      if (session?.user) {
-        void loadUserProfile(session.user).then((user) => {
-          if (cancelled) return;
-          if (user.status === 'suspended' || user.status === 'deleted') {
-            void supabase.auth.signOut({ scope: 'local' });
-            setState((p) => ({ ...p, user: null, token: null, isInitialized: true, isLoading: false, lastError: { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' } }));
-            return;
-          }
-          setState((p) => ({
-            ...p,
-            user,
-            token: session.access_token,
-            isInitialized: true,
-            lastError: null,
-          }));
-        });
-        void ensureUserProfile(session.user);
-      } else {
+
+      const action = decideAuthEventAction(event, session?.user?.id, loadedUserIdRef.current);
+
+      if (action === 'clear' || !session?.user) {
+        loadedUserIdRef.current = null;
         setState((p) => ({
           ...p,
           user: null,
           token: null,
           isInitialized: true,
         }));
+        return;
       }
+
+      if (action === 'update-token') {
+        // تجديد التوكن (أو دخول مكرر لنفس المستخدم) لا يغيّر الحساب: نحدّث التوكن فقط،
+        // بدون طلبات شبكة وبدون كائن user جديد.
+        setState((p) => (p.token === session.access_token ? p : { ...p, token: session.access_token }));
+        return;
+      }
+
+      loadedUserIdRef.current = session.user.id;
+      void loadUserProfile(session.user).then((user) => {
+        if (cancelled) return;
+        if (user.status === 'suspended' || user.status === 'deleted') {
+          loadedUserIdRef.current = null;
+          void supabase.auth.signOut({ scope: 'local' });
+          setState((p) => ({ ...p, user: null, token: null, isInitialized: true, isLoading: false, lastError: { code: 'ACCOUNT_SUSPENDED', message: 'تم إيقاف حسابك من الإدارة.' } }));
+          return;
+        }
+        setState((p) => ({
+          ...p,
+          user,
+          token: session.access_token,
+          isInitialized: true,
+          lastError: null,
+        }));
+      });
+      void ensureUserProfile(session.user);
     });
 
     return () => {
@@ -513,6 +533,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     // نمسح الحالة المحلية فوراً حتى ينتقل التطبيق لشاشة الدخول
     // حتى لو كان طلب Supabase بطيئاً أو الشبكة غير متاحة.
+    loadedUserIdRef.current = null;
     setState((p) => ({
       ...p,
       user: null,

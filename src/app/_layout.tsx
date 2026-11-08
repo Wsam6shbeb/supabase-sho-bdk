@@ -39,16 +39,21 @@ function AppEntry() {
   const { isInitialized, user } = useAuth();
   const theme = useTheme();
   const scheme = Colors[theme];
+  // نعتمد على قيم بسيطة (المعرّف ووجود الهاتف) وليس على كائن user نفسه:
+  // أي تحديث للكائن (تجديد توكن، إعادة تحميل الملف) كان يعيد تنفيذ router.replace
+  // ويرجّع المستخدم للرئيسية وهو داخل صفحة أخرى.
+  const userId = user?.id ?? null;
+  const hasPhone = Boolean(user?.phone);
 
   useEffect(() => {
     if (!isInitialized) return;
-    if (user) {
+    if (userId) {
       // لا أحد يدخل التطبيق بدون رقم هاتف (يُطلب مرة واحدة بعد أول تسجيل دخول)
-      router.replace(user.phone ? '/(drawer)/(tabs)' : '/auth/complete-phone');
+      router.replace(hasPhone ? '/(drawer)/(tabs)' : '/auth/complete-phone');
     } else {
       router.replace('/auth/login');
     }
-  }, [isInitialized, user]);
+  }, [isInitialized, userId, hasPhone]);
 
   if (!isInitialized) {
     return (
@@ -65,13 +70,15 @@ function AppEntry() {
 function PhoneGate() {
   const { isInitialized, user } = useAuth();
   const pathname = usePathname();
+  const hasUser = Boolean(user);
+  const hasPhone = Boolean(user?.phone);
 
   useEffect(() => {
-    if (!isInitialized || !user || user.phone) return;
+    if (!isInitialized || !hasUser || hasPhone) return;
     // '/' يعالجه AppEntry، وشاشة الرقم نفسها لا نعيد توجيهها
     if (pathname === '/' || pathname === '/auth/complete-phone') return;
     router.replace('/auth/complete-phone');
-  }, [isInitialized, user, pathname]);
+  }, [isInitialized, hasUser, hasPhone, pathname]);
 
   return null;
 }
