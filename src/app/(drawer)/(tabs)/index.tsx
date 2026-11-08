@@ -15,7 +15,9 @@ import { Colors, FontSizes, FontWeights, Radii, Spacing } from '@/constants/them
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { buildHomeFeed, type FeedEntry, type HomeFeedItem } from '@/domain/homeFeed';
 import { t } from '@/i18n/ar';
+import { fetchHomeFeedEntries } from '@/services/homeFeed';
 import { supabase } from '@/services/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
@@ -48,10 +50,12 @@ export default function HomeTab() {
     t('home.tip5'), t('home.tip6'), t('home.tip7'),
   ], []);
   const [tips, setTips] = useState<string[]>(fallbackTips);
+  const [feedEntries, setFeedEntries] = useState<FeedEntry[]>([]);
+  const feed = useMemo(() => buildHomeFeed(feedEntries, tips), [feedEntries, tips]);
   const [tipIntervalMs, setTipIntervalMs] = useState(6000);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
-  const flatListRef = useRef<FlatList<string>>(null);
+  const flatListRef = useRef<FlatList<HomeFeedItem>>(null);
 
   // Reload public tip settings whenever the home tab becomes active.
   // This lets dashboard edits appear without restarting the Metro app.
@@ -89,17 +93,22 @@ export default function HomeTab() {
           // Keep local fallback tips and the default six-second interval.
         }
       };
+      const loadFeedEntries = async () => {
+        const entries = await fetchHomeFeedEntries();
+        if (active) setFeedEntries(entries);
+      };
       void loadTips();
+      void loadFeedEntries();
       return () => { active = false; };
     }, []),
   );
 
   // دوران تلقائي كل 6 ثوانٍ
   useEffect(() => {
-    if (tips.length === 0) return;
+    if (feed.length === 0) return;
     const interval = setInterval(() => {
       setCurrentTipIndex((prev) => {
-        const next = (prev + 1) % tips.length;
+        const next = (prev + 1) % feed.length;
         flatListRef.current?.scrollToIndex({
           index: next,
           animated: true,
@@ -109,7 +118,7 @@ export default function HomeTab() {
     }, tipIntervalMs);
 
     return () => clearInterval(interval);
-  }, [tips.length, tipIntervalMs]);
+  }, [feed.length, tipIntervalMs]);
 
 // [شرح الدالة: handleRequestService] ينقل المستخدم إلى مسار طلب خدمة جديد.
   const handleRequestService = () => {
@@ -276,18 +285,18 @@ export default function HomeTab() {
         </View>
 
         {/* Quick Tips — Carousel مع دوران تلقائي */}
-        {tips.length > 0 && <View style={styles.tipsSection}>
+        {feed.length > 0 && <View style={styles.tipsSection}>
           <View style={styles.tipsHeader}>
             <Ionicons name="bulb-outline" size={20} color={scheme.warning} />
             <Text style={[styles.tipsTitle, { color: scheme.text }]}>
-              {t('home.quickTipsTitle')}
+              {t('home.feedTitle')}
             </Text>
           </View>
 
           <FlatList
             ref={flatListRef}
-            data={tips}
-            keyExtractor={(_, i) => `tip_${i}`}
+            data={feed}
+            keyExtractor={(item, i) => `${item.kind}_${i}`}
             horizontal
             showsHorizontalScrollIndicator={false}
             snapToInterval={TIP_CARD_WIDTH + TIP_CARD_GAP}
@@ -308,15 +317,41 @@ export default function HomeTab() {
                   styles.tipCard,
                   {
                     width: TIP_CARD_WIDTH,
-                    marginEnd: index === tips.length - 1 ? 0 : TIP_CARD_GAP,
+                    marginEnd: index === feed.length - 1 ? 0 : TIP_CARD_GAP,
                   },
                 ])}
               >
                 <View style={styles.tipRow}>
-                  <View style={[styles.tipDot, { backgroundColor: scheme.warning }]} />
-                  <Text style={[styles.tipText, { color: scheme.textSecondary }]}>
-                    {item}
-                  </Text>
+                  <View
+                    style={[
+                      styles.tipDot,
+                      {
+                        backgroundColor:
+                          item.kind === 'request' ? scheme.primary
+                          : item.kind === 'offer' ? scheme.success
+                          : scheme.warning,
+                      },
+                    ]}
+                  />
+                  {item.kind === 'tip' ? (
+                    <Text style={[styles.tipText, { color: scheme.textSecondary }]}>
+                      {item.text}
+                    </Text>
+                  ) : (
+                    <View style={styles.tipBody}>
+                      <Text
+                        style={[
+                          styles.requestLabel,
+                          { color: item.kind === 'offer' ? scheme.success : scheme.primary },
+                        ]}
+                      >
+                        {item.kind === 'offer' ? t('home.offerLabel') : t('home.recentRequestLabel')}
+                      </Text>
+                      <Text style={[styles.requestText, { color: scheme.text }]}>
+                        {item.kind === 'offer' ? `${t('home.offerPrefix')} ${item.text}` : item.text}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </AppCard>
             )}
@@ -324,7 +359,7 @@ export default function HomeTab() {
 
           {/* Pagination Dots */}
           <View style={styles.paginationRow}>
-            {tips.map((_, i) => (
+            {feed.map((_, i) => (
               <View
                 key={i}
                 style={[
@@ -501,6 +536,19 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: Radii.full,
     marginTop: Spacing.two,
+  },
+  tipBody: { flex: 1 },
+  requestLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    marginBottom: Spacing.one,
+    textAlign: 'right',
+  },
+  requestText: {
+    fontSize: FontSizes.base,
+    lineHeight: FontSizes.lg + 6,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   tipText: {
     flex: 1,

@@ -10,5 +10,7 @@ SCRATCH_URL="${ADMIN_URL%/*}/lifecycle_scratch"
 psql "$ADMIN_URL" -X -q -v ON_ERROR_STOP=1 -c 'drop database if exists lifecycle_scratch' -c 'create database lifecycle_scratch'
 psql "$SCRATCH_URL" -X -q -v ON_ERROR_STOP=1 -f "$DIR/00_fixture.sql"
 psql "$SCRATCH_URL" -X -q -v ON_ERROR_STOP=1 -f "$ROOT/supabase/migrations/20261107130000_expire_agreements_and_retire_stale_requests.sql"
+psql "$SCRATCH_URL" -X -q -v ON_ERROR_STOP=1 -f "$ROOT/supabase/migrations/20261108120000_add_home_feed.sql"
 psql "$SCRATCH_URL" -X -q -v ON_ERROR_STOP=1 -f "$DIR/05_expiry_and_stale_requests.sql"
+psql "$SCRATCH_URL" -X -q -v ON_ERROR_STOP=1 -f "$DIR/06_home_feed.sql"
 echo "LIFECYCLE SQL TESTS PASSED"
