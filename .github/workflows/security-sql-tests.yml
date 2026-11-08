@@ -55,3 +55,5 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/security_scratch
           WITH_FIXTURE: "1"
         run: bash supabase/tests/sql/run_local.sh "$DATABASE_URL"
+      - name: Run agreement expiry and stale request tests (separate scratch database)
+        run: bash supabase/tests/sql/lifecycle/run_local.sh postgresql://postgres:postgres@localhost:5432/security_scratch
