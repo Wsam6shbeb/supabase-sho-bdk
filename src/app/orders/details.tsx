@@ -40,7 +40,7 @@ export default function OrderDetailsScreen() {
 
   if (!order) {
     return (
-      <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+      <ScreenSafeArea style={[styles.safe, { backgroundColor: "transparent" }]}>
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={54} color={scheme.danger} />
           <Text style={[styles.title, { color: scheme.text }]}>الطلب غير موجود</Text>
@@ -58,7 +58,7 @@ export default function OrderDetailsScreen() {
     ?? 'غير محدد';
 
   return (
-    <ScreenSafeArea style={[styles.safe, { backgroundColor: scheme.background }]}>
+    <ScreenSafeArea style={[styles.safe, { backgroundColor: "transparent" }]}>
       <View style={styles.header}>
         <View style={styles.headerTitleWrap}>
           <Text style={[styles.title, { color: scheme.text }]}>تفاصيل الطلب</Text>
