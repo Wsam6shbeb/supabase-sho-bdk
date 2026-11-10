@@ -1,10 +1,5 @@
--- ===============================================================
 -- المرحلة 2 من التوثيق: رؤية حالة الطرف الآخر + طلب التوثيق + إشعار القرار
--- لا يغيّر أي جدول. دوال جديدة + تحديث decide_verification (إضافة إشعار فقط).
--- ===============================================================
 
--- 1) حالة توثيق الطرف الآخر في المحادثة (طرفا المحادثة فقط، بدون أي تفاصيل مراجعة).
---    verified = الحساب معتمد. requested_by_me = أرسلتُ له طلب توثيق سابقاً في هذه المحادثة.
 create or replace function public.get_counterparty_verification(p_conversation_id uuid)
 returns jsonb
 language plpgsql
@@ -46,7 +41,6 @@ $$;
 revoke all on function public.get_counterparty_verification(uuid) from public, anon;
 grant execute on function public.get_counterparty_verification(uuid) to authenticated;
 
--- 2) طلب توثيق من الطرف الآخر: رسالة نظام في المحادثة + إشعار له (مرة واحدة لكل محادثة).
 create or replace function public.request_counterparty_verification(p_conversation_id uuid)
 returns jsonb
 language plpgsql
@@ -99,7 +93,6 @@ begin
 
   perform public._post_system_message(p_conversation_id, v_uid, v_body);
 
-  -- نوع الإشعار new_message موجود في التطبيق؛ نوع جديد كان سيُسقط شاشة الإشعارات الحالية.
   perform public._notify(
     v_other,
     'new_message',
@@ -115,8 +108,6 @@ $$;
 revoke all on function public.request_counterparty_verification(uuid) from public, anon;
 grant execute on function public.request_counterparty_verification(uuid) to authenticated;
 
--- 3) decide_verification: نفس الدالة الحالية + إشعار للمستخدم بالقرار
---    (النوعان verification_approved / verification_rejected معرّفان أصلاً في التطبيق).
 create or replace function public.decide_verification(
   p_id uuid, p_decision text, p_reason text, p_admin uuid
 ) returns jsonb
@@ -174,3 +165,4 @@ $$;
 
 revoke all on function public.decide_verification(uuid, text, text, uuid) from public, anon, authenticated;
 grant execute on function public.decide_verification(uuid, text, text, uuid) to service_role;
+;

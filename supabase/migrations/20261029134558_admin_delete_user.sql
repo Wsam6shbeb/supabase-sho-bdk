@@ -1,7 +1,3 @@
--- Admin-initiated account deletion.
--- Anonymize the public profile and disable sign-in while retaining linked history
--- and verification records needed for safety, accounting, and audit purposes.
-
 create or replace function public.admin_delete_user(p_user_id uuid)
 returns void
 language plpgsql
@@ -33,7 +29,6 @@ begin
     raise exception 'USER_ALREADY_DELETED' using errcode = 'P0001';
   end if;
 
-  -- Do not remove access while the person has active work with another user.
   select count(*) into v_ongoing
     from public.agreements a
     join public.service_requests sr on sr.id = a.request_id
@@ -47,19 +42,15 @@ begin
     raise exception 'ACTIVE_WORK_IN_PROGRESS' using errcode = 'P0001';
   end if;
 
-  -- Remove personal/device data that can be safely deleted.
   delete from public.push_tokens where user_id = p_user_id;
   delete from public.notifications where user_id = p_user_id;
   delete from public.phone_shares where from_user_id = p_user_id;
   delete from public.provider_services where provider_id = p_user_id;
 
-  -- Keep referenced rows so existing agreements and conversations remain valid.
   update public.provider_profiles
      set bio = null, is_available = false
    where user_id = p_user_id;
 
-  -- Anonymize the profile. Keep verification, ratings, agreements, messages,
-  -- wallet/ledger, and report records for safety and accounting purposes.
   update public.users
      set full_name = 'حساب محذوف',
          phone = null,
@@ -70,7 +61,6 @@ begin
          deleted_at = now()
    where id = p_user_id;
 
-  -- Remove sign-in identities and sessions, then scrub and permanently ban Auth.
   delete from auth.identities where user_id = p_user_id;
   delete from auth.sessions where user_id = p_user_id;
   update auth.users
@@ -84,4 +74,4 @@ end;
 $$;
 
 revoke all on function public.admin_delete_user(uuid) from public, anon, authenticated;
-grant execute on function public.admin_delete_user(uuid) to service_role;
+grant execute on function public.admin_delete_user(uuid) to service_role;;

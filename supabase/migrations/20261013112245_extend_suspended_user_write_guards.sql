@@ -1,0 +1,16 @@
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.agreements FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.conversations FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.provider_services FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.provider_profiles FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.provider_skills FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.candidates FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.ledger_entries FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.phone_shares FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.ratings FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.reports FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.verifications FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.blocks FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.notifications FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();
+CREATE TRIGGER reject_suspended_user_writes_trg BEFORE INSERT OR UPDATE ON public.push_tokens FOR EACH ROW EXECUTE FUNCTION public.reject_suspended_user_writes();;

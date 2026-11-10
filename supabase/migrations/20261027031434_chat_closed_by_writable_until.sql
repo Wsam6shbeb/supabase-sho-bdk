@@ -180,3 +180,4 @@ begin
   return jsonb_build_object('ok', true);
 end;
 $function$;
+;
