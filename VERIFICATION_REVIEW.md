@@ -10,7 +10,7 @@
 - `supabase/migrations/20261021215212_verification_system.sql`
 - `supabase/migrations/20261023054628_verifications_service_role_select.sql`
 - `supabase/migrations/20261023105642_verification_visibility.sql`
-- `supabase/migrations/20261101190000_allow_support_verification_and_topups.sql`
+- `supabase/migrations/20261101211219_allow_support_verification_and_topups.sql`
 - `src/services/verification.ts`
 - `src/services/counterpartyVerification.ts`
 - `src/hooks/use-my-verification.ts`

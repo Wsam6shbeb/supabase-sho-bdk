@@ -39,14 +39,14 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/security_scratch
         run: |
           for migration in \
+            supabase/migrations/20261102080646_add_match_rate_limit.sql \
             supabase/migrations/20261102084036_add_ai_rate_limits.sql \
-            supabase/migrations/20261102120000_add_match_rate_limit.sql \
-            supabase/migrations/20261105090000_lock_candidates_to_server_writes.sql \
-            supabase/migrations/20261105091000_bound_provider_candidate_payload.sql \
-            supabase/migrations/20261105092000_bound_provider_service_inputs.sql \
-            supabase/migrations/20261105093000_phone_guard_structured_data.sql \
-            supabase/migrations/20261107110000_add_app_error_log.sql \
-            supabase/migrations/20261107120000_protect_gemini_quota_and_error_log.sql
+            supabase/migrations/20261107051620_lock_candidates_to_server_writes.sql \
+            supabase/migrations/20261107051639_bound_provider_candidate_payload.sql \
+            supabase/migrations/20261107051646_bound_provider_service_inputs.sql \
+            supabase/migrations/20261107051652_phone_guard_structured_data.sql \
+            supabase/migrations/20261107084412_add_app_error_log.sql \
+            supabase/migrations/20261107084418_protect_gemini_quota_and_error_log.sql
           do
             psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$migration"
           done
