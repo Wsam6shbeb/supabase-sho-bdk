@@ -1,3 +1,4 @@
+
 insert into public.app_settings (key, value)
 values
   ('sham_cash_account_code', to_jsonb(''::text)),
@@ -128,3 +129,4 @@ $function$;
 revoke all on function public.admin_topup_wallet(uuid, numeric, text) from public;
 revoke all on function public.admin_topup_wallet(uuid, numeric, text) from anon;
 grant execute on function public.admin_topup_wallet(uuid, numeric, text) to authenticated;
+;

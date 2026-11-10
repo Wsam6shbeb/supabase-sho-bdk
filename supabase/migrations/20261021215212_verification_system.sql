@@ -151,3 +151,4 @@ begin
    where id = v_uid;
 end;
 $function$;
+;

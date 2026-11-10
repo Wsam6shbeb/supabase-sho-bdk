@@ -1,3 +1,4 @@
+
 drop function if exists public.admin_topup_wallet(uuid, numeric, text);
 
 create function public.admin_topup_wallet(
@@ -133,3 +134,4 @@ $function$;
 revoke all on function public.admin_topup_wallet(uuid, numeric, text, uuid) from public;
 revoke all on function public.admin_topup_wallet(uuid, numeric, text, uuid) from anon;
 grant execute on function public.admin_topup_wallet(uuid, numeric, text, uuid) to authenticated;
+;

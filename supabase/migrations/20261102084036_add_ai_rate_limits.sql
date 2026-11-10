@@ -1,5 +1,4 @@
 -- Generic per-user, per-bucket rate limit for AI-backed edge functions.
-CREATE SCHEMA IF NOT EXISTS private;
 CREATE TABLE IF NOT EXISTS private.ai_rate_limits (
   user_id uuid NOT NULL,
   bucket text NOT NULL,
@@ -57,4 +56,4 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.consume_ai_rate_limit(uuid, text, integer, integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.consume_ai_rate_limit(uuid, text, integer, integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.consume_ai_rate_limit(uuid, text, integer, integer) TO service_role;;
