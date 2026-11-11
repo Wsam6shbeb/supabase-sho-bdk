@@ -78,6 +78,12 @@
         "projectId": "895d0a0b-928d-43bb-bbc8-c57b4ed76399"
       }
     },
-    "owner": "wsam955221595"
+    "owner": "wsam955221595",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/895d0a0b-928d-43bb-bbc8-c57b4ed76399"
+    }
   }
 }

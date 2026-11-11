@@ -143,6 +143,7 @@ const styles = StyleSheet.create({
   rowOther: { justifyContent: 'flex-end' },
   bubble: {
     maxWidth: '80%',
+    minWidth: 96 ,
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     borderRadius: Radii.lg,
