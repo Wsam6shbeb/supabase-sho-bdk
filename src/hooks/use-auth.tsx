@@ -32,6 +32,14 @@ import { Platform } from 'react-native';
 // يكمل نافذة OAuth على الويب عند رجوع Google إلى نفس التطبيق.
 WebBrowser.maybeCompleteAuthSession();
 
+// صلاحية عملية OAuth في Supabase 5 دقائق تقريباً. إذا أُغلقت نافذة Google بعد هذه المدة فالسبب غالباً
+// انتهاء المهلة (يحوّل Supabase المستخدم إلى Site URL بدل التطبيق، فلا يصلنا أي رابط عودة).
+const GOOGLE_OAUTH_TIMEOUT_MS = 4 * 60 * 1000;
+const GOOGLE_OAUTH_TIMEOUT_ERROR: ApiError = {
+  code: 'GOOGLE_OAUTH_TIMEOUT',
+  message: 'انتهت المهلة، حاول مرة أخرى.',
+};
+
 export interface AuthState {
   user: User | null;
   token: string | null;
@@ -355,7 +363,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
+      const startedAt = Date.now();
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      const elapsedMs = Date.now() - startedAt;
 
       if (result.type !== 'success' || !result.url) {
         if (result.type !== 'cancel' && result.type !== 'dismiss') {
@@ -367,6 +377,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               message: 'لم يكتمل تسجيل الدخول عبر Google.',
             },
           }));
+        } else if (elapsedMs >= GOOGLE_OAUTH_TIMEOUT_MS) {
+          setState((p) => ({ ...p, isLoading: false, lastError: GOOGLE_OAUTH_TIMEOUT_ERROR }));
         } else {
           setState((p) => ({ ...p, isLoading: false }));
         }
@@ -386,10 +398,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hashParams.get('error');
 
       if (oauthError) {
-        const apiErr = {
-          code: params.get('error') ?? hashParams.get('error') ?? 'GOOGLE_OAUTH_ERROR',
-          message: getUserMessage({ message: oauthError }, 'login'),
-        };
+        const apiErr = /expired/i.test(oauthError)
+          ? GOOGLE_OAUTH_TIMEOUT_ERROR
+          : {
+              code: params.get('error') ?? hashParams.get('error') ?? 'GOOGLE_OAUTH_ERROR',
+              message: getUserMessage({ message: oauthError }, 'login'),
+            };
         setState((p) => ({ ...p, isLoading: false, lastError: apiErr }));
         return null;
       }
