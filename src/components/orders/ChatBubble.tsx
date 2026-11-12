@@ -153,6 +153,7 @@ const styles = StyleSheet.create({
     lineHeight: FontSizes.lg + 4,
     writingDirection: 'rtl',
     textAlign: 'right',
+    fontFamily: 'sans-serif',
   },
   metaRow: {
     flexDirection: 'row',
