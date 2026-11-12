@@ -11,7 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Drawer, DrawerToggleButton } from 'expo-router/drawer';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Alert, Platform, Pressable, ScrollView, Share, Text, View } from 'react-native';
 
@@ -90,8 +90,16 @@ function DrawerContent(props: any) {
     })();
   };
 
-  const items = [
+  // href: عنصر يفتح شاشة داخل التبويبات (مثل طلباتي) بدل شاشة من الـ Drawer نفسه.
+  const items: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap; href?: Href }[] = [
     { name: '(tabs)', label: t('home.appName'), icon: 'home-outline' as const },
+    // طلباتي: نُقلت من شريط التبويبات إلى القائمة الجانبية (الشاشة نفسها بدون تغيير)
+    {
+      name: 'orders-link',
+      label: t('tabs.orders'),
+      icon: 'list-outline' as const,
+      href: '/(drawer)/(tabs)/orders' as Href,
+    },
     { name: 'profile', label: t('tabs.profile'), icon: 'person-outline' as const },
     // مراجعة البلاغات: للأدمن فقط
     ...(user?.is_admin
@@ -122,7 +130,8 @@ function DrawerContent(props: any) {
             <GuardedPressable
               key={item.name}
               onPress={() => {
-                props.navigation.navigate(item.name);
+                if (item.href) router.navigate(item.href);
+                else props.navigation.navigate(item.name);
                 props.navigation.closeDrawer();
               }}
               style={{

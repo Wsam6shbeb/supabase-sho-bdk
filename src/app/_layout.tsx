@@ -136,6 +136,9 @@ function RootStack() {
           {/* ⭐ جديد */}
           <Stack.Screen name="orders/disclaimer" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
           <Stack.Screen name="orders/request-again" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="jobs/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="jobs/details" options={{ headerShown: false, animation: 'slide_from_right' }} />
+          <Stack.Screen name="jobs/mine" options={{ headerShown: false, animation: 'slide_from_right' }} />
         </Stack>
         <AppEntry />
         <PhoneGate />

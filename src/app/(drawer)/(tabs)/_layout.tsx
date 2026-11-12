@@ -6,6 +6,7 @@
 // ===============================================================
 
 import { Colors, FontSizes, FontWeights } from '@/constants/theme';
+import { useJobsSettings } from '@/hooks/use-jobs-settings';
 import { useTheme } from '@/hooks/use-theme';
 import { t } from '@/i18n/ar';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -18,6 +19,8 @@ export default function TabsLayout() {
   const scheme = Colors[theme];
   // الارتفاع الثابت كان يلغي هامش أزرار النظام فيقع الشريط تحتها؛ نضيفه يدوياً
   const insets = useSafeAreaInsets();
+  // مفتاح تشغيل قسم الوظائف من الإعدادات: عند إطفائه يختفي التبويب بدون تحديث للتطبيق.
+  const { enabled: jobsEnabled } = useJobsSettings();
 
   return (
     <Tabs
@@ -40,6 +43,7 @@ export default function TabsLayout() {
         tabBarIcon: ({ color, size }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             index: 'home-outline',
+            jobs: 'briefcase-outline',
             orders: 'list-outline',
             messages: 'chatbubbles-outline',
             wallet: 'wallet-outline',
@@ -51,7 +55,12 @@ export default function TabsLayout() {
       })}
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.home') }} />
-      <Tabs.Screen name="orders" options={{ title: t('tabs.orders') }} />
+      <Tabs.Screen
+        name="jobs"
+        options={{ title: 'فرص العمل', tabBarLabel: 'فرص العمل', href: jobsEnabled ? undefined : null }}
+      />
+      {/* طلباتي: لم تعد تبويباً، تُفتح من القائمة الجانبية (الشاشة نفسها بنفس المسار). */}
+      <Tabs.Screen name="orders" options={{ title: t('tabs.orders'), href: null }} />
       <Tabs.Screen name="messages" options={{ title: t('tabs.messages') }} />
       <Tabs.Screen name="wallet" options={{ title: t('tabs.wallet') }} />
       <Tabs.Screen name="notifications" options={{ title: 'الإشعارات', tabBarLabel: 'الإشعارات',
