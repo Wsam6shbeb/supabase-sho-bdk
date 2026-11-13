@@ -127,7 +127,7 @@ export default function CreateOrderScreen() {
       setError('يرجى كتابة المدينة.');
       return;
     }
-    if (containsBlockedWord(trimmed, serviceArea, additionalInfo)) {
+    if (containsBlockedWord(trimmed, trimmedCity, serviceArea, additionalInfo)) {
       setError('النص يحتوي على ألفاظ غير مسموحة. عدّل النص وحاول مرة أخرى.');
       return;
     }
