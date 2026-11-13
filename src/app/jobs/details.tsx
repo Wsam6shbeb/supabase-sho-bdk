@@ -79,7 +79,7 @@ export default function JobDetailsScreen() {
       try {
         setContact(await getJobContact(jobId));
       } catch (err) {
-        setContactError(getUserMessage(err, 'load'));
+        setContactError(jobErrorMessage(err));
       }
     } catch (err) {
       setError(getUserMessage(err, 'load'));

@@ -45,6 +45,9 @@ export function jobErrorMessage(error: unknown): string {
   if (text.includes('JOBS_DISABLED')) {
     return 'قسم فرص العمل غير متاح حالياً.';
   }
+  if (text.includes('RATE_LIMITED')) {
+    return 'طلبت معلومات تواصل كثيرة خلال وقت قصير. حاول مرة أخرى بعد قليل.';
+  }
   if (text.includes('job_posts_contact_format')) {
     return 'وسيلة التواصل غير صحيحة. تحقق من الرقم أو الرابط.';
   }
