@@ -10,6 +10,12 @@ const BLOCKED_WORDS = [
   'تاكلو',
   'طيزا',
   'كسا',
+  'سنية',
+  'علوية',
+  'درزية',
+  'مسيحية',
+  'سمعولية',
+  'اسماعيلية',
 ];
 
 function normalizeArabicText(value: string): string {
