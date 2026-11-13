@@ -15,7 +15,7 @@ const BLOCKED_WORDS = [
 function normalizeArabicText(value: string): string {
   return value
     .normalize('NFKC')
-    .replace(/[\\u064B-\\u065F\\u0670\\u0640\\u200B-\\u200D\\uFEFF]/g, '')
+    .replace(/[\u064B-\u065F\u0670\u0640\u200B-\u200D\uFEFF]/g, '')
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ى/g, 'ي')
     .replace(/ة/g, 'ه')
