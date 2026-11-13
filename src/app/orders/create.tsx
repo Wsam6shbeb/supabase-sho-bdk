@@ -33,6 +33,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { areaPlaceholder } from '@/domain/areaSuggestions';
 import { PHONE_IN_TEXT_MESSAGE, containsPhoneNumber } from '@/domain/chatSafety';
+import { containsBlockedWord } from '@/domain/textModeration';
 import { usePreferredCity } from '@/hooks/use-preferred-city';
 import { useState } from 'react';
 import type { ServiceRequestAnalysis } from '@/context/OrderContext';
@@ -126,6 +127,10 @@ export default function CreateOrderScreen() {
       setError('يرجى كتابة المدينة.');
       return;
     }
+    if (containsBlockedWord(trimmed, trimmedCity, serviceArea, additionalInfo)) {
+      setError('النص يحتوي على ألفاظ غير مسموحة. عدّل النص وحاول مرة أخرى.');
+      return;
+    }
     if ([trimmed, trimmedCity, serviceArea, additionalInfo].some((value) => containsPhoneNumber(value))) {
       setError(PHONE_IN_TEXT_MESSAGE);
       return;
@@ -179,6 +184,10 @@ export default function CreateOrderScreen() {
   const handleClarificationConfirm = () => {
     if (!clarificationAnswer.trim()) {
       setError('جاوب على سؤال التوضيح قبل المتابعة.');
+      return;
+    }
+    if (containsBlockedWord(clarificationAnswer)) {
+      setError('النص يحتوي على ألفاظ غير مسموحة. عدّل النص وحاول مرة أخرى.');
       return;
     }
     void analyzeAndContinue(clarificationAnswer);
