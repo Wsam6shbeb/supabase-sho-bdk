@@ -12,6 +12,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type RpcResponse = { data: any; error: { message?: string } | null };
 const callRpc = supabase.rpc as unknown as (name: string, args?: Record<string, unknown>) => Promise<RpcResponse>;
+const RPC_TIMEOUT_MS = 20_000;
+
+async function callRpcWithTimeout(name: string, args?: Record<string, unknown>): Promise<RpcResponse> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      callRpc(name, args),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('DISPLAY_NAME_TIMEOUT')), RPC_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 export default function CompleteDisplayNameScreen() {
   const theme = useTheme();
@@ -30,41 +45,57 @@ export default function CompleteDisplayNameScreen() {
       setError('يجب أن يتراوح الاسم بين حرفين و40 حرفاً.');
       return;
     }
+
     setBusy(true);
-    const { data, error: rpcError } = await callRpc('set_my_display_name', { p_display_name: value });
-    setBusy(false);
-    if (rpcError) {
-      const message = rpcError.message ?? '';
-      setError(message.includes('DISPLAY_NAME_TAKEN')
-        ? 'هذا الاسم مستخدم بالفعل. اختر اسماً آخر.'
-        : message.includes('DISPLAY_NAME_PHONE_NOT_ALLOWED')
-          ? 'لا يمكن أن يحتوي الاسم على رقم هاتف.'
-          : message.includes('DISPLAY_NAME_LENGTH')
-            ? 'يجب أن يتراوح الاسم بين حرفين و40 حرفاً.'
-            : 'تعذر حفظ الاسم الآن. تحقق من الاتصال وحاول مجدداً.');
-      return;
+    setError(null);
+    try {
+      const { data, error: rpcError } = await callRpcWithTimeout('set_my_display_name', { p_display_name: value });
+      if (rpcError) {
+        const message = rpcError.message ?? '';
+        setError(message.includes('DISPLAY_NAME_TAKEN')
+          ? 'هذا الاسم مستخدم بالفعل. اختر اسماً آخر.'
+          : message.includes('DISPLAY_NAME_PHONE_NOT_ALLOWED')
+            ? 'لا يمكن أن يحتوي الاسم على رقم هاتف.'
+            : message.includes('DISPLAY_NAME_LENGTH')
+              ? 'يجب أن يتراوح الاسم بين حرفين و40 حرفاً.'
+              : 'تعذر حفظ الاسم الآن. تحقق من الاتصال وحاول مجدداً.');
+        return;
+      }
+
+      const savedName = typeof data?.display_name === 'string' ? data.display_name : null;
+      updateUser({
+        display_name: savedName,
+        name: savedName || user?.full_name || user?.name || 'مستخدم',
+        display_name_prompted_at: data?.display_name_prompted_at ?? new Date().toISOString(),
+      });
+      if (isEdit) router.back();
+      else router.replace('/(drawer)/(tabs)');
+    } catch (err) {
+      setError(err instanceof Error && err.message === 'DISPLAY_NAME_TIMEOUT'
+        ? 'استغرق الاتصال وقتاً أطول من المتوقع. تحقق من الإنترنت؛ وإذا لم يتغير الاسم، حاول مجدداً.'
+        : 'حدث خطأ غير متوقع أثناء حفظ الاسم. تحقق من الاتصال وحاول مجدداً.');
+    } finally {
+      setBusy(false);
     }
-    const savedName = typeof data?.display_name === 'string' ? data.display_name : null;
-    updateUser({
-      display_name: savedName,
-      name: savedName || user?.full_name || user?.name || 'مستخدم',
-      display_name_prompted_at: data?.display_name_prompted_at ?? new Date().toISOString(),
-    });
-    if (isEdit) router.back();
-    else router.replace('/(drawer)/(tabs)');
   };
 
   const handleSkip = async () => {
     if (busy) return;
     setBusy(true);
-    const { data, error: rpcError } = await callRpc('skip_my_display_name_prompt');
-    setBusy(false);
-    if (rpcError) {
-      setError('تعذر المتابعة الآن. تحقق من الاتصال وحاول مجدداً.');
-      return;
+    setError(null);
+    try {
+      const { data, error: rpcError } = await callRpcWithTimeout('skip_my_display_name_prompt');
+      if (rpcError) {
+        setError('تعذر المتابعة الآن. تحقق من الاتصال وحاول مجدداً.');
+        return;
+      }
+      updateUser({ display_name_prompted_at: data?.display_name_prompted_at ?? new Date().toISOString() });
+      router.replace('/(drawer)/(tabs)');
+    } catch {
+      setError('تعذر إكمال المتابعة بسبب تأخر الاتصال. تحقق من الإنترنت وحاول مجدداً.');
+    } finally {
+      setBusy(false);
     }
-    updateUser({ display_name_prompted_at: data?.display_name_prompted_at ?? new Date().toISOString() });
-    router.replace('/(drawer)/(tabs)');
   };
 
   return (
