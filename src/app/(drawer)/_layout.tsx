@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Alert, Platform, Pressable, ScrollView, Share, Text, View } from 'react-native';
 
 // رابط تحميل التطبيق ونص المشاركة (زر "شارك التطبيق" في القائمة الجانبية).
-const SHARE_URL = 'https://sho-bdk-download.pages.dev/';
+const SHARE_URL = 'https://sho-bdk-download.vercel.app/';
 const SHARE_MESSAGE =
   'جرّب تطبيق شو بدك؟ لطلب الخدمات والتواصل مع مقدميها في سوريا.\n\nحمّل التطبيق من هنا:\n' + SHARE_URL;
 
