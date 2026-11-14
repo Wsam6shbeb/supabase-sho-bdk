@@ -161,3 +161,52 @@ end;
 $$;
 
 notify pgrst, 'reload schema';
+
+
+-- Apply the same public-name fallback to the remaining user-facing and admin read RPCs.
+do $$
+declare
+  v_signature text;
+  v_definition text;
+  v_updated text;
+  v_alias text;
+  v_aliases text[] := array['u','o','ru','tu','pu','cu','fu','ou','cb','su'];
+  v_signatures text[] := array[
+    'public.admin_get_report_case(uuid)',
+    'public.admin_get_request(uuid)',
+    'public.admin_list_admins()',
+    'public.admin_list_job_reports(text,integer,integer)',
+    'public.admin_list_jobs(text,text,integer,integer)',
+    'public.admin_list_ledger(uuid,text,integer,integer)',
+    'public.admin_list_reports(text)',
+    'public.admin_list_requests(text,text,integer,integer)',
+    'public.get_my_order_history_v2()',
+    'public.get_my_provider_jobs()',
+    'public.get_phone_share_status(uuid)',
+    'public.notify_on_agreement_change()',
+    'public.notify_on_new_message()',
+    'public.notify_on_request_completed()',
+    'public.report_non_execution(uuid,text)',
+    'public.request_counterparty_verification(uuid)',
+    'public.share_my_phone(uuid)'
+  ];
+begin
+  foreach v_signature in array v_signatures loop
+    v_definition := pg_get_functiondef(v_signature::regprocedure);
+    v_updated := v_definition;
+
+    foreach v_alias in array v_aliases loop
+      v_updated := replace(v_updated, v_alias || '.full_name',
+        'coalesce(nullif(' || v_alias || '.display_name, ''''), ' || v_alias || '.full_name)');
+    end loop;
+
+    v_updated := replace(v_updated, 'coalesce(nullif(full_name, ''''),',
+      'coalesce(nullif(display_name, ''''), nullif(full_name, ''''),');
+
+    if v_updated = v_definition then
+      raise exception 'No public name expression found in %', v_signature;
+    end if;
+    execute v_updated;
+  end loop;
+end;
+$$;
