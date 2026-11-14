@@ -10,18 +10,14 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type RpcResponse = { data: any; error: { message?: string } | null };
-// مهم: نستدعي supabase.rpc مباشرة داخل الدالة. تخزينها في متغير (const callRpc = supabase.rpc)
-// يفقد الـ this الخاص بالعميل فلا يُرسل أي طلب للسيرفر وتبقى الشاشة عالقة.
-const callRpc = (name: string, args?: Record<string, unknown>): Promise<RpcResponse> =>
-  (supabase.rpc as unknown as (fn: string, args?: Record<string, unknown>) => Promise<RpcResponse>)(name, args);
 const RPC_TIMEOUT_MS = 20_000;
 
-async function callRpcWithTimeout(name: string, args?: Record<string, unknown>): Promise<RpcResponse> {
+// مرّر طلب RPC كدالة حتى يُستدعى عبر كائن Supabase نفسه ولا نفقد سياق this.
+async function callRpcWithTimeout<T>(request: () => Promise<T>): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      callRpc(name, args),
+      request(),
       new Promise<never>((_, reject) => {
         timeout = setTimeout(() => reject(new Error('DISPLAY_NAME_TIMEOUT')), RPC_TIMEOUT_MS);
       }),
@@ -52,7 +48,7 @@ export default function CompleteDisplayNameScreen() {
     setBusy(true);
     setError(null);
     try {
-      const { data, error: rpcError } = await callRpcWithTimeout('set_my_display_name', { p_display_name: value });
+      const { data, error: rpcError } = await callRpcWithTimeout(() => supabase.rpc('set_my_display_name', { p_display_name: value }));
       if (rpcError) {
         const message = rpcError.message ?? '';
         setError(message.includes('DISPLAY_NAME_TAKEN')
@@ -87,7 +83,7 @@ export default function CompleteDisplayNameScreen() {
     setBusy(true);
     setError(null);
     try {
-      const { data, error: rpcError } = await callRpcWithTimeout('skip_my_display_name_prompt');
+      const { data, error: rpcError } = await callRpcWithTimeout(() => supabase.rpc('skip_my_display_name_prompt'));
       if (rpcError) {
         setError('تعذر المتابعة الآن. تحقق من الاتصال وحاول مجدداً.');
         return;
