@@ -93,7 +93,9 @@ export function useAppUpdatePrompt(isAppInitialized: boolean): void {
           '\n\nالإصدار الحالي: ' + currentVersion +
           '\nالإصدار الجديد: ' + latestVersion;
 
+        let updateActionChosen = false;
         const openDownloadPage = () => {
+          updateActionChosen = true;
           promptVisible = false;
           lastPromptedVersion = null;
           void Linking.openURL(updateUrl).catch(() => {
@@ -120,6 +122,7 @@ export function useAppUpdatePrompt(isAppInitialized: boolean): void {
                 text: 'لاحقاً',
                 style: 'cancel',
                 onPress: () => {
+                  updateActionChosen = true;
                   promptVisible = false;
                   void AsyncStorage.setItem(DISMISSED_VERSION_KEY, latestVersion).catch(() => {});
                 },
@@ -130,7 +133,9 @@ export function useAppUpdatePrompt(isAppInitialized: boolean): void {
               cancelable: true,
               onDismiss: () => {
                 promptVisible = false;
-                void AsyncStorage.setItem(DISMISSED_VERSION_KEY, latestVersion).catch(() => {});
+                if (!updateActionChosen) {
+                  void AsyncStorage.setItem(DISMISSED_VERSION_KEY, latestVersion).catch(() => {});
+                }
               },
             },
           );
