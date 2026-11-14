@@ -170,7 +170,7 @@ declare
   v_definition text;
   v_updated text;
   v_alias text;
-  v_aliases text[] := array['u','o','ru','tu','pu','cu','fu','ou','cb','su'];
+  v_aliases text[] := array['ru','tu','pu','cu','fu','ou','cb','su','u','o'];
   v_signatures text[] := array[
     'public.admin_get_report_case(uuid)',
     'public.admin_get_request(uuid)',
