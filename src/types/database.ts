@@ -999,11 +999,16 @@ export type Database = {
     Functions: {
       set_my_display_name: {
         Args: { p_display_name: string }
-        Returns: Json
+        Returns: {
+          display_name: string | null
+          display_name_prompted_at: string | null
+        }
       }
       skip_my_display_name_prompt: {
         Args: Record<PropertyKey, never>
-        Returns: Json
+        Returns: {
+          display_name_prompted_at: string | null
+        }
       }
       get_provider_candidates: {
         Args: {
