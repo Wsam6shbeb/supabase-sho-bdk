@@ -83,6 +83,7 @@ function mapSupabaseUser(sbUser: any): User {
     name: meta.full_name ?? meta.name ?? '',
     full_name: meta.full_name ?? meta.name ?? '',
     display_name: null,
+    // undefined = غير معروف (فشل تحميل الملف الشخصي): لا نعرض سؤال الاسم المستعار بسبب خطأ عابر.
     display_name_prompted_at: undefined,
     email: sbUser.email ?? '',
     phone: sbUser.phone ?? meta.phone ?? '',
@@ -124,7 +125,12 @@ async function loadUserProfile(sbUser: any): Promise<User> {
       .eq('id', sbUser.id)
       .maybeSingle();
 
-    if (error || !data) return fallback;
+    // خطأ فعلي (شبكة/سيرفر): الحالة غير معروفة، نترك display_name_prompted_at غير معرّف فلا نسأل.
+    if (error) return fallback;
+
+    // لا خطأ ولا صف: حساب جديد لم يُنشأ صفه بعد (ensureUserProfile يعمل بعد التحميل الأول).
+    // الحساب الجديد لم يُسأل عن الاسم المستعار بعد، فنعتبره "لم يُسأل" ليظهر له السؤال.
+    if (!data) return { ...fallback, display_name_prompted_at: null };
 
     return {
       ...fallback,
