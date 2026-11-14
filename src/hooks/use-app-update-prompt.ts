@@ -126,7 +126,13 @@ export function useAppUpdatePrompt(isAppInitialized: boolean): void {
               },
               { text: 'تنزيل التحديث', onPress: openDownloadPage },
             ],
-            { cancelable: true },
+            {
+              cancelable: true,
+              onDismiss: () => {
+                promptVisible = false;
+                void AsyncStorage.setItem(DISMISSED_VERSION_KEY, latestVersion).catch(() => {});
+              },
+            },
           );
         }
       } catch {
