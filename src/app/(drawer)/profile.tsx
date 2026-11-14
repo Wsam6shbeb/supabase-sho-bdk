@@ -145,6 +145,17 @@ export default function ProfileScreen() {
                 </Text>
                 <Text style={[styles.region, { color: scheme.primary }]}>تعديل</Text>
               </GuardedPressable>
+              <GuardedPressable
+                onPress={() => router.push('/auth/complete-display-name?mode=edit')}
+                hitSlop={6}
+                style={styles.regionRow}
+              >
+                <Ionicons name="person-outline" size={14} color={scheme.textSecondary} />
+                <Text style={[styles.region, { color: scheme.textSecondary }]} numberOfLines={1}>
+                  الاسم الظاهر للجميع: {user?.display_name || user?.name || 'غير محدد'}
+                </Text>
+                <Text style={[styles.region, { color: scheme.primary }]}>تعديل</Text>
+              </GuardedPressable>
               {user?.region && (
                 <View style={styles.regionRow}>
                   <Ionicons name="location" size={14} color={scheme.textSecondary} />
