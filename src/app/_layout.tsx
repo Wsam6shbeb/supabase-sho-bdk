@@ -44,16 +44,17 @@ function AppEntry() {
   // ويرجّع المستخدم للرئيسية وهو داخل صفحة أخرى.
   const userId = user?.id ?? null;
   const hasPhone = Boolean(user?.phone);
+  const displayNamePrompted = user?.display_name_prompted_at !== null;
 
   useEffect(() => {
     if (!isInitialized) return;
     if (userId) {
       // لا أحد يدخل التطبيق بدون رقم هاتف (يُطلب مرة واحدة بعد أول تسجيل دخول)
-      router.replace(hasPhone ? '/(drawer)/(tabs)' : '/auth/complete-phone');
+      router.replace(!hasPhone ? '/auth/complete-phone' : displayNamePrompted ? '/(drawer)/(tabs)' : '/auth/complete-display-name');
     } else {
       router.replace('/auth/login');
     }
-  }, [isInitialized, userId, hasPhone]);
+  }, [isInitialized, userId, hasPhone, displayNamePrompted]);
 
   if (!isInitialized) {
     return (
@@ -72,13 +73,19 @@ function PhoneGate() {
   const pathname = usePathname();
   const hasUser = Boolean(user);
   const hasPhone = Boolean(user?.phone);
+  const displayNamePrompted = user?.display_name_prompted_at !== null;
 
   useEffect(() => {
-    if (!isInitialized || !hasUser || hasPhone) return;
-    // '/' يعالجه AppEntry، وشاشة الرقم نفسها لا نعيد توجيهها
-    if (pathname === '/' || pathname === '/auth/complete-phone') return;
-    router.replace('/auth/complete-phone');
-  }, [isInitialized, hasUser, hasPhone, pathname]);
+    if (!isInitialized || !hasUser) return;
+    if (!hasPhone) {
+      if (pathname === '/' || pathname === '/auth/complete-phone') return;
+      router.replace('/auth/complete-phone');
+      return;
+    }
+    if (displayNamePrompted) return;
+    if (pathname === '/' || pathname === '/auth/complete-display-name') return;
+    router.replace('/auth/complete-display-name');
+  }, [isInitialized, hasUser, hasPhone, displayNamePrompted, pathname]);
 
   return null;
 }
@@ -115,6 +122,7 @@ function RootStack() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="auth/login" options={{ headerShown: false, animation: 'fade' }} />
           <Stack.Screen name="auth/complete-phone" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
+          <Stack.Screen name="auth/complete-display-name" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="auth/register" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
           <Stack.Screen name="auth/forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
           <Stack.Screen name="auth/verify-email" options={{ headerShown: false, animation: 'slide_from_right' }} />

@@ -81,6 +81,9 @@ function mapSupabaseUser(sbUser: any): User {
   return {
     id: sbUser.id,
     name: meta.full_name ?? meta.name ?? '',
+    full_name: meta.full_name ?? meta.name ?? '',
+    display_name: null,
+    display_name_prompted_at: undefined,
     email: sbUser.email ?? '',
     phone: sbUser.phone ?? meta.phone ?? '',
     region: region,
@@ -117,7 +120,7 @@ async function loadUserProfile(sbUser: any): Promise<User> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name, phone, region, avatar_url, is_provider, is_admin, verification_status, status, deleted_at, created_at, topup_code')
+      .select('id, full_name, display_name, display_name_prompted_at, phone, region, avatar_url, is_provider, is_admin, verification_status, status, deleted_at, created_at, topup_code')
       .eq('id', sbUser.id)
       .maybeSingle();
 
@@ -126,7 +129,10 @@ async function loadUserProfile(sbUser: any): Promise<User> {
     return {
       ...fallback,
       id: data.id,
-      name: data.full_name || fallback.name,
+      name: data.display_name || data.full_name || fallback.name,
+      full_name: data.full_name || fallback.full_name,
+      display_name: data.display_name ?? null,
+      display_name_prompted_at: data.display_name_prompted_at ?? null,
       phone: data.phone || fallback.phone,
       region: data.region
         ? { id: data.region, name_ar: data.region }

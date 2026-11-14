@@ -45,7 +45,7 @@ export default function CompletePhoneScreen() {
     }
     updateUser({ phone: result.phone });
     if (isEdit) router.back();
-    else router.replace('/(drawer)/(tabs)');
+    else router.replace(user?.display_name_prompted_at === null ? '/auth/complete-display-name' : '/(drawer)/(tabs)');
   };
 
   const handleLogout = () => {
