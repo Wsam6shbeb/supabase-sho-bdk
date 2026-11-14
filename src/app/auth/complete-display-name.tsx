@@ -11,7 +11,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type RpcResponse = { data: any; error: { message?: string } | null };
-const callRpc = supabase.rpc as unknown as (name: string, args?: Record<string, unknown>) => Promise<RpcResponse>;
+// مهم: نستدعي supabase.rpc مباشرة داخل الدالة. تخزينها في متغير (const callRpc = supabase.rpc)
+// يفقد الـ this الخاص بالعميل فلا يُرسل أي طلب للسيرفر وتبقى الشاشة عالقة.
+const callRpc = (name: string, args?: Record<string, unknown>): Promise<RpcResponse> =>
+  (supabase.rpc as unknown as (fn: string, args?: Record<string, unknown>) => Promise<RpcResponse>)(name, args);
 const RPC_TIMEOUT_MS = 20_000;
 
 async function callRpcWithTimeout(name: string, args?: Record<string, unknown>): Promise<RpcResponse> {
