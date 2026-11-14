@@ -206,7 +206,7 @@ begin
     v_updated := v_definition;
 
     foreach v_alias in array v_aliases loop
-      v_updated := regexp_replace(v_updated, '\\m' || v_alias || '\\.full_name',
+      v_updated := regexp_replace(v_updated, '\m' || v_alias || '\.full_name',
         'coalesce(nullif(' || v_alias || '.display_name, ''''), ' || v_alias || '.full_name)', 'g');
     end loop;
 
