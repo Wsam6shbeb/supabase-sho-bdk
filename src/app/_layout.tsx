@@ -44,7 +44,7 @@ function AppEntry() {
   // ويرجّع المستخدم للرئيسية وهو داخل صفحة أخرى.
   const userId = user?.id ?? null;
   const hasPhone = Boolean(user?.phone);
-  const displayNamePrompted = Boolean(user?.display_name_prompted_at);
+  const displayNamePrompted = user?.display_name_prompted_at !== null;
 
   useEffect(() => {
     if (!isInitialized) return;
