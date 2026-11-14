@@ -815,6 +815,10 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           deleted_at: string | null
+          display_name: string | null
+          display_name_changed_at: string | null
+          display_name_normalized: string | null
+          display_name_prompted_at: string | null
           full_name: string
           id: string
           is_admin: boolean
@@ -833,6 +837,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           deleted_at?: string | null
+          display_name?: string | null
+          display_name_changed_at?: string | null
+          display_name_normalized?: string | null
+          display_name_prompted_at?: string | null
           full_name: string
           id: string
           is_admin?: boolean
@@ -851,6 +859,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           deleted_at?: string | null
+          display_name?: string | null
+          display_name_changed_at?: string | null
+          display_name_normalized?: string | null
+          display_name_prompted_at?: string | null
           full_name?: string
           id?: string
           is_admin?: boolean
