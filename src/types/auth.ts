@@ -18,7 +18,7 @@ export interface User {
   /** الاسم الأصلي المحفوظ داخلياً. */
   full_name: string;
   display_name: string | null;
-  display_name_prompted_at: string | null;
+  display_name_prompted_at?: string | null;
   email: string;
   phone: string;
   region: Region;
