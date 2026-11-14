@@ -40,7 +40,7 @@ export default function CompleteDisplayNameScreen() {
 
   const handleSave = async () => {
     if (busy) return;
-    const value = displayName.trim().replace(/\\s+/g, ' ');
+    const value = displayName.trim().replace(/\s+/g, ' ');
     if (value && (value.length < 2 || value.length > 40)) {
       setError('يجب أن يتراوح الاسم بين حرفين و40 حرفاً.');
       return;
