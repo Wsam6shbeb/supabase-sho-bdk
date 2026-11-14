@@ -67,7 +67,13 @@ export function useAppUpdatePrompt(isAppInitialized: boolean): void {
         const latest = parseVersion(latestVersion);
         const minimum = parseVersion(values.app_min_supported_version);
 
-        if (!current || !latest || !minimum) return;
+        if (
+          typeof currentVersion !== 'string' ||
+          typeof latestVersion !== 'string' ||
+          !current ||
+          !latest ||
+          !minimum
+        ) return;
         if (compareVersions(minimum, latest) > 0) return;
         if (compareVersions(current, latest) >= 0) return;
 
