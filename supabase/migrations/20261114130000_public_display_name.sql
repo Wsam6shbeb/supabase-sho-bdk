@@ -197,6 +197,11 @@ declare
   ];
 begin
   foreach v_signature in array v_signatures loop
+    -- Some isolated environments intentionally omit the optional job-management RPCs.
+    if to_regprocedure(v_signature) is null then
+      continue;
+    end if;
+
     v_definition := pg_get_functiondef(v_signature::regprocedure);
     v_updated := v_definition;
 
