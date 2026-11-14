@@ -73,7 +73,7 @@ function PhoneGate() {
   const pathname = usePathname();
   const hasUser = Boolean(user);
   const hasPhone = Boolean(user?.phone);
-  const displayNamePrompted = Boolean(user?.display_name_prompted_at);
+  const displayNamePrompted = user?.display_name_prompted_at !== null;
 
   useEffect(() => {
     if (!isInitialized || !hasUser) return;
