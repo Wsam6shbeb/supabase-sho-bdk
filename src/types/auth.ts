@@ -16,8 +16,8 @@ export interface User {
   /** الاسم العام الذي يظهر للمستخدمين الآخرين. */
   name: string;
   /** الاسم الأصلي المحفوظ داخلياً. */
-  full_name: string;
-  display_name: string | null;
+  full_name?: string;
+  display_name?: string | null;
   display_name_prompted_at?: string | null;
   email: string;
   phone: string;
