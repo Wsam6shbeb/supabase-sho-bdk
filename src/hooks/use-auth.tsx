@@ -83,7 +83,7 @@ function mapSupabaseUser(sbUser: any): User {
     name: meta.full_name ?? meta.name ?? '',
     full_name: meta.full_name ?? meta.name ?? '',
     display_name: null,
-    display_name_prompted_at: null,
+    display_name_prompted_at: undefined,
     email: sbUser.email ?? '',
     phone: sbUser.phone ?? meta.phone ?? '',
     region: region,
