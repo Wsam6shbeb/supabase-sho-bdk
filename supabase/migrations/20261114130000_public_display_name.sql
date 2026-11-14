@@ -14,13 +14,21 @@ returns trigger
 language plpgsql
 set search_path = public, pg_temp
 as $$
+declare
+  v_rpc_owner name;
 begin
-  if (new.display_name is distinct from old.display_name
+  if new.display_name is distinct from old.display_name
       or new.display_name_normalized is distinct from old.display_name_normalized
       or new.display_name_changed_at is distinct from old.display_name_changed_at
-      or new.display_name_prompted_at is distinct from old.display_name_prompted_at)
-     and current_setting('app.display_name_rpc', true) is distinct from 'on' then
-    raise exception 'DISPLAY_NAME_WRITE_NOT_ALLOWED' using errcode = '42501';
+      or new.display_name_prompted_at is distinct from old.display_name_prompted_at then
+    select pg_get_userbyid(p.proowner)
+      into v_rpc_owner
+      from pg_proc p
+     where p.oid = 'public.set_my_display_name(text)'::regprocedure;
+
+    if current_user is distinct from v_rpc_owner then
+      raise exception 'DISPLAY_NAME_WRITE_NOT_ALLOWED' using errcode = '42501';
+    end if;
   end if;
   return new;
 end;
@@ -62,8 +70,6 @@ begin
   end if;
 
   v_normalized := case when v_name is null then null else lower(v_name) end;
-  perform set_config('app.display_name_rpc', 'on', true);
-
   begin
     update public.users
        set display_name = v_name,
@@ -96,7 +102,6 @@ begin
     raise exception 'FORBIDDEN' using errcode = '42501';
   end if;
 
-  perform set_config('app.display_name_rpc', 'on', true);
   update public.users
      set display_name_prompted_at = coalesce(display_name_prompted_at, now())
    where id = v_user_id
