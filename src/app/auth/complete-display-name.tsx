@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const RPC_TIMEOUT_MS = 20_000;
 
 // مرّر طلب RPC كدالة حتى يُستدعى عبر كائن Supabase نفسه ولا نفقد سياق this.
-async function callRpcWithTimeout<T>(request: () => Promise<T>): Promise<T> {
+async function callRpcWithTimeout<T>(request: () => PromiseLike<T>): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
