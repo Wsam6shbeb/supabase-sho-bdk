@@ -17,6 +17,7 @@ import { Colors } from '@/constants/theme';
 import { OrderProvider } from '@/context/OrderContext';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { useAppUpdatePrompt } from '@/hooks/use-app-update-prompt';
 import { useTheme } from '@/hooks/use-theme';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
@@ -92,8 +93,9 @@ function PhoneGate() {
 
 // [شرح الدالة: RootStack] يبني مجموعة المسارات الرئيسية التي يمكن للتطبيق الانتقال بينها.
 function RootStack() {
-  const { user } = useAuth();
+  const { user, isInitialized } = useAuth();
   usePushNotifications(user?.id);
+  useAppUpdatePrompt(isInitialized);
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const navTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
