@@ -24,6 +24,13 @@ import { useEffect } from 'react';
 import { I18nManager, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  sendDefaultPii: false,
+  tracesSampleRate: 0,
+});
 
 export { AppErrorBoundary as ErrorBoundary } from '@/components/ui/AppErrorBoundary';
 
@@ -158,7 +165,7 @@ function RootStack() {
 }
 
 // [شرح الدالة: RootLayout] يجهز التخطيط الجذري للتطبيق ويهيئ التنقل والحالة المشتركة.
-export default function RootLayout() {
+function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -172,3 +179,4 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+export default Sentry.wrap(RootLayout);

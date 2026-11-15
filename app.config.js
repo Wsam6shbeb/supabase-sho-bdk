@@ -1,3 +1,4 @@
+
 // Keep cleartext HTTP available for local development only.
 // EAS sets EAS_BUILD_PROFILE to development, preview, or production.
 module.exports = ({ config }) => {
@@ -20,6 +21,14 @@ module.exports = ({ config }) => {
 
     return plugin;
   });
+
+  plugins.push([
+    "@sentry/react-native/expo",
+    {
+      organization: "sho-bdk",
+      project: "sho-bdk-app",
+    },
+  ]);
 
   return {
     ...config,
