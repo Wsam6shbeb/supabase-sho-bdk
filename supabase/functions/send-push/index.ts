@@ -3,6 +3,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Called by the database (pg_net) when a notification is created/updated; sends a push through Expo
 // to all of the user's registered devices. Auth: x-push-secret is compared with a secret stored in Vault.
+//
+// IMPORTANT: this function must be deployed WITHOUT JWT verification, because the caller is the database
+// (pg_net), not a signed-in user:  supabase functions deploy send-push --no-verify-jwt
+// Protection is the shared secret below (403 without it).
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
@@ -11,6 +15,16 @@ const reply = (body: unknown, status = 200) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+// Constant-time comparison so the secret cannot be guessed from response timing.
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 type ExpoTicket = {
   status: "ok" | "error";
@@ -30,7 +44,12 @@ Deno.serve(async (req) => {
   // 1) verify the shared secret with the database
   const provided = req.headers.get("x-push-secret") ?? "";
   const { data: expected, error: secretError } = await supabase.rpc("get_push_secret");
-  if (secretError || !expected || provided !== expected) {
+  if (
+    secretError ||
+    typeof expected !== "string" ||
+    !expected ||
+    !constantTimeEqual(provided, expected)
+  ) {
     return reply({ error: "forbidden" }, 403);
   }
 
