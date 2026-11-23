@@ -1,56 +1,121 @@
-# Welcome to your Expo app 👋
+# Sho Bdk — Service Marketplace
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Sho Bdk** is a full-stack mobile marketplace that connects customers with local service providers. The platform brings service discovery, AI-assisted request analysis, provider matching, order management, and customer–provider communication into one application.
 
-## Get started
+[**View the Android application (APK)**](https://sho-bdk-download.vercel.app)
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Project at a glance
 
-2. Start the app
+| Area | Technology |
+|---|---|
+| Mobile application | React Native |
+| Framework & navigation | Expo SDK 57, Expo Router |
+| Language | TypeScript |
+| Backend platform | Supabase |
+| Data layer | PostgreSQL |
+| Server-side operations | Supabase Edge Functions |
+| Authentication & data access | Supabase Auth, supabase-js |
+| AI integration | Google Gemini |
+| Error monitoring | Sentry |
 
-   ```bash
-   npx expo start
-   ```
+## Core capabilities
 
-In the output, you'll find options to open the app in a
+- **Service discovery and requests** — customers can describe the service they need and submit a request.
+- **AI-assisted request analysis** — service requests are analyzed to help identify relevant service categories and matching providers.
+- **Provider matching** — candidate providers are retrieved and narrowed using backend matching logic.
+- **Provider profiles** — service providers can describe the services they offer and manage their service information.
+- **Order lifecycle** — supports the flow between customer requests, provider responses, and order management.
+- **Messaging** — customer and provider communication within the application.
+- **Provider verification workflow** — supports submission and administrative review of provider verification information.
+- **Wallet and commissions** — includes provider balance and service commission concepts.
+- **Administrative dashboard** — a companion dashboard supports operational and verification workflows.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Architecture
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+The application is built around a React Native client and a Supabase backend.
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+React Native / Expo
+        |
+        | Supabase client
+        v
+Supabase
+  |-- PostgreSQL database
+  |-- Authentication
+  |-- Row Level Security (RLS)
+  |-- Edge Functions
+        |
+        | AI-assisted analysis
+        v
+   Google Gemini
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The mobile client handles the user experience, while database access and selected server-side workflows are handled through Supabase. Edge Functions are used for backend operations such as service analysis and provider matching.
 
-### Other setup steps
+## Engineering highlights
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+- **Typed mobile codebase:** TypeScript is used across the application.
+- **File-based navigation:** Expo Router organizes application routes.
+- **Backend-driven workflows:** Supabase Edge Functions handle selected operations that should not be implemented as client-only logic.
+- **Database access control:** Supabase Row Level Security is part of the backend access-control model.
+- **AI integration:** Gemini is integrated into service-request analysis and matching workflows.
+- **Operational error handling:** the application includes centralized error-handling improvements to provide more understandable user-facing feedback.
+- **Automated tests:** Jest and React Native Testing Library are included in the development toolchain.
 
-## Learn more
+## Running locally
 
-To learn more about developing your project with Expo, look at the following resources:
+### Requirements
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Node.js and npm
+- Android Studio / Android SDK for Android development, or an available iOS development environment
+- A configured Supabase project
+- The required environment variables and service configuration
 
-## Join the community
+### Setup
 
-Join our community of developers creating universal apps.
+```bash
+npm install
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Create a local `.env` file and provide the project's public Supabase configuration:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+```
+
+Then start the Expo development server:
+
+```bash
+npx expo start
+```
+
+For an Android development build:
+
+```bash
+npx expo start --dev-client --android
+```
+
+> Backend functions and database migrations require their corresponding Supabase configuration. Never commit private service-role keys, AI provider secrets, or other credentials to the repository.
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm start` | Start the Expo development server |
+| `npm run android` | Start the Android development workflow |
+| `npm run ios` | Start the iOS development workflow |
+| `npm test` | Run the Jest test suite |
+| `npm run lint` | Run the configured Expo lint command |
+
+## Application
+
+The Android build is available here:
+
+**[https://sho-bdk-download.vercel.app](https://sho-bdk-download.vercel.app)**
+
+---
+
+*Sho Bdk is an independently developed software project. This repository contains the mobile application source code; backend services and external integrations may require separate configuration and access.*
