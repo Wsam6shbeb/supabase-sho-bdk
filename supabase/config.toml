@@ -1,0 +1,7 @@
+project_id = "sho-bdk"
+
+[functions.cleanup-deleted-verification-files]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
